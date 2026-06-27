@@ -41,7 +41,7 @@ export class AdminEmailScheduler {
         const subject = `Daily Platform Summary - ${new Date().toISOString().split('T')[0]}`;
         const html = this.renderSummaryEmail(metrics);
 
-        await this.emailService.send({ to: toEmail, subject, html, unsubscribeUrl: true });
+        await this.emailService.send({ to: toEmail, subject, html, unsubscribeUrl: `skip` });
         this.logger.log(`Sent daily summary to ${toEmail}`);
       }
     } catch (error) {

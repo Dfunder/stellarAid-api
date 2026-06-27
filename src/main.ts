@@ -6,9 +6,14 @@ import {
 } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { json, urlencoded } from 'express';
+import { PiiLoggerService } from './common/logger/pii-logger.service';
+import { requestContextMiddleware } from './common/logger/request-context';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new PiiLoggerService();
+  const app = await NestFactory.create(AppModule, { logger });
+  app.useLogger(logger);
+  app.use(requestContextMiddleware);
 
   // Security headers — issue #323
   app.use(

@@ -70,6 +70,7 @@ Copy `.env.example` to `.env` and adjust values for your machine. See `docs/envi
 | --- | --- | --- |
 | `NODE_ENV` | No | Runtime environment. Use `development` locally. |
 | `PORT` | No | HTTP port. Defaults to `3000`. |
+| `LOG_LEVEL` | No | Structured logger level. Defaults to `info`. |
 | `ENABLE_SWAGGER` | No | Kept for local configuration; Swagger is currently mounted by the app. |
 | `DATABASE_URL` | Yes | PostgreSQL connection string used by Prisma. |
 | `POSTGRES_USER` | No | Docker Compose PostgreSQL username. |

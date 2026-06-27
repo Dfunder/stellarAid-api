@@ -123,7 +123,7 @@ export class CampaignsService {
       where.status = status as any;
     }
 
-    let orderBy: Prisma.CampaignOrderByWithRelationInput;
+    let orderBy: Prisma.CampaignOrderByWithRelationInput | Prisma.CampaignOrderByWithRelationInput[];
     switch (sortBy) {
       case 'mostFunded':
         orderBy = { raisedAmount: 'desc' };

@@ -83,7 +83,8 @@ export class DisputesController {
   async fileDispute(@Request() req, @Body() dto: FileDisputeDto) {
     return this.adminService.fileDispute(req.user.sub, dto);
   // ── Issue #308 ───────────────────────────────────────────────────────────
-
+  }
+  
   @Patch('users/:id/suspend')
   suspendUser(
     @Param('id', ParseUUIDPipe) id: string,

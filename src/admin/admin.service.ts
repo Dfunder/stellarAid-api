@@ -12,14 +12,12 @@ import { FileDisputeDto } from './dtos/file-dispute.dto';
 import { SuspendUserDto } from './dtos/suspend-user.dto';
 import { ListDisputesDto } from './dtos/list-disputes.dto';
 import { ResolveDisputeDto } from './dtos/resolve-dispute.dto';
-import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
-    private readonly prisma: PrismaService,
   ) {}
 
   // ── Issue #308: suspend user ──────────────────────────────────────────────
@@ -192,44 +190,49 @@ export class AdminService {
     adminId: string,
     adminEmail: string,
   ): Promise<{ message: string }> {
-    const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
-    if (!campaign) throw new NotFoundException(`Campaign ${campaignId} not found`);
-    if (campaign.status === 'SUSPENDED' as any)
-    const campaign = await this.campaignRepo.findOne({ where: { id: campaignId } });
-    if (!campaign) throw new NotFoundException(`Campaign ${campaignId} not found`);
-    if (campaign.status === CampaignStatus.SUSPENDED) {
+    // 1. Fetch the campaign using Prisma
+    const campaign = await this.prisma.campaign.findUnique({ 
+      where: { id: campaignId } 
+    });
+    
+    if (!campaign) {
+      throw new NotFoundException(`Campaign ${campaignId} not found`);
+    }
+
+    // 2. Validate current status to prevent redundant execution
+    if (campaign.status === 'SUSPENDED') {
       throw new BadRequestException('Campaign is already suspended');
+    }
 
     const previousStatus = campaign.status;
 
-    await this.prisma.campaign.update({
-      where: { id: campaignId },
-      data: { status: 'SUSPENDED' as any },
+    // 3. Update campaign status and log everything within a single transaction pipeline
+    await this.prisma.$transaction(async (tx) => {
+      await tx.campaign.update({
+        where: { id: campaignId },
+        data: { 
+          status: 'SUSPENDED',
+          // If your schema stores suspension reason, map it here:
+          // suspensionReason: dto.reason 
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'ADMIN_ACTION',
+          resourceType: 'campaign',
+          resourceId: campaignId,
+          userId: adminId,
+          details: JSON.stringify({ 
+            action: 'CAMPAIGN_SUSPENDED', 
+            reason: dto.reason, 
+            previousStatus 
+          }),
+        },
+      });
     });
 
-    await this.prisma.auditLog.create({
-      data: {
-        action: 'ADMIN_ACTION',
-        resourceType: 'campaign',
-        resourceId: campaignId,
-        userId: adminId,
-        details: JSON.stringify({ action: 'CAMPAIGN_SUSPENDED', reason: dto.reason, previousStatus }),
-      },
-    });
-    campaign.status = CampaignStatus.SUSPENDED;
-    campaign.suspensionReason = dto.reason;
-    await this.campaignRepo.save(campaign);
-
-    await this.auditLogRepo.save(
-      this.auditLogRepo.create({
-        action: 'CAMPAIGN_SUSPENDED',
-        actorId: adminId,
-        targetType: 'campaign',
-        targetId: campaignId,
-        metadata: { reason: dto.reason, previousStatus },
-      }),
-    );
-
+    // 4. Dispatch background communication task
     await this.notificationsService.sendCampaignSuspensionEmail({
       toEmail: adminEmail,
       campaignId,

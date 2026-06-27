@@ -1,97 +1,220 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# StellarAid API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend API for StellarAid, a Stellar-powered fundraising platform. The service is built with NestJS, Prisma, PostgreSQL, Redis, Bull queues, Socket.IO notifications, and Stellar network integrations.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Prerequisites
 
-## Description
+- Node.js 20+
+- npm 10+
+- PostgreSQL 16+ or a reachable PostgreSQL database
+- Redis 7+ or a reachable Redis instance
+- Docker and Docker Compose, optional but useful for local PostgreSQL and Redis
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Quick Start
 
-## Project setup
+1. Install dependencies.
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+2. Create your local environment file.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+On macOS or Linux:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
 ```
 
-## Run tests
+3. Start PostgreSQL and Redis.
+
+If you already run PostgreSQL and Redis locally, make sure `DATABASE_URL` and `REDIS_URL` in `.env` match your services.
+
+To use the repository Docker Compose dependencies:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up -d postgres redis
 ```
 
-## Deployment
+With the Compose defaults, use this database URL in `.env`:
 
-Production deploys must apply Prisma migrations before the API process starts.
-The production start command, `npm run start:prod`, runs `prisma migrate deploy`
-first via the `prestart:prod` lifecycle hook.
+```env
+DATABASE_URL="postgresql://stellaraid:stellaraid@localhost:5432/stellaraid?schema=public"
+REDIS_URL="redis://localhost:6379"
+```
 
-Refer to [docs/deployment.md](./docs/deployment.md) for the deploy order, rollback
-plan, and migration-history notes.
+4. Apply the Prisma schema and generate the Prisma client.
 
-The same production database will track applied migration state in
-`_prisma_migrations`.
+```bash
+npm run prisma:migrate
+npm run prisma:generate
+```
 
-## Resources
+5. Start the API in watch mode.
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+npm run start:dev
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+The API listens on `http://localhost:3000` by default.
 
-## Support
+## Environment Variables
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Copy `.env.example` to `.env` and adjust values for your machine.
 
-## Stay in touch
+| Variable | Required | Description |
+| --- | --- | --- |
+| `NODE_ENV` | No | Runtime environment. Use `development` locally. |
+| `PORT` | No | HTTP port. Defaults to `3000`. |
+| `ENABLE_SWAGGER` | No | Kept for local configuration; Swagger is currently mounted by the app. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string used by Prisma. |
+| `REDIS_URL` | Yes | Redis connection string used by queues, cache, throttling, and health checks. |
+| `JWT_SECRET` | Yes | Secret used for JWT signing and validation. Change it outside local development. |
+| `ADMIN_WALLETS` | No | Comma-separated Stellar public keys that receive the `ADMIN` role after auth. |
+| `ADMIN_EMAILS` | No | Comma-separated email addresses for scheduled admin summaries. |
+| `SMTP_HOST` | No | SMTP host for transactional email. If absent in development, emails are logged. |
+| `SMTP_PORT` | No | SMTP port. Defaults to `587`. |
+| `SMTP_USER` | No | SMTP username. |
+| `SMTP_PASS` | No | SMTP password. |
+| `EMAIL_FROM` | No | Sender address for outgoing emails. |
+| `APP_BASE_URL` | No | Public base URL used in email links. |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name for uploads. |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key for uploads. |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret for uploads. |
+| `CLOUDINARY_UPLOAD_PRESET` | No | Cloudinary upload preset. Defaults to `stellaraid-upload`. |
+| `FRONTEND_URL` | No | CORS origin. Defaults to `http://localhost:3000`. |
+| `JSON_BODY_LIMIT` | No | JSON request body limit. Defaults to `1mb`. |
+| `FILE_UPLOAD_LIMIT` | No | URL-encoded body limit. Defaults to `5mb`. |
+| `STELLAR_HORIZON_URL` | No | Stellar Horizon URL. Defaults to Stellar testnet Horizon. |
+| `STELLAR_RPC_URL` | No | Soroban RPC URL. Defaults to Stellar testnet RPC. |
+| `STELLAR_NETWORK_PASSPHRASE` | No | Stellar network passphrase. Defaults to testnet. |
+| `STELLAR_SERVER_SECRET` | No | Server secret used by Soroban service when signing transactions. |
+| `STELLAR_FEE_BUMP_SECRET` | No | Optional fee-bump secret for Stellar transactions. |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Prisma Workflow
 
-## License
+Prisma schema lives in `prisma/schema.prisma`.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+# Create/apply local development migrations
+npm run prisma:migrate
+
+# Generate Prisma Client
+npm run prisma:generate
+
+# Apply existing migrations in production or CI
+npm run prisma:deploy
+
+# Open Prisma Studio
+npm run prisma:studio
+```
+
+Production startup runs `npm run prisma:deploy` automatically before `npm run start:prod` through the `prestart:prod` lifecycle hook. See `docs/deployment.md` for the deployment runbook and rollback notes.
+
+## Available Scripts
+
+```bash
+npm run start:dev     # Start NestJS in watch mode for local development
+npm run start         # Start NestJS once
+npm run build         # Compile TypeScript into dist/
+npm run start:prod    # Run migrations, then start dist/main
+npm run lint          # Run ESLint with auto-fix
+npm run format        # Format source and test files
+npm test              # Run unit tests
+npm run test:e2e      # Run e2e tests
+npm run test:cov      # Run tests with coverage
+```
+
+## API Entry Points
+
+- Base URL: `http://localhost:3000`
+- Swagger docs: `http://localhost:3000/api/docs`
+- Health check: `GET /health`
+- Readiness check: `GET /health/ready`
+- Bull dashboard in non-production: `http://localhost:3000/admin/queues`
+
+Main route groups include auth, users, campaigns, donations, milestones, contracts, Stellar helpers, notifications, newsletter, uploads, API keys, admin actions, disputes, and health checks.
+
+## Architecture
+
+The application uses Nest modules to keep domain logic separated. Prisma owns database access, Redis supports caching/throttling/queues, Bull handles background jobs, and Stellar services communicate with Horizon and Soroban RPC.
+
+```mermaid
+flowchart TD
+  Client[Web or API Client] --> API[NestJS API]
+  API --> Auth[Auth Module]
+  API --> Campaigns[Campaigns Module]
+  API --> Donations[Donations Module]
+  API --> Admin[Admin Module]
+  API --> Notifications[Notifications Module]
+  API --> Stellar[Stellar Module]
+  API --> Uploads[Uploads Module]
+
+  Auth --> Prisma[Prisma Service]
+  Campaigns --> Prisma
+  Donations --> Prisma
+  Admin --> Prisma
+  Notifications --> Prisma
+
+  API --> Redis[(Redis)]
+  Notifications --> Queues[Bull Queues]
+  Admin --> Queues
+  Queues --> Redis
+
+  Prisma --> Postgres[(PostgreSQL)]
+  Stellar --> Horizon[Stellar Horizon]
+  Stellar --> Soroban[Soroban RPC]
+  Uploads --> Cloudinary[Cloudinary]
+  Notifications --> SMTP[SMTP Provider]
+```
+
+## Project Structure
+
+```text
+src/
+  admin/          Admin approvals, suspensions, disputes, summaries
+  api-keys/       API key creation and guards
+  auth/           Wallet challenge/verify/logout and JWT auth
+  campaigns/      Campaign CRUD, updates, analytics, scoring
+  common/         Shared guards, decorators, logging, Sentry middleware
+  contracts/      Smart contract records and lookups
+  donations/      Donation creation, verification, admin tip reporting
+  health/         Database, Redis, and Stellar health checks
+  milestones/     Milestone fund release workflows
+  newsletter/     Newsletter subscribe/unsubscribe
+  notifications/  In-app, email, WebSocket notifications
+  prisma/         Prisma service and module
+  queue/          Bull queue registration
+  redis/          Redis cache module
+  stellar/        Horizon, Soroban, pricing, transaction services
+  throttler/      Redis-backed request throttling
+  uploads/        Cloudinary upload helpers
+  users/          Profiles, KYC, preferences, donation exports
+```
+
+## Local Development Notes
+
+- Use `npm run start:dev` for day-to-day development.
+- Keep PostgreSQL and Redis running before starting the API.
+- If emails are not configured with SMTP credentials, development mode logs messages instead of sending them.
+- Swagger is generated from the Nest application at `/api/docs`.
+- Health checks validate PostgreSQL, Redis, and Stellar Horizon connectivity.
+
+## Docker
+
+Build and run the full stack:
+
+```bash
+docker compose up --build
+```
+
+For local development, it is often faster to run only dependencies with Docker:
+
+```bash
+docker compose up -d postgres redis
+npm run start:dev
+```

@@ -64,7 +64,7 @@ The API listens on `http://localhost:3000` by default.
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and adjust values for your machine.
+Copy `.env.example` to `.env` and adjust values for your machine. See `docs/environment.md` for the full required/optional reference and secrets management guidance.
 
 | Variable | Required | Description |
 | --- | --- | --- |
@@ -72,6 +72,9 @@ Copy `.env.example` to `.env` and adjust values for your machine.
 | `PORT` | No | HTTP port. Defaults to `3000`. |
 | `ENABLE_SWAGGER` | No | Kept for local configuration; Swagger is currently mounted by the app. |
 | `DATABASE_URL` | Yes | PostgreSQL connection string used by Prisma. |
+| `POSTGRES_USER` | No | Docker Compose PostgreSQL username. |
+| `POSTGRES_PASSWORD` | No | Docker Compose PostgreSQL password. |
+| `POSTGRES_DB` | No | Docker Compose PostgreSQL database name. |
 | `REDIS_URL` | Yes | Redis connection string used by queues, cache, throttling, and health checks. |
 | `JWT_SECRET` | Yes | Secret used for JWT signing and validation. Change it outside local development. |
 | `ADMIN_WALLETS` | No | Comma-separated Stellar public keys that receive the `ADMIN` role after auth. |

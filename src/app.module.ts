@@ -7,6 +7,7 @@ import * as Joi from 'joi';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './health/health.module';
 import { KycModule } from './kyc/kyc.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { KycModule } from './kyc/kyc.module';
     }),
 
     AuthModule,
-
+    UsersModule,
     ThrottlerModule.forRoot([
       {
         name: 'global',

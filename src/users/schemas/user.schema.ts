@@ -9,6 +9,11 @@ export enum UserRole {
   ADMIN = 'admin',
 }
 
+export enum UserStatus {
+  ACTIVE = 'active',
+  SUSPENDED = 'suspended',
+}
+
 export enum KycStatus {
   NOT_SUBMITTED = 'not_submitted',
   PENDING = 'pending',
@@ -51,6 +56,9 @@ export class User {
 
   @Prop({ type: String, enum: Object.values(UserRole), default: UserRole.USER })
   role!: UserRole;
+
+  @Prop({ type: String, enum: Object.values(UserStatus), default: UserStatus.ACTIVE })
+  status!: UserStatus;
 
   @Prop({ type: Boolean, default: false })
   isVerified!: boolean;

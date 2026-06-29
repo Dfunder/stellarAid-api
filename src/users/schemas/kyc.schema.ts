@@ -30,7 +30,7 @@ export enum KycReviewStatus {
   },
 })
 export class Kyc {
-  @Prop({ type: Schema.Types.ObjectId, required: true, ref: 'User' })
+  @Prop({ type: Types.ObjectId, required: true, ref: 'User' })
   userId!: Types.ObjectId;
 
   @Prop({ type: String, enum: Object.values(KycDocumentType), required: true })

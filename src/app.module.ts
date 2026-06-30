@@ -9,6 +9,7 @@ import { JwtAuthModule } from './auth/jwt-auth.module';
 import { AdminModule } from './admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { KycModule } from './kyc/kyc.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { KycModule } from './kyc/kyc.module';
     AuthModule,
     JwtAuthModule,
     AdminModule,
+    ProjectsModule,
 
     ThrottlerModule.forRoot([
       {

@@ -32,6 +32,13 @@ export class UsersService {
     return this.userModel.findOne({ emailVerificationToken: token }).exec();
   }
 
+  /**
+   * Look up a user by their active password-reset token digest.
+   *
+   * Callers MUST pass the hashed token (see `hashResetToken` in
+   * `auth.service.ts`) rather than the raw token, so a leaked DB cannot
+   * be used to complete a reset. Expiry is enforced by the caller.
+   */
   async findByPasswordResetToken(token: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ passwordResetToken: token }).exec();
   }

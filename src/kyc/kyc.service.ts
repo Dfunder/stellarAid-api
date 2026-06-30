@@ -38,8 +38,12 @@ export class KycService {
       submittedAt: new Date(),
     });
 
-    // Update user's KYC status to pending
-    await this.usersService.update(userId, { kycStatus: KycStatus.PENDING });
+    // Update user's KYC status to pending and stamp submission date so
+    // GET /users/me/kyc can report it without a second query.
+    await this.usersService.update(userId, {
+      kycStatus: KycStatus.PENDING,
+      kycSubmissionDate: new Date(),
+    });
 
     return kyc;
   }
@@ -65,14 +69,22 @@ export class KycService {
     const kyc = await this.kycModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
     
     if (kyc) {
-      // Update user's KYC status based on review result
-      const userKycStatus = status === KycReviewStatus.APPROVED 
-        ? KycStatus.APPROVED 
-        : status === KycReviewStatus.REJECTED 
-          ? KycStatus.REJECTED 
+      // Update user's KYC status based on review result and, when the
+      // reviewer left a note, surface it on the user so the GET
+      // /users/me/kyc response can include it.
+      const userKycStatus = status === KycReviewStatus.APPROVED
+        ? KycStatus.APPROVED
+        : status === KycReviewStatus.REJECTED
+          ? KycStatus.REJECTED
           : KycStatus.PENDING;
-      
-      await this.usersService.update(kyc.userId, { kycStatus: userKycStatus });
+
+      // Last-reviewer-wins: clearing reviewNote on subsequent status
+      // changes is intentional so GET /users/me/kyc reflects the
+      // most recent review verbatim.
+      await this.usersService.update(kyc.userId, {
+        kycStatus: userKycStatus,
+        kycReviewNotes: reviewNote ?? null,
+      });
     }
 
     return kyc;

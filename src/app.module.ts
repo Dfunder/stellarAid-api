@@ -6,6 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import * as Joi from 'joi';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthModule } from './auth/jwt-auth.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { AdminModule } from './admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { KycModule } from './kyc/kyc.module';
@@ -75,9 +76,17 @@ import { ProjectsModule } from './projects/projects.module';
     KycModule,
   ],
   providers: [
+    // APP_GUARDs fire in declared order. ThrottlerGuard runs first so
+    // every request counts toward rate limits (including 401s on
+    // unverified requests). JwtAuthGuard runs second and short-circuits
+    // for endpoints marked @Public().
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

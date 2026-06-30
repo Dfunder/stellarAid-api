@@ -10,12 +10,14 @@ import {
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { Public } from './decorators/public.decorator';
 import { sendError, sendSuccess } from '../utils/response.util';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto, @Res() res: Response): Promise<Response> {

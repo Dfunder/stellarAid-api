@@ -2,7 +2,6 @@ import {
   Controller,
   Post,
   UseGuards,
-  Request,
   Body,
   UseInterceptors,
   UploadedFile,
@@ -12,7 +11,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard, JwtPayload } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { KycService } from './kyc.service';
 import { SubmitKycDto } from './dto/submit-kyc.dto';
 import { sendError, sendSuccess } from '../utils/response.util';
@@ -52,7 +52,7 @@ export class KycController {
     }),
   )
   async submitKyc(
-    @Request() req,
+    @CurrentUser() currentUser: JwtPayload,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: SubmitKycDto,
     @Res() res: Response,
@@ -62,15 +62,10 @@ export class KycController {
         return sendError(res, 'Document file is required', HttpStatus.BAD_REQUEST);
       }
 
-      const userId = req.user._id?.toString() || req.user.id;
-      if (!userId) {
-        return sendError(res, 'User ID not found in token', HttpStatus.UNAUTHORIZED);
-      }
-
       const documentUrl = `/uploads/kyc/${file.filename}`;
-      
+
       const kyc = await this.kycService.create(
-        userId,
+        currentUser.sub,
         body.documentType,
         documentUrl,
       );

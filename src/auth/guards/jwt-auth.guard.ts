@@ -45,12 +45,20 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err: unknown, user: unknown, _info: unknown) {
+  // Signature intentionally mirrors `@nestjs/passport`'s base
+  // `IAuthGuard.handleRequest<TUser>` (err/user/info: any) so this
+  // override satisfies TS2416 without relying on method-parameter
+  // bivariance. Casting `user` to `TUser` is honest about the passport
+  // boundary; downstream callers (e.g. `@CurrentUser()`) get the
+  // typed `JwtPayload` back without any further narrowing.
+  handleRequest<TUser = JwtPayload>(
+    err: any,
+    user: any,
+    _info: any,
+  ): TUser {
     if (err || !user) {
-      throw (
-        (err as Error) ?? new UnauthorizedException('Invalid or expired token')
-      );
+      throw err ?? new UnauthorizedException('Invalid or expired token');
     }
-    return user;
+    return user as TUser;
   }
 }

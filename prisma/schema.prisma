@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -39,6 +38,7 @@ model Artist {
   totalEarningsUsdc Decimal   @default(0)
   createdAt       DateTime  @default(now())
   portfolios      Portfolio[]
+  services        Service[]
 }
 
 enum Role {
@@ -90,4 +90,20 @@ enum PortfolioCategory {
   ANIMATION
   BRANDING
   OTHER
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  artistId    String
+  artist      Artist   @relation(fields: [artistId], references: [id])
+  title       String
+  description String
+  category    String
+  priceUsdc   Decimal
+  deliveryDays Int
+  revisions   Int
+  features    String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

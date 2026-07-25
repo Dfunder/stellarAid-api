@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -20,6 +19,24 @@ model User {
   walletAddress String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+  artist        Artist?
+}
+
+model Artist {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  bio             String?
+  tagline         String?
+  profilePhotoUrl String?
+  coverPhotoUrl   String?
+  skills          String[]
+  isVerified      Boolean   @default(false)
+  verifiedAt      DateTime?
+  averageRating   Float     @default(0)
+  totalReviews    Int       @default(0)
+  totalEarningsUsdc Decimal   @default(0)
+  createdAt       DateTime  @default(now())
 }
 
 enum Role {

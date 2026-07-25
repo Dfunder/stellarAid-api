@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -37,6 +38,7 @@ model Artist {
   totalReviews    Int       @default(0)
   totalEarningsUsdc Decimal   @default(0)
   createdAt       DateTime  @default(now())
+  portfolios      Portfolio[]
 }
 
 enum Role {
@@ -51,4 +53,41 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   BANNED
+}
+
+model Portfolio {
+  id            String            @id @default(uuid())
+  artistId      String
+  artist        Artist            @relation(fields: [artistId], references: [id])
+  title         String
+  description   String
+  category      PortfolioCategory
+  tags          String[]
+  coverImageUrl String
+  isPublished   Boolean           @default(false)
+  viewCount     Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  items         PortfolioItem[]
+}
+
+model PortfolioItem {
+  id          String    @id @default(uuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  imageUrl    String
+  title       String
+  description String
+  order       Int
+  createdAt   DateTime  @default(now())
+}
+
+enum PortfolioCategory {
+  ILLUSTRATION
+  GRAPHIC_DESIGN
+  UI_UX
+  PHOTOGRAPHY
+  ANIMATION
+  BRANDING
+  OTHER
 }

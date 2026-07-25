@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  name          String
+  passwordHash  String
+  role          Role       @default(ARTIST)
+  status        UserStatus @default(PENDING_VERIFICATION)
+  walletAddress String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  artist        Artist?
+}
+
+model Artist {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  bio             String?
+  tagline         String?
+  profilePhotoUrl String?
+  coverPhotoUrl   String?
+  skills          String[]
+  isVerified      Boolean   @default(false)
+  verifiedAt      DateTime?
+  averageRating   Float     @default(0)
+  totalReviews    Int       @default(0)
+  totalEarningsUsdc Decimal   @default(0)
+  createdAt       DateTime  @default(now())
+}
+
+enum Role {
+  ARTIST
+  CLIENT
+  BUSINESS
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BANNED
+}

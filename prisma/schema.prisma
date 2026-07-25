@@ -20,6 +20,7 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   artist        Artist?
+  commissions   Commission[]
 }
 
 model Artist {
@@ -39,6 +40,7 @@ model Artist {
   createdAt       DateTime  @default(now())
   portfolios      Portfolio[]
   services        Service[]
+  commissions     Commission[]
 }
 
 enum Role {
@@ -106,4 +108,35 @@ model Service {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  commissions Commission[]
+}
+
+model Commission {
+  id          String           @id @default(uuid())
+  clientId    String
+  client      User             @relation(fields: [clientId], references: [id])
+  artistId    String
+  artist      Artist           @relation(fields: [artistId], references: [id])
+  serviceId   String?
+  service     Service?         @relation(fields: [serviceId], references: [id])
+  title       String
+  description String
+  budgetUsdc  Decimal
+  deadline    DateTime
+  status      CommissionStatus @default(PENDING)
+  attachments String[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+enum CommissionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUESTED
+  COMPLETED
+  CANCELLED
+  DISPUTED
 }

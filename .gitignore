@@ -1,9 +1,9 @@
 # compiled output
 /dist
 /node_modules
-/.npm
+/build
 
-# logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -28,14 +28,29 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-# vscode
+# IDE - VSCode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# environment
+# dotenv environment variable files
 .env
+.env.development.local
+.env.test.local
+.env.production.local
 .env.local
-.env.*.local
+
+# temp directory
+.temp
+.tmp
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

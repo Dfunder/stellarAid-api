@@ -127,6 +127,7 @@ model Commission {
   attachments String[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  milestones  Milestone[]
 }
 
 enum CommissionStatus {
@@ -139,4 +140,24 @@ enum CommissionStatus {
   COMPLETED
   CANCELLED
   DISPUTED
+}
+
+model Milestone {
+  id           String          @id @default(uuid())
+  commissionId String
+  commission   Commission      @relation(fields: [commissionId], references: [id])
+  title        String
+  description  String
+  amountUsdc   Decimal
+  dueDate      DateTime
+  status       MilestoneStatus @default(PENDING)
+  completedAt  DateTime?
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  PAID
 }

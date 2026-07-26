@@ -11,19 +11,21 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
+  id            String         @id @default(uuid())
+  email         String         @unique
   name          String
   passwordHash  String
-  role          Role       @default(ARTIST)
-  status        UserStatus @default(PENDING_VERIFICATION)
+  role          Role           @default(ARTIST)
+  status        UserStatus     @default(PENDING_VERIFICATION)
   walletAddress String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   artist        Artist?
   commissions   Commission[]
   reviewsGiven  Review[]
   messages      Message[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
 }
 
 model Artist {
@@ -228,4 +230,26 @@ model Message {
   attachmentUrl  String?
   isRead         Boolean      @default(false)
   createdAt      DateTime     @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuditLog } from '@prisma/client';
+import { AuditLog, User, Artist, Role, UserStatus } from '@prisma/client';
 
 @Injectable()
 export class AuditService {
@@ -103,5 +103,179 @@ export class AuditService {
       limit,
       totalPages,
     };
+  }
+
+  /**
+   * Get users with filtering, search, and pagination
+   * @param filters - Filter criteria (search, role, status)
+   * @param page - Page number (default: 1)
+   * @param limit - Number of items per page (default: 10)
+   */
+  async getUsers(
+    filters: {
+      search?: string;
+      role?: Role;
+      status?: UserStatus;
+    } = {},
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    data: User[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const where: any = {};
+
+    if (filters.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { email: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters.role) {
+      where.role = filters.role;
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          artist: {
+            select: {
+              id: true,
+              isVerified: true,
+            },
+          },
+        },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: users,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * Update user status
+   * @param id - User ID
+   * @param status - New user status
+   */
+  async updateUserStatus(id: string, status: UserStatus): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { status },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+      },
+    });
+  }
+
+  /**
+   * Get artists pending verification
+   * @param page - Page number (default: 1)
+   * @param limit - Number of items per page (default: 10)
+   */
+  async getPendingVerificationArtists(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    data: Artist[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const where = {
+      isVerified: false,
+    };
+
+    const skip = (page - 1) * limit;
+
+    const [artists, total] = await Promise.all([
+      this.prisma.artist.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+        },
+      }),
+      this.prisma.artist.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: artists,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * Verify or revoke verification for an artist
+   * @param id - Artist ID
+   * @param isVerified - Whether to grant or revoke verification
+   */
+  async verifyArtist(id: string, isVerified: boolean): Promise<Artist> {
+    return this.prisma.artist.update({
+      where: { id },
+      data: {
+        isVerified,
+        verifiedAt: isVerified ? new Date() : null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
   }
 }

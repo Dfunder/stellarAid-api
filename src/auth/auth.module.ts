@@ -1,49 +1,32 @@
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-  RequestMethod,
-} from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { PassportModule } from '@nestjs/passport';
+import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
-
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { TokenValidationMiddleware } from '../common/middleware/token-validation.middleware';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { AuthService } from './providers/auth.service';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { UsersModule } from '../users/users.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [
-    PassportModule,
-    TypeOrmModule.forFeature([User]),
+    PrismaModule,
+    RedisModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>('jwtSecret'),
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: '15m',
+          expiresIn: (configService.get<string>('JWT_EXPIRES_IN') || '1d') as any,
         },
       }),
+      inject: [ConfigService],
     }),
+    UsersModule,
   ],
   controllers: [AuthController],
-  providers: [
-    JwtStrategy,
-    AuthService,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-  ],
-  exports: [JwtModule, AuthService],
+  providers: [AuthService],
+  exports: [AuthService, JwtModule, PassportModule],
 })
-export class AuthModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(TokenValidationMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
-  }
-}
+export class AuthModule {}

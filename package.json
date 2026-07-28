@@ -1,5 +1,5 @@
 {
-  "name": "stellaraid-api",
+  "name": "stellarAid-api",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -17,72 +17,46 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "npm run typeorm -- migration:generate -d src/database/data-source.ts",
-    "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts"
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1015.0",
-    "@aws-sdk/s3-request-presigner": "^3.1015.0",
-    "@bull-board/express": "^6.20.6",
-    "@nestjs/bull": "^11.0.4",
     "@nestjs/common": "^11.0.1",
-    "@nestjs/config": "^4.0.3",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
-    "@nestjs/jwt": "^11.0.0",
-    "@nestjs/passport": "^11.0.0",
-    "@nestjs/platform-express": "^11.1.17",
-    "@nestjs/platform-socket.io": "^11.1.17",
-    "@nestjs/swagger": "^11.2.6",
-    "@nestjs/typeorm": "^11.0.0",
-    "@nestjs/websockets": "^11.1.17",
-    "@stellar/stellar-sdk": "^14.6.1",
-    "@types/ejs": "^3.1.5",
-    "@types/nodemailer": "^7.0.11",
-    "@types/uuid": "^10.0.0",
-    "bcrypt": "^5.1.1",
-    "bull": "^4.16.5",
-    "bull-board": "^1.7.2",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
+    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.4.6",
+    "@prisma/client": "5.17.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/passport-jwt": "^4.0.1",
+    "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.4",
-    "dotenv": "^17.3.1",
-    "ejs": "^4.0.1",
-    "joi": "^18.0.2",
-    "multer": "^2.1.1",
-    "nestjs-pino": "^4.6.0",
-    "nodemailer": "^8.0.1",
+    "class-validator": "^0.15.1",
+    "ioredis": "^5.11.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
-    "pg": "^8.18.0",
-    "pino": "^10.3.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "7.8.1",
-    "socket.io": "^4.8.3",
-    "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.28",
-    "uuid": "^13.0.0"
+    "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@nestjs/cli": "^11.0.0",
+    "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
-    "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
-    "@types/multer": "^2.1.0",
-    "@types/node": "^22.10.7",
-    "@types/passport-jwt": "^4.0.1",
-    "@types/supertest": "^6.0.2",
+    "@types/node": "^24.0.0",
+    "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
-    "globals": "^16.0.0",
+    "globals": "^17.0.0",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
+    "prisma": "5.17.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
@@ -96,28 +70,17 @@
     "moduleFileExtensions": [
       "js",
       "json",
-      "ts",
-      ".mjs"
+      "ts"
     ],
-    "rootDir": ".",
-    "testRegex": "test/.*\\.spec\\.ts$",
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "src/**/*.(t|j)s"
+      "**/*.(t|j)s"
     ],
-    "coverageDirectory": "coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/src/$1",
-      "^rxjs/internal/operators/(.*)$": "<rootDir>/node_modules/rxjs/dist/cjs/internal/operators/$1",
-      "^rxjs/internal/observable/(.*)$": "<rootDir>/node_modules/rxjs/dist/cjs/internal/observable/$1"
-    },
-    "globals": {
-      "ts-jest": {
-        "tsconfig": "tsconfig.spec.json"
-      }
-    }
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
   }
 }

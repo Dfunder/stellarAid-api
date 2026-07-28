@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "module": "nodenext",
-    // "strict": true,
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
     "esModuleInterop": true,
@@ -21,7 +20,6 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "types": ["node", "jest"]
+    "noFallthroughCasesInSwitch": false
   }
 }

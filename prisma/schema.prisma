@@ -1,0 +1,255 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String
+  passwordHash  String
+  role          Role           @default(ARTIST)
+  status        UserStatus     @default(PENDING_VERIFICATION)
+  walletAddress String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  artist        Artist?
+  commissions   Commission[]
+  reviewsGiven  Review[]
+  messages      Message[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Artist {
+  id                String      @id @default(uuid())
+  userId            String      @unique
+  user              User        @relation(fields: [userId], references: [id])
+  bio               String?
+  tagline           String?
+  profilePhotoUrl   String?
+  coverPhotoUrl     String?
+  skills            String[]
+  isVerified        Boolean     @default(false)
+  verifiedAt        DateTime?
+  averageRating     Float       @default(0)
+  totalReviews      Int         @default(0)
+  totalEarningsUsdc Decimal     @default(0)
+  createdAt         DateTime    @default(now())
+  portfolios        Portfolio[]
+  services          Service[]
+  commissions       Commission[]
+  reviews           Review[]
+}
+
+enum Role {
+  ARTIST
+  CLIENT
+  BUSINESS
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model Portfolio {
+  id            String            @id @default(uuid())
+  artistId      String
+  artist        Artist            @relation(fields: [artistId], references: [id])
+  title         String
+  description   String
+  category      PortfolioCategory
+  tags          String[]
+  coverImageUrl String
+  isPublished   Boolean           @default(false)
+  viewCount     Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  items         PortfolioItem[]
+}
+
+model PortfolioItem {
+  id          String    @id @default(uuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  imageUrl    String
+  title       String
+  description String
+  order       Int
+  createdAt   DateTime  @default(now())
+}
+
+enum PortfolioCategory {
+  ILLUSTRATION
+  GRAPHIC_DESIGN
+  UI_UX
+  PHOTOGRAPHY
+  ANIMATION
+  BRANDING
+  OTHER
+}
+
+model Service {
+  id           String       @id @default(uuid())
+  artistId     String
+  artist       Artist       @relation(fields: [artistId], references: [id])
+  title        String
+  description  String
+  category     String
+  priceUsdc    Decimal
+  deliveryDays Int
+  revisions    Int
+  features     String[]
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  commissions  Commission[]
+}
+
+model Commission {
+  id            String           @id @default(uuid())
+  clientId      String
+  client        User             @relation(fields: [clientId], references: [id])
+  artistId      String
+  artist        Artist           @relation(fields: [artistId], references: [id])
+  serviceId     String?
+  service       Service?         @relation(fields: [serviceId], references: [id])
+  title         String
+  description   String
+  budgetUsdc    Decimal
+  deadline      DateTime
+  status        CommissionStatus @default(PENDING)
+  attachments   String[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  milestones    Milestone[]
+  payments      Payment[]
+  review        Review?
+  conversations Conversation[]
+}
+
+enum CommissionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUESTED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model Milestone {
+  id           String          @id @default(uuid())
+  commissionId String
+  commission   Commission      @relation(fields: [commissionId], references: [id])
+  title        String
+  description  String
+  amountUsdc   Decimal
+  dueDate      DateTime
+  status       MilestoneStatus @default(PENDING)
+  completedAt  DateTime?
+  payments     Payment[]
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+  REFUNDED
+  FAILED
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  commissionId    String
+  commission      Commission    @relation(fields: [commissionId], references: [id])
+  milestoneId     String?
+  milestone       Milestone?    @relation(fields: [milestoneId], references: [id])
+  clientWallet    String
+  artistWallet    String
+  amountUsdc      Decimal
+  platformFeeUsdc Decimal
+  assetCode       String
+  txHash          String?
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+}
+
+model Review {
+  id           String     @id @default(uuid())
+  commissionId String     @unique
+  commission   Commission @relation(fields: [commissionId], references: [id])
+  reviewerId   String
+  reviewer     User       @relation(fields: [reviewerId], references: [id])
+  artistId     String
+  artist       Artist     @relation(fields: [artistId], references: [id])
+  rating       Int
+  comment      String?
+  isPublic     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+}
+
+model Conversation {
+  id             String      @id @default(uuid())
+  commissionId   String?
+  commission     Commission? @relation(fields: [commissionId], references: [id])
+  participantIds String[]
+  lastMessageAt  DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+  messages       Message[]
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  content        String
+  attachmentUrl  String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}

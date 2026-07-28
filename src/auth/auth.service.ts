@@ -42,7 +42,12 @@ export class AuthService {
 
     // Store OTP in Redis for 24h (86400 seconds)
     await this.redisClient.set(`verification_otp:${user.id}`, otp, 'EX', 86400);
-    await this.redisClient.set(`verification_otp:${user.email}`, otp, 'EX', 86400);
+    await this.redisClient.set(
+      `verification_otp:${user.email}`,
+      otp,
+      'EX',
+      86400,
+    );
 
     return { message: 'Verification email sent' };
   }

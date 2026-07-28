@@ -1,276 +1,127 @@
 import {
-  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CommissionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { RejectCommissionDto } from './dto/accept-reject.dto';
-import {
-  RequestRevisionDto,
-  SubmitCommissionDto,
-} from './dto/submit-revision.dto';
-import { CreateMilestonesDto } from './dto/milestone.dto';
-
-const VALID_TRANSITIONS: Record<CommissionStatus, CommissionStatus[]> = {
-  PENDING: [CommissionStatus.ACCEPTED, CommissionStatus.REJECTED, CommissionStatus.CANCELLED],
-  ACCEPTED: [CommissionStatus.IN_PROGRESS, CommissionStatus.CANCELLED],
-  REJECTED: [],
-  IN_PROGRESS: [CommissionStatus.SUBMITTED, CommissionStatus.CANCELLED, CommissionStatus.DISPUTED],
-  SUBMITTED: [CommissionStatus.COMPLETED, CommissionStatus.REVISION_REQUESTED],
-  REVISION_REQUESTED: [CommissionStatus.SUBMITTED, CommissionStatus.CANCELLED],
-  COMPLETED: [],
-  CANCELLED: [],
-  DISPUTED: [],
-};
+import { CreateCommissionDto } from './dto/create-commission.dto';
 
 @Injectable()
 export class CommissionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private validateTransition(current: CommissionStatus, next: CommissionStatus) {
-    const allowed = VALID_TRANSITIONS[current];
-    if (!allowed || !allowed.includes(next)) {
-      throw new BadRequestException(
-        `Invalid status transition from ${current} to ${next}`,
-      );
-    }
-  }
-
-  async accept(commissionId: string, artistId: string) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-      include: { client: true },
+  async create(clientUserId: string, dto: CreateCommissionDto) {
+    const artist = await this.prisma.artist.findUnique({
+      where: { userId: dto.artistUserId },
     });
 
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.artistId !== artistId) {
-      throw new BadRequestException('Only the assigned artist can accept');
+    if (!artist) {
+      throw new NotFoundException('Artist not found');
     }
 
-    this.validateTransition(commission.status, CommissionStatus.ACCEPTED);
+    if (dto.serviceId) {
+      const service = await this.prisma.service.findUnique({
+        where: { id: dto.serviceId },
+      });
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.commission.update({
-        where: { id: commissionId },
-        data: { status: CommissionStatus.ACCEPTED },
-      }),
-      this.prisma.conversation.create({
-        data: {
-          commissionId,
-          participantIds: [commission.clientId, artistId],
-        },
-      }),
-      this.prisma.notification.create({
-        data: {
-          userId: commission.clientId,
-          type: 'COMMISSION_ACCEPTED',
-          title: 'Commission Accepted',
-          message: `Your commission "${commission.title}" has been accepted by the artist.`,
-          metadata: { commissionId },
-        },
-      }),
-    ]);
-
-    return updated;
-  }
-
-  async reject(commissionId: string, artistId: string, dto: RejectCommissionDto) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-    });
-
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.artistId !== artistId) {
-      throw new BadRequestException('Only the assigned artist can reject');
+      if (!service || service.artistId !== artist.id) {
+        throw new NotFoundException('Service not found for this artist');
+      }
     }
 
-    this.validateTransition(commission.status, CommissionStatus.REJECTED);
-
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.commission.update({
-        where: { id: commissionId },
-        data: { status: CommissionStatus.REJECTED },
-      }),
-      this.prisma.notification.create({
-        data: {
-          userId: commission.clientId,
-          type: 'COMMISSION_REJECTED',
-          title: 'Commission Rejected',
-          message: dto.reason
-            ? `Your commission "${commission.title}" was rejected: ${dto.reason}`
-            : `Your commission "${commission.title}" was rejected.`,
-          metadata: { commissionId, reason: dto.reason },
-        },
-      }),
-    ]);
-
-    return updated;
-  }
-
-  async submit(commissionId: string, artistId: string, dto: SubmitCommissionDto) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-    });
-
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.artistId !== artistId) {
-      throw new BadRequestException('Only the assigned artist can submit');
-    }
-
-    this.validateTransition(commission.status, CommissionStatus.SUBMITTED);
-
-    return this.prisma.commission.update({
-      where: { id: commissionId },
+    const commission = await this.prisma.commission.create({
       data: {
-        status: CommissionStatus.SUBMITTED,
-        attachments: dto.deliverableUrls,
+        clientId: clientUserId,
+        artistId: artist.id,
+        serviceId: dto.serviceId ?? null,
+        title: dto.title,
+        description: dto.description,
+        budgetUsdc: dto.budgetUsdc,
+        deadline: new Date(dto.deadline),
+        attachments: dto.attachments ?? [],
+      },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        artist: {
+          include: {
+            user: { select: { id: true, name: true } },
+          },
+        },
+        service: true,
       },
     });
+
+    return commission;
   }
 
-  async requestRevision(commissionId: string, clientId: string, dto: RequestRevisionDto) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
+  async findAllForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { artist: true },
     });
 
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.clientId !== clientId) {
-      throw new BadRequestException('Only the client can request revisions');
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
-    this.validateTransition(commission.status, CommissionStatus.REVISION_REQUESTED);
+    const where: Record<string, unknown> = {};
 
-    return this.prisma.commission.update({
-      where: { id: commissionId },
-      data: { status: CommissionStatus.REVISION_REQUESTED },
-    });
-  }
-
-  async approve(commissionId: string, clientId: string) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-    });
-
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.clientId !== clientId) {
-      throw new BadRequestException('Only the client can approve');
+    if (user.role === 'ARTIST' && user.artist) {
+      where.artistId = user.artist.id;
+    } else {
+      where.clientId = userId;
     }
 
-    this.validateTransition(commission.status, CommissionStatus.COMPLETED);
-
-    return this.prisma.commission.update({
-      where: { id: commissionId },
-      data: { status: CommissionStatus.COMPLETED },
-    });
-  }
-
-  async cancel(commissionId: string, userId: string) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-      include: { payments: true },
-    });
-
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.clientId !== userId && commission.artistId !== userId) {
-      throw new BadRequestException('Only participants can cancel');
-    }
-
-    this.validateTransition(commission.status, CommissionStatus.CANCELLED);
-
-    const hasEscrow = commission.payments.some(
-      (p) => p.status === 'CONFIRMED' || p.status === 'RELEASED',
-    );
-
-    const newStatus =
-      commission.status === CommissionStatus.IN_PROGRESS && hasEscrow
-        ? CommissionStatus.DISPUTED
-        : CommissionStatus.CANCELLED;
-
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.commission.update({
-        where: { id: commissionId },
-        data: { status: newStatus },
-      }),
-      this.prisma.notification.create({
-        data: {
-          userId: commission.clientId === userId ? commission.artistId : commission.clientId,
-          type: newStatus === CommissionStatus.DISPUTED ? 'COMMISSION_DISPUTED' : 'COMMISSION_CANCELLED',
-          title: newStatus === CommissionStatus.DISPUTED ? 'Commission Disputed' : 'Commission Cancelled',
-          message: `Commission "${commission.title}" has been ${newStatus.toLowerCase()}.`,
-          metadata: { commissionId },
+    return this.prisma.commission.findMany({
+      where,
+      include: {
+        client: { select: { id: true, name: true } },
+        artist: {
+          include: { user: { select: { id: true, name: true } } },
         },
-      }),
-    ]);
-
-    return updated;
+        service: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
-  async createMilestones(commissionId: string, artistId: string, dto: CreateMilestonesDto) {
+  async findOne(id: string, userId: string) {
     const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-      include: { milestones: true },
+      where: { id },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        artist: {
+          include: { user: { select: { id: true, name: true } } },
+        },
+        service: true,
+        milestones: true,
+        review: true,
+      },
     });
 
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.artistId !== artistId) {
-      throw new BadRequestException('Only the assigned artist can create milestones');
-    }
-    if (commission.status !== CommissionStatus.IN_PROGRESS) {
-      throw new BadRequestException('Milestones can only be created for in-progress commissions');
+    if (!commission) {
+      throw new NotFoundException('Commission not found');
     }
 
-    const existingTotal = commission.milestones.reduce(
-      (sum, m) => sum + Number(m.amountUsdc),
-      0,
-    );
-    const newTotal = dto.milestones.reduce((sum, m) => sum + m.amountUsdc, 0);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { artist: true },
+    });
 
-    if (existingTotal + newTotal > Number(commission.budgetUsdc)) {
-      throw new BadRequestException(
-        `Milestone total (${existingTotal + newTotal}) exceeds commission budget (${commission.budgetUsdc})`,
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isClient = commission.clientId === userId;
+    const isArtist =
+      user.artist !== null && commission.artistId === user.artist.id;
+
+    if (!isClient && !isArtist) {
+      throw new ForbiddenException(
+        'You are not a participant of this commission',
       );
     }
 
-    return this.prisma.milestone.createMany({
-      data: dto.milestones.map((m) => ({
-        commissionId,
-        title: m.title,
-        description: m.description,
-        amountUsdc: m.amountUsdc,
-        dueDate: new Date(m.dueDate),
-      })),
-    });
-  }
-
-  async listMilestones(commissionId: string) {
-    return this.prisma.milestone.findMany({
-      where: { commissionId },
-      orderBy: { dueDate: 'asc' },
-    });
-  }
-
-  async approveMilestone(commissionId: string, milestoneId: string, clientId: string) {
-    const commission = await this.prisma.commission.findUnique({
-      where: { id: commissionId },
-    });
-
-    if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.clientId !== clientId) {
-      throw new BadRequestException('Only the client can approve milestones');
-    }
-
-    const milestone = await this.prisma.milestone.findUnique({
-      where: { id: milestoneId },
-    });
-
-    if (!milestone || milestone.commissionId !== commissionId) {
-      throw new NotFoundException('Milestone not found in this commission');
-    }
-
-    return this.prisma.milestone.update({
-      where: { id: milestoneId },
-      data: { status: 'APPROVED', completedAt: new Date() },
-    });
+    return commission;
   }
 }

@@ -1,6 +1,9 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Patch, Param, Body, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { GetAuditLogsDto } from './dto/get-audit-logs.dto';
+import { GetUsersDto } from './dto/get-users.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { VerifyArtistDto } from './dto/verify-artist.dto';
 import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorators';
@@ -24,5 +27,46 @@ export class AdminController {
     };
 
     return this.auditService.getAuditLogs(filters, page, limit);
+  }
+
+  @Get('users')
+  @Roles(Role.ADMIN)
+  async getUsers(@Query() getUsersDto: GetUsersDto) {
+    const { search, role, status, page, limit } = getUsersDto;
+    
+    const filters = {
+      search,
+      role,
+      status,
+    };
+
+    return this.auditService.getUsers(filters, page, limit);
+  }
+
+  @Patch('users/:id/status')
+  @Roles(Role.ADMIN)
+  async updateUserStatus(
+    @Param('id') id: string,
+    @Body() updateUserStatusDto: UpdateUserStatusDto,
+  ) {
+    return this.auditService.updateUserStatus(id, updateUserStatusDto.status);
+  }
+
+  @Get('artists/pending-verification')
+  @Roles(Role.ADMIN)
+  async getPendingVerificationArtists(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.auditService.getPendingVerificationArtists(page, limit);
+  }
+
+  @Patch('artists/:id/verify')
+  @Roles(Role.ADMIN)
+  async verifyArtist(
+    @Param('id') id: string,
+    @Body() verifyArtistDto: VerifyArtistDto,
+  ) {
+    return this.auditService.verifyArtist(id, verifyArtistDto.isVerified);
   }
 }

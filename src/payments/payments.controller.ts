@@ -11,7 +11,7 @@ import { Request } from 'express';
 @Throttle({ default: { limit: 20, ttl: 60000 } })
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
-
+// Initiate escrow endpoint
   @Post('commissions/:id/escrow')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Initiate escrow payment for a commission' })
@@ -29,7 +29,7 @@ export class PaymentsController {
   ) {
     return this.paymentsService.initiateEscrow(commissionId, dto);
   }
-
+// Confirm payment endpoint
   @Post('confirm')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Submit signed XDR to confirm a payment' })

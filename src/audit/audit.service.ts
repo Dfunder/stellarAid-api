@@ -125,6 +125,85 @@ export class AuditService {
     });
   }
 
+  async getAnalytics(from?: Date, to?: Date) {
+    const dateFilter: any = {};
+    if (from || to) {
+      dateFilter.createdAt = {};
+      if (from) dateFilter.createdAt.gte = from;
+      if (to) dateFilter.createdAt.lte = to;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Run all queries in parallel for performance
+    const [
+      totalArtists,
+      totalClients,
+      totalCommissions,
+      commissionsByStatus,
+      totalUsdcVolumeResult,
+      openDisputes,
+      newUsersToday,
+    ] = await Promise.all([
+      // Total artists
+      this.prisma.artist.count({ where: dateFilter }),
+      // Total clients
+      this.prisma.user.count({ where: { ...dateFilter, role: 'CLIENT' } }),
+      // Total commissions
+      this.prisma.commission.count({ where: dateFilter }),
+      // Commissions grouped by status
+      this.prisma.commission.groupBy({
+        by: ['status'],
+        _count: true,
+        where: dateFilter,
+      }),
+      // Total USDC volume (sum of all commission budgets in the date range)
+      this.prisma.commission.aggregate({
+        _sum: { budgetUsdc: true },
+        where: dateFilter,
+      }),
+      // Open disputes (DISPUTED status)
+      this.prisma.commission.count({ where: { ...dateFilter, status: 'DISPUTED' } }),
+      // New users created today
+      this.prisma.user.count({
+        where: {
+          createdAt: {
+            gte: today,
+            lte: todayEnd,
+          },
+        },
+      }),
+    ]);
+
+    // Format commissions by status into a clean object
+    const formattedCommissionsByStatus = commissionsByStatus.reduce((acc, curr) => {
+      acc[curr.status] = curr._count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Calculate total USDC volume
+    const totalUsdcVolume = totalUsdcVolumeResult._sum.budgetUsdc 
+      ? parseFloat(totalUsdcVolumeResult._sum.budgetUsdc.toString()) 
+      : 0;
+
+    return {
+      totalArtists,
+      totalClients,
+      totalCommissions,
+      commissionsByStatus: formattedCommissionsByStatus,
+      totalUsdcVolume,
+      openDisputes,
+      newUsersToday,
+      dateRange: {
+        from: from?.toISOString() || 'all time',
+        to: to?.toISOString() || 'present',
+      },
+    };
+  }
+
   /**
    * Get users with filtering, search, and pagination
    * @param filters - Filter criteria (search, role, status)

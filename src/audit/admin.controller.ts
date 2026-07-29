@@ -1,13 +1,14 @@
-import { Controller, Get, Query, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Patch, Param, Body, UseGuards, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { GetAuditLogsDto } from './dto/get-audit-logs.dto';
 import { GetUsersDto } from './dto/get-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { VerifyArtistDto } from './dto/verify-artist.dto';
+import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorators';
-import { Role } from '@prisma/client';
+import { Role, CommissionStatus } from '@prisma/client';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)

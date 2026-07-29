@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nestjs/throttler-storage-redis';
+import Redis from 'ioredis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -14,6 +17,20 @@ import { PaymentsModule } from './payments/payments.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,
+          limit: 100,
+        },
+      ],
+      storage: new ThrottlerStorageRedisService(
+        new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        }),
+      ),
+    }),
     PrismaModule,
     RedisModule,
     AuthModule,

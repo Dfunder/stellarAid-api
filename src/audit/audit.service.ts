@@ -105,6 +105,26 @@ export class AuditService {
     };
   }
 
+  async getAllCommissions(status?: CommissionStatus) {
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+
+    return this.prisma.commission.findMany({
+      where,
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        artist: {
+          include: { user: { select: { id: true, name: true } } },
+        },
+        service: { select: { id: true, title: true } },
+        payments: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   /**
    * Get users with filtering, search, and pagination
    * @param filters - Filter criteria (search, role, status)

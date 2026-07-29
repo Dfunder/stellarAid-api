@@ -10,10 +10,15 @@ import { RolesGuard } from '../auth/sync/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorators';
 import { Role, CommissionStatus } from '@prisma/client';
 
+import { PaymentsService } from '../payments/payments.service';
+
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AdminController {
-  constructor(private auditService: AuditService) {}
+  constructor(
+    private auditService: AuditService,
+    private paymentsService: PaymentsService
+  ) {}
 
   @Get('audit-logs')
   @Roles(Role.ADMIN)
@@ -69,5 +74,27 @@ export class AdminController {
     @Body() verifyArtistDto: VerifyArtistDto,
   ) {
     return this.auditService.verifyArtist(id, verifyArtistDto.isVerified);
+  }
+
+  @Get('commissions')
+  @Roles(Role.ADMIN)
+  async getAdminCommissions(@Query('status') status?: CommissionStatus) {
+    return this.auditService.getAllCommissions(status);
+  }
+
+  @Get('commissions/disputed')
+  @Roles(Role.ADMIN)
+  async getDisputedCommissions() {
+    return this.auditService.getAllCommissions(CommissionStatus.DISPUTED);
+  }
+
+  @Post('commissions/:id/resolve-dispute')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async resolveCommissionDispute(
+    @Param('id') id: string,
+    @Body() resolveDisputeDto: ResolveDisputeDto,
+  ) {
+    return this.paymentsService.resolveDispute(id, resolveDisputeDto);
   }
 }

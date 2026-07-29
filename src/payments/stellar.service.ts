@@ -284,6 +284,119 @@ export class StellarService implements OnModuleInit {
     );
   }
 
+  /**
+   * Build and sign a Soroban transaction that calls the Escrow contract's
+   * `refund_payment` function, sending funds back to the client.
+   * Returns the transaction hash after submission.
+   */
+  async refundFundsOnChain(
+    clientWallet: string,
+    grossAmount: number,
+    assetCode: string,
+    commissionId: string,
+  ): Promise<{ txHash: string }> {
+    const contract = new StellarSdk.Contract(this.escrowContractId);
+    const sourceAccount = await this.loadAccount(
+      this.platformKeypair.publicKey(),
+    );
+
+    const clientAddr = this.addressToScVal(clientWallet);
+    const grossScVal = this.i128ToScVal(
+      BigInt(Math.round(grossAmount * 10_000_000)),
+    );
+    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(
+      Buffer.from(assetCode),
+    );
+    const commissionScVal = StellarSdk.xdr.ScVal.scvBytes(
+      Buffer.from(commissionId),
+    );
+
+    const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
+      fee: StellarSdk.BASE_FEE,
+      networkPassphrase: this.networkPassphrase,
+    })
+      .addOperation(
+        contract.call(
+          'refund_payment',
+          clientAddr,
+          grossScVal,
+          assetScVal,
+          commissionScVal,
+        ),
+      )
+      .setTimeout(300)
+      .build();
+
+    transaction.sign(this.platformKeypair);
+
+    const result = await this.server.submitTransaction(transaction);
+    return { txHash: result.hash };
+  }
+
+  /**
+   * Build and sign a Soroban transaction that calls the Escrow contract's
+   * `partial_release_payment` function, splitting funds between artist, platform, and client.
+   * Returns the transaction hash after submission.
+   */
+  async partialReleaseFundsOnChain(
+    artistWallet: string,
+    clientWallet: string,
+    grossAmount: number,
+    artistShareBps: number,
+    platformFee: number,
+    assetCode: string,
+    commissionId: string,
+  ): Promise<{ txHash: string }> {
+    const contract = new StellarSdk.Contract(this.escrowContractId);
+    const sourceAccount = await this.loadAccount(
+      this.platformKeypair.publicKey(),
+    );
+
+    const artistAddr = this.addressToScVal(artistWallet);
+    const clientAddr = this.addressToScVal(clientWallet);
+    const platformAddr = this.addressToScVal(
+      this.platformKeypair.publicKey(),
+    );
+    const grossScVal = this.i128ToScVal(
+      BigInt(Math.round(grossAmount * 10_000_000)),
+    );
+    const artistShareScVal = this.i128ToScVal(BigInt(artistShareBps));
+    const feeScVal = this.i128ToScVal(
+      BigInt(Math.round(platformFee * 10_000_000)),
+    );
+    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(
+      Buffer.from(assetCode),
+    );
+    const commissionScVal = StellarSdk.xdr.ScVal.scvBytes(
+      Buffer.from(commissionId),
+    );
+
+    const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
+      fee: StellarSdk.BASE_FEE,
+      networkPassphrase: this.networkPassphrase,
+    })
+      .addOperation(
+        contract.call(
+          'partial_release_payment',
+          artistAddr,
+          clientAddr,
+          platformAddr,
+          grossScVal,
+          artistShareScVal,
+          feeScVal,
+          assetScVal,
+          commissionScVal,
+        ),
+      )
+      .setTimeout(300)
+      .build();
+
+    transaction.sign(this.platformKeypair);
+
+    const result = await this.server.submitTransaction(transaction);
+    return { txHash: result.hash };
+  }
+
   private i128ToScVal(value: bigint): StellarSdk.xdr.ScVal {
     const hi = new StellarSdk.xdr.Hyper(BigInt.asIntN(64, value >> BigInt(64)));
     const lo = new StellarSdk.xdr.UnsignedHyper(BigInt.asUintN(64, value));

@@ -43,6 +43,7 @@ export class PaymentsService {
       throw new NotFoundException(`Commission ${commissionId} not found`);
     }
 
+    // Retrieve wallet addresses
     const artistWallet = commission.artist.user?.walletAddress ?? '';
     const platformWallet = this.stellar.getPlatformPublicKey();
 
@@ -52,6 +53,7 @@ export class PaymentsService {
 
     const artistWalletForTx = artistWallet || platformWallet;
 
+    // Build the unsigned transaction
     const amountStr = dto.amount.toFixed(7);
     const unsignedXdr = await this.stellar.buildEscrowCreationTx(
       dto.clientWallet,

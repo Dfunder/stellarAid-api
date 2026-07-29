@@ -1,11 +1,14 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Param, Post, Req } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { InitiateEscrowDto } from './dto/initiate-escrow.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
+import { Request } from 'express';
 
 @ApiTags('payments')
 @Controller('payments')
+@Throttle({ default: { limit: 20, ttl: 60000 } })
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
@@ -20,6 +23,7 @@ export class PaymentsController {
   @ApiResponse({ status: 400, description: 'Validation error' })
   @ApiResponse({ status: 404, description: 'Commission not found' })
   async initiateEscrow(
+    @Req() req: Request,
     @Param('id') commissionId: string,
     @Body() dto: InitiateEscrowDto,
   ) {
@@ -35,7 +39,7 @@ export class PaymentsController {
   })
   @ApiResponse({ status: 400, description: 'Transaction failed or payment not in PENDING state' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
-  async confirmPayment(@Body() dto: ConfirmPaymentDto) {
+  async confirmPayment(@Req() req: Request, @Body() dto: ConfirmPaymentDto) {
     return this.paymentsService.confirmPayment(dto);
   }
 
@@ -49,7 +53,7 @@ export class PaymentsController {
   })
   @ApiResponse({ status: 400, description: 'Commission not COMPLETED or artist has no wallet' })
   @ApiResponse({ status: 404, description: 'Commission or confirmed payment not found' })
-  async releasePayment(@Param('id') commissionId: string) {
+  async releasePayment(@Req() req: Request, @Param('id') commissionId: string) {
     return this.paymentsService.releasePayment(commissionId);
   }
 }

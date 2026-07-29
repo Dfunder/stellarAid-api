@@ -11,6 +11,8 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
 import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
 
+import { HealthController } from './health/health.controller';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -23,7 +25,7 @@ import { PaymentsModule } from './payments/payments.module';
     CommissionsModule,
     PaymentsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

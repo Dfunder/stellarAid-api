@@ -97,4 +97,15 @@ export class AdminController {
   ) {
     return this.paymentsService.resolveDispute(id, resolveDisputeDto);
   }
+
+  @Get('analytics')
+  @Roles(Role.ADMIN)
+  async getAnalytics(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+    return this.auditService.getAnalytics(fromDate, toDate);
+  }
 }

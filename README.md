@@ -1,98 +1,349 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🌟 Lumora
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+**Lumora** is a Stellar-powered creative marketplace where artists, designers, and creative professionals showcase their work, connect with clients, receive secure payments, and build sustainable careers in the global digital economy.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+# 📖 About Lumora
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Lumora empowers creators to monetize their talents through a decentralized ecosystem built on the Stellar network.
 
-## Project setup
+Whether you're a graphic designer, illustrator, UI/UX designer, digital artist, photographer, animator, or creative agency, Lumora provides a trusted platform to showcase your portfolio, sell digital works, secure freelance opportunities, and receive payments instantly through Stellar.
 
-```bash
-$ npm install
+The platform combines the power of blockchain transparency, decentralized payments, and professional talent discovery into one unified ecosystem.
+
+## ✨ Core Features
+
+* 🎨 Portfolio Showcase — Build a professional creative portfolio
+* 💼 Client Marketplace — Connect with businesses and potential clients
+* 💸 Instant Payments — Receive payments through Stellar assets
+* 🔐 Decentralized & Secure — Wallet-based authentication and ownership
+* 📄 Commission Management — Custom work requests and project tracking
+* ⭐ Reputation System — Reviews, ratings, and verified work history
+* 📊 Transparent Transactions — Payment records verifiable on-chain
+* ⚙️ Open Source Ecosystem — Built for developers and community contributors
+
+---
+
+# 🏗 Organization Repositories
+
+## lumora-web
+
+Frontend Marketplace & Portfolio Platform
+
+### Features
+
+* Artist portfolio management
+* Creative marketplace
+* Design discovery & search
+* Client dashboards
+* Commission request system
+* Wallet integration
+* Messaging system
+* Artist hiring workflow
+
+### Tech Stack
+
+* Next.js
+* TypeScript
+* TailwindCSS
+* React Query
+* Zustand
+* Stellar Wallet SDK
+
+---
+
+## lumora-services
+
+Backend APIs & Core Services
+
+### Features
+
+* Authentication & authorization
+* User profile management
+* Portfolio management
+* Commission workflows
+* Marketplace services
+* Messaging services
+* Payment tracking
+* Notification system
+* Analytics & reporting
+
+### Tech Stack
+
+* NestJS
+* PostgreSQL
+* Redis
+* Prisma ORM
+* BullMQ
+* Nodemailer
+
+---
+
+## lumora-contracts
+
+Soroban Smart Contracts
+
+### Features
+
+* Escrow payments
+* Milestone-based releases
+* Artist payouts
+* Platform fee management
+* Commission agreements
+* Dispute handling
+* Multi-asset support
+
+### Tech Stack
+
+* Rust
+* Soroban SDK
+* Soroban CLI
+* Stellar RPC
+
+---
+
+## lumora-mobile
+
+Mobile Application
+
+### Features
+
+* Artist portfolio management
+* Client communication
+* Real-time notifications
+* Project tracking
+* Wallet integration
+* Secure payments
+
+### Tech Stack
+
+* React Native
+* Expo
+* Stellar SDK
+
+---
+
+## lumora-design-system
+
+Shared Design Components
+
+### Features
+
+* UI components
+* Design tokens
+* Brand assets
+* Typography standards
+* Accessibility guidelines
+
+---
+
+## Repository Structure
+
+Each repository includes:
+
+```text
+/docs
+/examples
+/scripts
+/tests
 ```
 
-## Compile and run the project
+---
+
+# 🔑 How Lumora Works
+
+## For Artists
+
+1. Create an account and connect your Stellar wallet
+2. Build your portfolio and showcase your work
+3. Publish services or list artwork for sale
+4. Receive commission requests from clients
+5. Complete projects and receive payments securely
+6. Build your reputation through reviews and ratings
+
+---
+
+## For Clients
+
+1. Discover talented artists and designers
+2. Browse portfolios and completed work
+3. Purchase existing artwork or design assets
+4. Request custom projects and commissions
+5. Pay securely using Stellar assets
+6. Collaborate and communicate directly with creators
+
+---
+
+## For Businesses
+
+1. Search for creative talent
+2. Post design opportunities
+3. Hire freelancers or agencies
+4. Manage projects and milestones
+5. Pay globally without banking barriers
+
+---
+
+# 🌐 Powered by Stellar
+
+Lumora leverages Stellar's fast, low-cost, and borderless payment infrastructure.
+
+Supported assets include:
+
+* XLM
+* USDC
+* NGNT
+* EURC
+* Custom Stellar Assets
+
+### Benefits
+
+* Near-instant settlements
+* Low transaction fees
+* Global accessibility
+* Transparent payment history
+* Secure wallet ownership
+
+---
+
+# 🛠 Tech Stack
+
+## 🌐 Frontend
+
+* Next.js
+* React
+* TypeScript
+* TailwindCSS
+* React Query
+* Zustand
+* Stellar Wallet SDK
+
+## ⚙️ Backend
+
+* NestJS
+* PostgreSQL
+* Redis
+* Prisma ORM
+* BullMQ
+* Nodemailer
+
+## 📝 Smart Contracts
+
+* Rust
+* Soroban SDK
+* Soroban CLI
+* Stellar RPC
+
+## 🗄 Storage Layer
+
+* PostgreSQL
+* Redis
+* Object Storage (S3 Compatible)
+* Optional IPFS Support
+
+---
+
+# 🚀 Roadmap
+
+## Phase 1 — MVP
+
+### Creator Platform
+
+* User registration
+* Wallet authentication
+* Artist profiles
+* Portfolio showcase
+* Artwork listings
+* Client discovery
+
+### Marketplace
+
+* Purchase digital artwork
+* Stellar payments
+* Basic commission requests
+
+### Smart Contracts
+
+* Escrow contracts
+* Artist payouts
+* Platform fees
+
+---
+
+## Phase 2 — Professional Marketplace
+
+* Messaging system
+* Reviews & ratings
+* Milestone-based projects
+* Team collaboration
+* Advanced search & filtering
+* Artist verification badges
+
+---
+
+## Phase 3 — Creative Economy
+
+* Talent recruitment portal
+* Creative agencies support
+* Subscription memberships
+* Community competitions
+* Creator grants
+* Portfolio analytics
+
+---
+
+## Phase 4 — Ecosystem Expansion
+
+* NFT ownership certificates
+* Creative licensing marketplace
+* DAO governance
+* AI-powered talent matching
+* Cross-chain integrations
+* Ecosystem funding programs
+
+---
+
+# 🤝 Contributing
+
+Lumora is fully open source and welcomes contributions from:
+
+* Stellar developers
+* Soroban smart contract engineers
+* Backend developers
+* Frontend developers
+* UI/UX designers
+* Product designers
+* Technical writers
+* Community moderators
+* Artists and creative professionals
+
+Please see:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+CONTRIBUTING.md
 ```
 
-## Run tests
+for development guidelines, contribution workflow, and code standards.
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+# 🌍 Vision
 
-# test coverage
-$ npm run test:cov
-```
+Our vision is to become the leading decentralized creative economy platform where artists and clients connect without borders, enabling global collaboration, transparent payments, and equal opportunities for creative professionals everywhere.
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+# 📜 License
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Lumora is released under the MIT License, allowing free use, modification, and distribution with attribution.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+# 🌟 Join the Lumora Journey
 
-## Resources
+We're building the future of creative work on Stellar.
 
-Check out a few resources that may come in handy when working with NestJS:
+Whether you're an artist, designer, developer, entrepreneur, or supporter of the creator economy, there's a place for you in Lumora.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Create. Connect. Earn.

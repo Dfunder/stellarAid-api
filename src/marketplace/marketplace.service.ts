@@ -16,7 +16,6 @@ export class MarketplaceService {
     private readonly prisma: PrismaService,
     @Inject('RedisClient') private readonly redisClient: Redis,
   ) {}
-// create a new service listing
   async createService(artistUserId: string, dto: CreateServiceDto) {
     const artist = await this.prisma.artist.findUnique({
       where: { userId: artistUserId },

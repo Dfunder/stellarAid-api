@@ -18,8 +18,10 @@ import { RedisModule } from '../redis/redis.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
+          // Short-lived access token. Long-lived refresh tokens are issued
+          // separately (JWT_REFRESH_EXPIRES_IN). See docs/security/jwt-strategy.md.
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN') ||
-            '1d') as any,
+            '15m') as any,
         },
       }),
       inject: [ConfigService],

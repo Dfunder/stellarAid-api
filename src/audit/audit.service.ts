@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLog, User, Artist, Role, UserStatus } from '@prisma/client';
+import { paginate } from '../common/utils/pagination.util';
 
 @Injectable()
 export class AuditService {
@@ -42,15 +43,9 @@ export class AuditService {
       startDate?: Date;
       endDate?: Date;
     } = {},
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<{
-    data: AuditLog[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
+    page?: number | string,
+    limit?: number | string,
+  ) {
     const where: any = {};
 
     if (filters.userId) {
@@ -71,16 +66,17 @@ export class AuditService {
       }
     }
 
-    const skip = (page - 1) * limit;
-
-    const [auditLogs, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.auditLog.findMany({
         where,
         orderBy: {
           createdAt: 'desc',
         },
         skip,
-        take: limit,
+        take,
         include: {
           user: {
             select: {
@@ -90,38 +86,40 @@ export class AuditService {
             },
           },
         },
-      }),
-      this.prisma.auditLog.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data: auditLogs,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+        }),
+      count: () => this.prisma.auditLog.count({ where }),
+    });
   }
 
-  async getAllCommissions(status?: CommissionStatus) {
+  async getAllCommissions(
+    status?: CommissionStatus,
+    page?: number | string,
+    limit?: number | string,
+  ) {
     const where: any = {};
     if (status) {
       where.status = status;
     }
 
-    return this.prisma.commission.findMany({
-      where,
-      include: {
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.commission.findMany({
+          where,
+          skip,
+          take,
+          include: {
         client: { select: { id: true, name: true, email: true } },
         artist: {
           include: { user: { select: { id: true, name: true } } },
         },
         service: { select: { id: true, title: true } },
         payments: true,
-      },
-      orderBy: { createdAt: 'desc' },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      count: () => this.prisma.commission.count({ where }),
     });
   }
 
@@ -216,15 +214,9 @@ export class AuditService {
       role?: Role;
       status?: UserStatus;
     } = {},
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<{
-    data: User[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
+    page?: number | string,
+    limit?: number | string,
+  ) {
     const where: any = {};
 
     if (filters.search) {
@@ -242,16 +234,17 @@ export class AuditService {
       where.status = filters.status;
     }
 
-    const skip = (page - 1) * limit;
-
-    const [users, total] = await Promise.all([
-      this.prisma.user.findMany({
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.user.findMany({
         where,
         orderBy: {
           createdAt: 'desc',
         },
         skip,
-        take: limit,
+        take,
         select: {
           id: true,
           email: true,
@@ -267,19 +260,9 @@ export class AuditService {
             },
           },
         },
-      }),
-      this.prisma.user.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data: users,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+        }),
+      count: () => this.prisma.user.count({ where }),
+    });
   }
 
   /**
@@ -307,29 +290,24 @@ export class AuditService {
    * @param limit - Number of items per page (default: 10)
    */
   async getPendingVerificationArtists(
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<{
-    data: Artist[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
+    page?: number | string,
+    limit?: number | string,
+  ) {
     const where = {
       isVerified: false,
     };
 
-    const skip = (page - 1) * limit;
-
-    const [artists, total] = await Promise.all([
-      this.prisma.artist.findMany({
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.artist.findMany({
         where,
         orderBy: {
           createdAt: 'desc',
         },
         skip,
-        take: limit,
+        take,
         include: {
           user: {
             select: {
@@ -339,19 +317,9 @@ export class AuditService {
             },
           },
         },
-      }),
-      this.prisma.artist.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data: artists,
-      total,
-      page,
-      limit,
-      totalPages,
-    };
+        }),
+      count: () => this.prisma.artist.count({ where }),
+    });
   }
 
   /**

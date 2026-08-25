@@ -13,6 +13,10 @@ import { AuditModule } from './audit/audit.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
+import { WalletModule } from './wallet/wallet.module';
+import { SearchModule } from './search/search.module';
+import { DiscoverModule } from './discover/discover.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
@@ -39,6 +43,10 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     MarketplaceModule,
     CommissionsModule,
     PaymentsModule,
+    WalletModule,
+    SearchModule,
+    DiscoverModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

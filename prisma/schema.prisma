@@ -77,6 +77,7 @@ model Portfolio {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   items         PortfolioItem[]
+  viewDays      PortfolioViewDay[]
 }
 
 model PortfolioItem {
@@ -87,7 +88,19 @@ model PortfolioItem {
   title       String
   description String
   order       Int
+  viewCount   Int       @default(0)
   createdAt   DateTime  @default(now())
+}
+
+model PortfolioViewDay {
+  id          String    @id @default(uuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  date        DateTime  @db.Date
+  viewCount   Int       @default(0)
+
+  @@unique([portfolioId, date])
+  @@index([portfolioId, date])
 }
 
 enum PortfolioCategory {

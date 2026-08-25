@@ -53,8 +53,11 @@ export class MarketplaceController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Browse all active services' })
   @ApiResponse({ status: 200, description: 'List of active services' })
-  async findAllActive() {
-    return this.marketplaceService.findAllActive();
+  async findAllActive(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.marketplaceService.findAllActive(page, limit);
   }
 
   @Public()
@@ -74,6 +77,16 @@ export class MarketplaceController {
   @ApiResponse({ status: 404, description: 'Service not found' })
   async findOne(@Param('id') id: string) {
     return this.marketplaceService.findOne(id);
+  }
+
+  @Public()
+  @Get('portfolios/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'View a published portfolio' })
+  @ApiResponse({ status: 200, description: 'Portfolio details' })
+  @ApiResponse({ status: 404, description: 'Portfolio not found' })
+  async findPortfolio(@Param('id') id: string) {
+    return this.marketplaceService.findPortfolio(id);
   }
 
   @Public()

@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
 @ApiTags('Health')
-@Controller('health')
+@Controller({ version: '1', path: 'health' })
 export class HealthController {
   constructor(
     private readonly prismaService: PrismaService,

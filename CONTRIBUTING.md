@@ -67,6 +67,52 @@ To seed the database, use the following command:
 npm run prisma:seed
 ```
 
+## API Versioning
+
+This API uses URI versioning to manage changes and maintain backward compatibility. All endpoints are prefixed with `/v1/`.
+
+### Current Version
+
+- **Version 1 (v1)**: All existing endpoints are accessible under the `/v1/` prefix
+- Example: `POST /v1/auth/register`, `GET /v1/health`
+
+### Adding Versioned Routes
+
+When creating new controllers or routes, always specify the version:
+
+```typescript
+@Controller({ version: '1', path: 'your-resource' })
+export class YourController {
+  // Routes will be accessible at /v1/your-resource
+}
+```
+
+### Versioning Strategy
+
+- **URI Versioning**: The version is part of the URL path
+- **Default Version**: Version 1 is the default and currently active version
+- **Future Versions**: When breaking changes are needed, create a new version (e.g., v2) while maintaining v1 for backward compatibility
+
+### Migration Path
+
+When introducing breaking changes:
+1. Create new endpoints in the next version (e.g., v2)
+2. Maintain existing v1 endpoints for a deprecation period
+3. Communicate deprecation timeline to API consumers
+4. Eventually remove deprecated v1 endpoints
+
+### Testing Versioned Endpoints
+
+When testing API endpoints, always include the version prefix:
+
+```bash
+# Correct
+curl http://localhost:3000/v1/health
+
+# Incorrect (will not work)
+curl http://localhost:3000/health
+```
+
 ## Branch Naming
 
 All branches should be named using the following convention:

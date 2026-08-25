@@ -1,15 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { SanitizeString } from '../../common/validation/sanitize-string.decorator';
 
 export class SearchServicesDto {
   @ApiPropertyOptional({ description: 'Search query' })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   q?: string;
 
   @ApiPropertyOptional({ description: 'Filter by category' })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   category?: string;
 
@@ -39,6 +42,7 @@ export class SearchServicesDto {
     enum: ['price-asc', 'price-desc', 'newest', 'top-rated'],
   })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   sortBy?: string;
 

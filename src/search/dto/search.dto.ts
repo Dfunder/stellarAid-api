@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { SanitizeString } from '../../common/validation/sanitize-string.decorator';
 
 export enum SearchType {
   ARTISTS = 'artists',
@@ -12,7 +13,9 @@ export class SearchDto {
     description: 'Search query string',
     example: 'logo design',
   })
+  @SanitizeString()
   @IsString()
+  @IsNotEmpty()
   q: string;
 
   @ApiPropertyOptional({

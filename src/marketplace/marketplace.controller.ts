@@ -22,6 +22,7 @@ import { MarketplaceService } from './marketplace.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { SearchServicesDto } from './dto/search-services.dto';
+import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
 
 @ApiTags('marketplace')
 @Controller('marketplace')
@@ -31,6 +32,11 @@ export class MarketplaceController {
 
   @Post('services')
   @Roles(Role.ARTIST)
+  @RoleRateLimit({
+    ttl: 60000,
+    limits: { [Role.ARTIST]: 30, [Role.BUSINESS]: 10 },
+    defaultLimit: 10,
+  })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'List a new service (artist only)' })
   @ApiResponse({ status: 201, description: 'Service created' })
@@ -47,8 +53,11 @@ export class MarketplaceController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Browse all active services' })
   @ApiResponse({ status: 200, description: 'List of active services' })
-  async findAllActive() {
-    return this.marketplaceService.findAllActive();
+  async findAllActive(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.marketplaceService.findAllActive(page, limit);
   }
 
   @Public()
@@ -68,6 +77,16 @@ export class MarketplaceController {
   @ApiResponse({ status: 404, description: 'Service not found' })
   async findOne(@Param('id') id: string) {
     return this.marketplaceService.findOne(id);
+  }
+
+  @Public()
+  @Get('portfolios/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'View a published portfolio' })
+  @ApiResponse({ status: 200, description: 'Portfolio details' })
+  @ApiResponse({ status: 404, description: 'Portfolio not found' })
+  async findPortfolio(@Param('id') id: string) {
+    return this.marketplaceService.findPortfolio(id);
   }
 
   @Public()

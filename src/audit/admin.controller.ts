@@ -7,13 +7,14 @@ import { VerifyArtistDto } from './dto/verify-artist.dto';
 import { ResolveDisputeDto } from './dto/resolve-dispute.dto';
 import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
+import { IpWhitelistGuard } from '../common/guards/ip-whitelist.guard';
 import { Roles } from '../auth/decorators/roles.decorators';
 import { Role, CommissionStatus } from '@prisma/client';
 
 import { PaymentsService } from '../payments/payments.service';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, IpWhitelistGuard)
 export class AdminController {
   constructor(
     private auditService: AuditService,
@@ -78,14 +79,21 @@ export class AdminController {
 
   @Get('commissions')
   @Roles(Role.ADMIN)
-  async getAdminCommissions(@Query('status') status?: CommissionStatus) {
-    return this.auditService.getAllCommissions(status);
+  async getAdminCommissions(
+    @Query('status') status?: CommissionStatus,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.auditService.getAllCommissions(status, page, limit);
   }
 
   @Get('commissions/disputed')
   @Roles(Role.ADMIN)
-  async getDisputedCommissions() {
-    return this.auditService.getAllCommissions(CommissionStatus.DISPUTED);
+  async getDisputedCommissions(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.auditService.getAllCommissions(CommissionStatus.DISPUTED, page, limit);
   }
 
   @Post('commissions/:id/resolve-dispute')

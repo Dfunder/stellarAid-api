@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { ThrottlerStorageRedisService } from '@nestjs/throttler-storage-redis';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import Redis from 'ioredis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -16,25 +16,25 @@ import { PaymentsModule } from './payments/payments.module';
 import { WalletModule } from './wallet/wallet.module';
 import { SearchModule } from './search/search.module';
 import { validate } from './config/env.validation';
+import { DiscoverModule } from './discover/discover.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 import { HealthController } from './health/health.controller';
+import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
+import { decodeJwt } from './common/throttling/rate-limit.decorator';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate }),
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60000,
-          limit: 100,
-        },
-      ],
-      storage: new ThrottlerStorageRedisService(
-        new Redis({
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        }),
-      ),
+    ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: ['RedisClient'],
+      useFactory: (redis: Redis) => ({
+        throttlers: [{ ttl: 60000, limit: 100 }],
+        storage: new RedisThrottlerStorage(redis),
+        getTracker: (req) =>
+          req.user?.sub || decodeJwt(req.headers.authorization)?.sub || req.ip,
+      }),
     }),
     PrismaModule,
     RedisModule,
@@ -46,8 +46,13 @@ import { HealthController } from './health/health.controller';
     PaymentsModule,
     WalletModule,
     SearchModule,
+    DiscoverModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

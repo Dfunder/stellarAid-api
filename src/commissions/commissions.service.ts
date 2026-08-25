@@ -1,14 +1,75 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CommissionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { paginate } from '../common/utils/pagination.util';
 import { CreateCommissionDto } from './dto/create-commission.dto';
+import { SubmitCommissionDto } from './dto/submit-revision.dto';
+
+const VALID_TRANSITIONS: Record<CommissionStatus, CommissionStatus[]> = {
+  PENDING: [CommissionStatus.ACCEPTED],
+  ACCEPTED: [CommissionStatus.SUBMITTED],
+  REJECTED: [],
+  IN_PROGRESS: [CommissionStatus.SUBMITTED],
+  SUBMITTED: [CommissionStatus.COMPLETED],
+  REVISION_REQUESTED: [CommissionStatus.SUBMITTED],
+  COMPLETED: [],
+  CANCELLED: [],
+  DISPUTED: [],
+};
 
 @Injectable()
 export class CommissionsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private validateTransition(current: CommissionStatus, next: CommissionStatus) {
+    if (!VALID_TRANSITIONS[current]?.includes(next)) {
+      throw new BadRequestException(`Invalid status transition from ${current} to ${next}`);
+    }
+  }
+
+  async accept(commissionId: string, artistId: string) {
+    const commission = await this.prisma.commission.findUnique({
+      where: { id: commissionId },
+      include: { artist: true },
+    });
+    if (!commission) throw new NotFoundException('Commission not found');
+    if (commission.artist.userId !== artistId) throw new BadRequestException('Only the assigned artist can accept');
+    this.validateTransition(commission.status, CommissionStatus.ACCEPTED);
+    return this.prisma.commission.update({
+      where: { id: commissionId },
+      data: { status: CommissionStatus.ACCEPTED },
+    });
+  }
+
+  async submit(commissionId: string, artistId: string, dto: SubmitCommissionDto) {
+    const commission = await this.prisma.commission.findUnique({
+      where: { id: commissionId },
+      include: { artist: true },
+    });
+    if (!commission) throw new NotFoundException('Commission not found');
+    if (commission.artist.userId !== artistId) throw new BadRequestException('Only the assigned artist can submit');
+    this.validateTransition(commission.status, CommissionStatus.SUBMITTED);
+    return this.prisma.commission.update({
+      where: { id: commissionId },
+      data: { status: CommissionStatus.SUBMITTED, attachments: dto.deliverableUrls },
+    });
+  }
+
+  async approve(commissionId: string, clientId: string) {
+    const commission = await this.prisma.commission.findUnique({ where: { id: commissionId } });
+    if (!commission) throw new NotFoundException('Commission not found');
+    if (commission.clientId !== clientId) throw new BadRequestException('Only the client can approve');
+    this.validateTransition(commission.status, CommissionStatus.COMPLETED);
+    return this.prisma.commission.update({
+      where: { id: commissionId },
+      data: { status: CommissionStatus.COMPLETED },
+    });
+  }
 
   async create(clientUserId: string, dto: CreateCommissionDto) {
     const artist = await this.prisma.artist.findUnique({
@@ -54,7 +115,11 @@ export class CommissionsService {
     return commission;
   }
 
-  async findAllForUser(userId: string) {
+  async findAllForUser(
+    userId: string,
+    page?: number | string,
+    limit?: number | string,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { artist: true },
@@ -72,16 +137,24 @@ export class CommissionsService {
       where.clientId = userId;
     }
 
-    return this.prisma.commission.findMany({
-      where,
-      include: {
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.commission.findMany({
+          where,
+          skip,
+          take,
+          include: {
         client: { select: { id: true, name: true } },
         artist: {
           include: { user: { select: { id: true, name: true } } },
         },
         service: { select: { id: true, title: true } },
-      },
-      orderBy: { createdAt: 'desc' },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      count: () => this.prisma.commission.count({ where }),
     });
   }
 

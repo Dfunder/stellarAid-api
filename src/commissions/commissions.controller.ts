@@ -5,7 +5,9 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -16,6 +18,8 @@ import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
 import { CommissionsService } from './commissions.service';
 import { CreateCommissionDto } from './dto/create-commission.dto';
+import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
+import { SubmitCommissionDto } from './dto/submit-revision.dto';
 
 @ApiTags('commissions')
 @Controller('commissions')
@@ -25,6 +29,11 @@ export class CommissionsController {
 
   @Post()
   @Roles(Role.CLIENT)
+  @RoleRateLimit({
+    ttl: 60000,
+    limits: { [Role.CLIENT]: 20, [Role.BUSINESS]: 30 },
+    defaultLimit: 10,
+  })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a commission request (client only)' })
   @ApiResponse({ status: 201, description: 'Commission created' })
@@ -37,12 +46,38 @@ export class CommissionsController {
     return this.commissionsService.create(user.sub, dto);
   }
 
+  @Patch(':id/accept')
+  @Roles(Role.ARTIST)
+  async accept(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
+    return this.commissionsService.accept(id, user.sub);
+  }
+
+  @Patch(':id/submit')
+  @Roles(Role.ARTIST)
+  async submit(
+    @Param('id') id: string,
+    @CurrentUser() user: { sub: string },
+    @Body() dto: SubmitCommissionDto,
+  ) {
+    return this.commissionsService.submit(id, user.sub, dto);
+  }
+
+  @Patch(':id/approve')
+  @Roles(Role.CLIENT)
+  async approve(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
+    return this.commissionsService.approve(id, user.sub);
+  }
+
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List own commissions' })
   @ApiResponse({ status: 200, description: 'List of commissions' })
-  async findAll(@CurrentUser() user: { sub: string }) {
-    return this.commissionsService.findAllForUser(user.sub);
+  async findAll(
+    @CurrentUser() user: { sub: string },
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.commissionsService.findAllForUser(user.sub, page, limit);
   }
 
   @Get(':id')

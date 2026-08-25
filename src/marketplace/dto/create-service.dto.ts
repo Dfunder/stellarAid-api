@@ -8,9 +8,11 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { SanitizeString } from '../../common/validation/sanitize-string.decorator';
 
 export class CreateServiceDto {
   @ApiProperty({ description: 'Service title', example: 'Logo Design' })
+  @SanitizeString()
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -19,11 +21,13 @@ export class CreateServiceDto {
     description: 'Service description',
     example: 'Professional logo design with unlimited revisions',
   })
+  @SanitizeString()
   @IsString()
   @IsNotEmpty()
   description: string;
 
   @ApiProperty({ description: 'Service category', example: 'GRAPHIC_DESIGN' })
+  @SanitizeString()
   @IsString()
   @IsNotEmpty()
   category: string;
@@ -50,6 +54,9 @@ export class CreateServiceDto {
   })
   @IsArray()
   @IsString({ each: true })
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map((item) => item.trim()) : value,
+  )
   features: string[];
 
   @ApiProperty({
@@ -58,5 +65,6 @@ export class CreateServiceDto {
   })
   @IsOptional()
   @IsString()
+  @SanitizeString()
   notes?: string;
 }

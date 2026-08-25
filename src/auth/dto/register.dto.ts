@@ -1,19 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsEnum, IsString, Matches, MinLength } from 'class-validator';
 import { Role } from '@prisma/client';
+import { SanitizeString } from '../../common/validation/sanitize-string.decorator';
 
 export class RegisterDto {
   @ApiProperty({
     description: 'User full name',
     example: 'John Doe',
   })
+  @SanitizeString()
   @IsString()
+  @MinLength(1)
   name: string;
 
   @ApiProperty({
     description: 'User email address',
     example: 'user@example.com',
   })
+  @SanitizeString()
   @IsEmail()
   email: string;
 

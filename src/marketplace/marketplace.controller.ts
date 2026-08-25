@@ -47,8 +47,11 @@ export class MarketplaceController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Browse all active services' })
   @ApiResponse({ status: 200, description: 'List of active services' })
-  async findAllActive() {
-    return this.marketplaceService.findAllActive();
+  async findAllActive(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.marketplaceService.findAllActive(page, limit);
   }
 
   @Public()

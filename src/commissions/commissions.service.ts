@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { paginate } from '../common/utils/pagination.util';
 import { CreateCommissionDto } from './dto/create-commission.dto';
 
 @Injectable()
@@ -54,7 +55,11 @@ export class CommissionsService {
     return commission;
   }
 
-  async findAllForUser(userId: string) {
+  async findAllForUser(
+    userId: string,
+    page?: number | string,
+    limit?: number | string,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { artist: true },
@@ -72,16 +77,24 @@ export class CommissionsService {
       where.clientId = userId;
     }
 
-    return this.prisma.commission.findMany({
-      where,
-      include: {
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.commission.findMany({
+          where,
+          skip,
+          take,
+          include: {
         client: { select: { id: true, name: true } },
         artist: {
           include: { user: { select: { id: true, name: true } } },
         },
         service: { select: { id: true, title: true } },
-      },
-      orderBy: { createdAt: 'desc' },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      count: () => this.prisma.commission.count({ where }),
     });
   }
 

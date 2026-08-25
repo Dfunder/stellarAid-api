@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -41,8 +42,12 @@ export class CommissionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List own commissions' })
   @ApiResponse({ status: 200, description: 'List of commissions' })
-  async findAll(@CurrentUser() user: { sub: string }) {
-    return this.commissionsService.findAllForUser(user.sub);
+  async findAll(
+    @CurrentUser() user: { sub: string },
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.commissionsService.findAllForUser(user.sub, page, limit);
   }
 
   @Get(':id')

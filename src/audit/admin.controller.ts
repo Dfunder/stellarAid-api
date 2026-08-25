@@ -78,14 +78,21 @@ export class AdminController {
 
   @Get('commissions')
   @Roles(Role.ADMIN)
-  async getAdminCommissions(@Query('status') status?: CommissionStatus) {
-    return this.auditService.getAllCommissions(status);
+  async getAdminCommissions(
+    @Query('status') status?: CommissionStatus,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.auditService.getAllCommissions(status, page, limit);
   }
 
   @Get('commissions/disputed')
   @Roles(Role.ADMIN)
-  async getDisputedCommissions() {
-    return this.auditService.getAllCommissions(CommissionStatus.DISPUTED);
+  async getDisputedCommissions(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.auditService.getAllCommissions(CommissionStatus.DISPUTED, page, limit);
   }
 
   @Post('commissions/:id/resolve-dispute')

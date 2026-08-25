@@ -10,6 +10,7 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { SearchServicesDto } from './dto/search-services.dto';
 import { PortfolioAnalyticsService } from '../analytics/portfolio-analytics.service';
+import { paginate } from '../common/utils/pagination.util';
 
 @Injectable()
 export class MarketplaceService {
@@ -68,18 +69,26 @@ export class MarketplaceService {
     return service;
   }
 
-  async findAllActive() {
-    return this.prisma.service.findMany({
-      where: { isActive: true },
-      include: {
+  async findAllActive(page?: number | string, limit?: number | string) {
+    return paginate({
+      page,
+      limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.service.findMany({
+          where: { isActive: true },
+          skip,
+          take,
+          include: {
         artist: {
           include: {
             user: { select: { id: true, name: true } },
             reviews: { select: { rating: true } },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      count: () => this.prisma.service.count({ where: { isActive: true } }),
     });
   }
 
@@ -222,31 +231,23 @@ export class MarketplaceService {
         break;
     }
 
-    const offset = dto.offset ?? 0;
-    const limit = dto.limit ?? 10;
-
-    const [services, total] = await Promise.all([
-      this.prisma.service.findMany({
+    const result = await paginate({
+      page: dto.page,
+      limit: dto.limit,
+      fetch: ({ skip, take }) =>
+        this.prisma.service.findMany({
         where,
         orderBy,
-        skip: offset,
-        take: limit,
+        skip,
+        take,
         include: {
           artist: {
             include: { user: { select: { id: true, name: true } } },
           },
         },
-      }),
-      this.prisma.service.count({ where }),
-    ]);
-
-    const result = {
-      data: services,
-      total,
-      offset,
-      limit,
-      hasMore: offset + limit < total,
-    };
+        }),
+      count: () => this.prisma.service.count({ where }),
+    });
 
     const isUnfiltered =
       !dto.q &&

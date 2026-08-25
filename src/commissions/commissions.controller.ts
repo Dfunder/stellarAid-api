@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
 import { CommissionsService } from './commissions.service';
 import { CreateCommissionDto } from './dto/create-commission.dto';
+import { SubmitCommissionDto } from './dto/submit-revision.dto';
 
 @ApiTags('commissions')
 @Controller('commissions')
@@ -35,6 +37,28 @@ export class CommissionsController {
     @Body() dto: CreateCommissionDto,
   ) {
     return this.commissionsService.create(user.sub, dto);
+  }
+
+  @Patch(':id/accept')
+  @Roles(Role.ARTIST)
+  async accept(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
+    return this.commissionsService.accept(id, user.sub);
+  }
+
+  @Patch(':id/submit')
+  @Roles(Role.ARTIST)
+  async submit(
+    @Param('id') id: string,
+    @CurrentUser() user: { sub: string },
+    @Body() dto: SubmitCommissionDto,
+  ) {
+    return this.commissionsService.submit(id, user.sub, dto);
+  }
+
+  @Patch(':id/approve')
+  @Roles(Role.CLIENT)
+  async approve(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
+    return this.commissionsService.approve(id, user.sub);
   }
 
   @Get()

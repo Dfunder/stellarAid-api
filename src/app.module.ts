@@ -13,6 +13,8 @@ import { AuditModule } from './audit/audit.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
+import { WalletModule } from './wallet/wallet.module';
+import { SearchModule } from './search/search.module';
 
 import { HealthController } from './health/health.controller';
 
@@ -41,6 +43,8 @@ import { HealthController } from './health/health.controller';
     MarketplaceModule,
     CommissionsModule,
     PaymentsModule,
+    WalletModule,
+    SearchModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

@@ -304,6 +304,16 @@ Supported assets include:
 
 ---
 
+# 📚 Documentation
+
+* 🚀 [Deployment Guide](docs/deployment.md) — Production deployment, Docker setup, Prisma database migrations, and rollback procedures
+* 🔧 [Troubleshooting Guide](docs/troubleshooting.md) — Solutions for common startup, database, Redis, and Stellar network issues
+* 🛡️ [Security Documentation](docs/security/) — Security controls, wallet encryption, CSRF protection, and lockout policies
+* ⚠️ [Error Handling](docs/error-handling.md) — Standardized API error responses and exception hierarchy
+* 🤝 [Contributing Guidelines](CONTRIBUTING.md) — Local development workflow, code standards, and PR checklist
+
+---
+
 # 🤝 Contributing
 
 Lumora is fully open source and welcomes contributions from:

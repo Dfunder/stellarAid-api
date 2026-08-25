@@ -129,6 +129,13 @@ Before submitting a pull request, please ensure the following:
 - [ ] No lint errors
 - [ ] Swagger docs updated
 
+## Additional Documentation
+
+For more in-depth guides, please consult:
+
+- [Deployment Guide](docs/deployment.md) — Production deployment, Docker, database migrations, and rollback procedures.
+- [Troubleshooting Guide](docs/troubleshooting.md) — Common startup errors, database, Redis, and Stellar network debugging.
+
 ## Good First Issues
 
 If you're new to the project and looking for a place to start, check out the issues tagged with `good first issue`.

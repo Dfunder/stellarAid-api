@@ -46,18 +46,18 @@ export class SearchServicesDto {
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ description: 'Page offset', default: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  offset?: number;
-
-  @ApiPropertyOptional({ description: 'Page size', default: 10, maximum: 50 })
+  @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(50)
+  page?: number;
+
+  @ApiPropertyOptional({ description: 'Page size', default: 20, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
   limit?: number;
 }

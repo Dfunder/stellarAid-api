@@ -9,13 +9,32 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { SearchServicesDto } from './dto/search-services.dto';
+import { PortfolioAnalyticsService } from '../analytics/portfolio-analytics.service';
 
 @Injectable()
 export class MarketplaceService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject('RedisClient') private readonly redisClient: Redis,
+    private readonly portfolioAnalytics: PortfolioAnalyticsService,
   ) {}
+
+  async findPortfolio(id: string) {
+    const portfolio = await this.prisma.portfolio.findFirst({
+      where: { id, isPublished: true },
+      include: {
+        items: { orderBy: { order: 'asc' } },
+        artist: { include: { user: { select: { id: true, name: true } } } },
+      },
+    });
+
+    if (!portfolio) {
+      throw new NotFoundException('Portfolio not found');
+    }
+
+    await this.portfolioAnalytics.recordView(id, portfolio.items.map((item) => item.id));
+    return portfolio;
+  }
 // create a new service listing
   async createService(artistUserId: string, dto: CreateServiceDto) {
     const artist = await this.prisma.artist.findUnique({

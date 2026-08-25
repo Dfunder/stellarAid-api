@@ -71,6 +71,16 @@ export class MarketplaceController {
   }
 
   @Public()
+  @Get('portfolios/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'View a published portfolio' })
+  @ApiResponse({ status: 200, description: 'Portfolio details' })
+  @ApiResponse({ status: 404, description: 'Portfolio not found' })
+  async findPortfolio(@Param('id') id: string) {
+    return this.marketplaceService.findPortfolio(id);
+  }
+
+  @Public()
   @Get('featured')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get featured artists and services' })

@@ -15,6 +15,7 @@ import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WalletModule } from './wallet/wallet.module';
 import { SearchModule } from './search/search.module';
+import { DiscoverModule } from './discover/discover.module';
 
 import { HealthController } from './health/health.controller';
 
@@ -45,6 +46,7 @@ import { HealthController } from './health/health.controller';
     PaymentsModule,
     WalletModule,
     SearchModule,
+    DiscoverModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

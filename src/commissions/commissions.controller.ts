@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
 import { CommissionsService } from './commissions.service';
 import { CreateCommissionDto } from './dto/create-commission.dto';
+import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
 
 @ApiTags('commissions')
 @Controller('commissions')
@@ -25,6 +26,11 @@ export class CommissionsController {
 
   @Post()
   @Roles(Role.CLIENT)
+  @RoleRateLimit({
+    ttl: 60000,
+    limits: { [Role.CLIENT]: 20, [Role.BUSINESS]: 30 },
+    defaultLimit: 10,
+  })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a commission request (client only)' })
   @ApiResponse({ status: 201, description: 'Commission created' })

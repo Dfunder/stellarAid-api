@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { ThrottlerStorageRedisService } from '@nestjs/throttler-storage-redis';
-import Redis from 'ioredis';
+import { ThrottlerGuard, ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -15,6 +14,8 @@ import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
 
 import { HealthController } from './health/health.controller';
+import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
+import { decodeJwt } from './common/throttling/rate-limit.decorator';
 
 @Module({
   imports: [
@@ -26,12 +27,8 @@ import { HealthController } from './health/health.controller';
           limit: 100,
         },
       ],
-      storage: new ThrottlerStorageRedisService(
-        new Redis({
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        }),
-      ),
+      getTracker: (req) =>
+        req.user?.sub || decodeJwt(req.headers.authorization)?.sub || req.ip,
     }),
     PrismaModule,
     RedisModule,
@@ -43,6 +40,11 @@ import { HealthController } from './health/health.controller';
     PaymentsModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    RedisThrottlerStorage,
+    { provide: ThrottlerStorage, useExisting: RedisThrottlerStorage },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

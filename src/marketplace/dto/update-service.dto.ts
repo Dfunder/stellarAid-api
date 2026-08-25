@@ -8,20 +8,24 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { SanitizeString } from '../../common/validation/sanitize-string.decorator';
 
 export class UpdateServiceDto {
   @ApiPropertyOptional({ description: 'Service title' })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   title?: string;
 
   @ApiPropertyOptional({ description: 'Service description' })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   description?: string;
 
   @ApiPropertyOptional({ description: 'Service category' })
   @IsOptional()
+  @SanitizeString()
   @IsString()
   category?: string;
 
@@ -47,6 +51,9 @@ export class UpdateServiceDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map((item) => item.trim()) : value,
+  )
   features?: string[];
 
   @ApiPropertyOptional({ description: 'Whether service is active' })

@@ -15,12 +15,13 @@ import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WalletModule } from './wallet/wallet.module';
 import { SearchModule } from './search/search.module';
+import { validate } from './config/env.validation';
 
 import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate }),
     ThrottlerModule.forRoot({
       throttlers: [
         {

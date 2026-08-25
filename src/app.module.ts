@@ -16,6 +16,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { WalletModule } from './wallet/wallet.module';
 import { SearchModule } from './search/search.module';
 import { DiscoverModule } from './discover/discover.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 import { HealthController } from './health/health.controller';
 
@@ -47,6 +48,7 @@ import { HealthController } from './health/health.controller';
     WalletModule,
     SearchModule,
     DiscoverModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

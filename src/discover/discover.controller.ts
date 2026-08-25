@@ -5,7 +5,7 @@ import { DiscoverPaginationDto } from './dto/discover-pagination.dto';
 import { DiscoverService } from './discover.service';
 
 @ApiTags('discover')
-@Controller('discover')
+@Controller({ version: '1', path: 'discover' })
 export class DiscoverController {
   constructor(private readonly discoverService: DiscoverService) {}
 

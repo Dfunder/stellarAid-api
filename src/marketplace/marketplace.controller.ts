@@ -25,7 +25,7 @@ import { SearchServicesDto } from './dto/search-services.dto';
 import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
 
 @ApiTags('marketplace')
-@Controller('marketplace')
+@Controller({ version: '1', path: 'marketplace' })
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class MarketplaceController {
   constructor(private readonly marketplaceService: MarketplaceService) {}

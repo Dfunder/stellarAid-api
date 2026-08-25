@@ -22,7 +22,7 @@ import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
 import { SubmitCommissionDto } from './dto/submit-revision.dto';
 
 @ApiTags('commissions')
-@Controller('commissions')
+@Controller({ version: '1', path: 'commissions' })
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CommissionsController {
   constructor(private readonly commissionsService: CommissionsService) {}

@@ -13,7 +13,7 @@ import { Role, CommissionStatus } from '@prisma/client';
 
 import { PaymentsService } from '../payments/payments.service';
 
-@Controller('admin')
+@Controller({ version: '1', path: 'admin' })
 @UseGuards(JwtAuthGuard, RolesGuard, IpWhitelistGuard)
 export class AdminController {
   constructor(

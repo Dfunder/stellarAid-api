@@ -8,7 +8,7 @@ import { ConnectWalletDto } from './dto';
 @ApiTags('wallet')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('wallet')
+@Controller({ version: '1', path: 'wallet' })
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 

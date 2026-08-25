@@ -11,7 +11,7 @@ import { RolesGuard } from '../auth/sync/roles.guard';
 import { PortfolioAnalyticsService } from './portfolio-analytics.service';
 
 @ApiTags('analytics')
-@Controller('analytics')
+@Controller({ version: '1', path: 'analytics' })
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AnalyticsController {
   constructor(private readonly analytics: PortfolioAnalyticsService) {}

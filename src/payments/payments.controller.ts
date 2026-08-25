@@ -7,7 +7,7 @@ import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { Request } from 'express';
 
 @ApiTags('payments')
-@Controller('payments')
+@Controller({ version: '1', path: 'payments' })
 @Throttle({ default: { limit: 20, ttl: 60000 } })
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}

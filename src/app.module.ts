@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule, ThrottlerStorage } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import Redis from 'ioredis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -20,15 +21,15 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60000,
-          limit: 100,
-        },
-      ],
-      getTracker: (req) =>
-        req.user?.sub || decodeJwt(req.headers.authorization)?.sub || req.ip,
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: ['RedisClient'],
+      useFactory: (redis: Redis) => ({
+        throttlers: [{ ttl: 60000, limit: 100 }],
+        storage: new RedisThrottlerStorage(redis),
+        getTracker: (req) =>
+          req.user?.sub || decodeJwt(req.headers.authorization)?.sub || req.ip,
+      }),
     }),
     PrismaModule,
     RedisModule,
@@ -42,8 +43,6 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
   controllers: [AppController, HealthController],
   providers: [
     AppService,
-    RedisThrottlerStorage,
-    { provide: ThrottlerStorage, useExisting: RedisThrottlerStorage },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

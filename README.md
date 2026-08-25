@@ -306,6 +306,8 @@ Supported assets include:
 
 # 📚 Documentation
 
+* 📖 [API Usage Examples & Postman](docs/api-usage-examples.md) — Comprehensive API guide, authentication examples, search queries, and Postman collections (`postman/`)
+* 🌌 [Stellar Integration Guide](docs/stellar-integration.md) — Stellar payment flows, Soroban smart escrow contracts, supported assets, and wallet integrations
 * 🚀 [Deployment Guide](docs/deployment.md) — Production deployment, Docker setup, Prisma database migrations, and rollback procedures
 * 🔧 [Troubleshooting Guide](docs/troubleshooting.md) — Solutions for common startup, database, Redis, and Stellar network issues
 * 🛡️ [Security Documentation](docs/security/) — Security controls, wallet encryption, CSRF protection, and lockout policies

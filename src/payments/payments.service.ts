@@ -10,9 +10,10 @@ import { StellarService } from './stellar.service';
 import { InitiateEscrowDto } from './dto/initiate-escrow.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { ResolveDisputeDto, DisputeResolution } from '../audit/dto/resolve-dispute.dto';
+import { calculatePlatformFee, DEFAULT_PLATFORM_FEE_RATE } from '../common/utils';
 
 /** Platform fee expressed as a fraction (2 %). */
-const PLATFORM_FEE_RATE = 0.02;
+const PLATFORM_FEE_RATE = DEFAULT_PLATFORM_FEE_RATE;
 
 @Injectable()
 export class PaymentsService {
@@ -63,7 +64,7 @@ export class PaymentsService {
       commissionId,
     );
 
-    const platformFee = dto.amount * PLATFORM_FEE_RATE;
+    const platformFee = calculatePlatformFee(dto.amount, PLATFORM_FEE_RATE);
 
     const payment = await this.prisma.payment.create({
       data: {

@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { generateOtp } from '../common/utils';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -44,7 +45,7 @@ export class AuthService {
     });
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtp(6);
 
     // Store OTP in Redis for 24h (86400 seconds)
     await this.redisClient.set(`verification_otp:${user.id}`, otp, 'EX', 86400);

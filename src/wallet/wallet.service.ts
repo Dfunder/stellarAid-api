@@ -2,8 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { Keypair } from '@stellar/stellar-sdk';
+import { isValidStellarPublicKey } from '../common/utils';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectWalletDto } from './dto';
 
@@ -13,16 +12,13 @@ export class WalletService {
 
   async connectWallet(userId: string, dto: ConnectWalletDto) {
     // Validate Stellar public key format
-    let keypair: Keypair;
-    try {
-      keypair = Keypair.fromPublicKey(dto.publicKey);
-    } catch {
+    if (!isValidStellarPublicKey(dto.publicKey)) {
       throw new BadRequestException(
         'Invalid Stellar public key format. Must start with G and be a valid ed25519 public key.',
       );
     }
 
-    const publicKey = keypair.publicKey();
+    const publicKey = dto.publicKey;
 
     // Verify the user exists
     const user = await this.prisma.user.findUnique({ where: { id: userId } });

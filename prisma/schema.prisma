@@ -1,5 +1,13 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ============================================================================
+// StellarAid / Lumora API - Prisma Database Schema
+// ============================================================================
+// This file defines the PostgreSQL data model for the Lumora platform,
+// encompassing user identity, artist profiles, portfolios, marketplace services,
+// commission lifecycles, Stellar escrow payments, messaging, notifications, and
+// security audit logs.
+//
+// Documentation: https://pris.ly/d/prisma-schema
+// ============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -10,259 +18,512 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ----------------------------------------------------------------------------
+// Authentication & Identity Models
+// ----------------------------------------------------------------------------
+
+/// Represents a system user account (clients, artists, businesses, administrators).
+/// Core identity model for authentication, role-based access control, and ownership.
 model User {
+  /// Unique identifier (UUID v4)
   id            String         @id @default(uuid())
+  /// Unique email address used for login and notifications
   email         String         @unique
+  /// Full name or display name of the user
   name          String
+  /// Secure bcrypt password hash (salt rounds >= 12)
   passwordHash  String
+  /// System access role (ARTIST, CLIENT, BUSINESS, ADMIN)
   role          Role           @default(ARTIST)
+  /// Account verification and moderation lifecycle status
   status        UserStatus     @default(PENDING_VERIFICATION)
+  /// Connected Stellar public key (ed25519 G-address) for escrow & payments
   walletAddress String?
+  /// Timestamp of account creation
   createdAt     DateTime       @default(now())
+  /// Timestamp of last profile or account update
   updatedAt     DateTime       @updatedAt
+
+  /// Optional 1-to-1 artist profile extension (present if role is ARTIST)
   artist        Artist?
+  /// Commissions where this user is the client/buyer
   commissions   Commission[]
+  /// Reviews submitted by this user as a client
   reviewsGiven  Review[]
+  /// Chat messages sent by this user
   messages      Message[]
+  /// In-app notification notifications addressed to this user
   notifications Notification[]
+  /// Security and administrative audit trail entries associated with this user
   auditLogs     AuditLog[]
 }
 
+/// Extended profile for creative professionals offering services and portfolios.
+/// Linked 1-to-1 with a User record.
 model Artist {
+  /// Unique identifier (UUID v4)
   id                String      @id @default(uuid())
+  /// Foreign key referencing the primary User account
   userId            String      @unique
+  /// Relational reference to User model
   user              User        @relation(fields: [userId], references: [id])
+  /// Professional biographical summary
   bio               String?
+  /// Short tagline or headline displayed on search cards
   tagline           String?
+  /// URL to hosted profile avatar image
   profilePhotoUrl   String?
+  /// URL to hosted banner/cover image
   coverPhotoUrl     String?
+  /// Array of creative skills, software proficiencies, and tags
   skills            String[]
+  /// Verification badge status granted by platform administrators
   isVerified        Boolean     @default(false)
+  /// Timestamp when artist was officially verified
   verifiedAt        DateTime?
+  /// Cached aggregate rating average (0.0 to 5.0)
   averageRating     Float       @default(0)
+  /// Total count of completed reviews received
   totalReviews      Int         @default(0)
+  /// Cumulative USDC revenue earned across completed commissions
   totalEarningsUsdc Decimal     @default(0)
+  /// Timestamp when artist profile was created
   createdAt         DateTime    @default(now())
+
+  /// Portfolios showcasing creative projects
   portfolios        Portfolio[]
+  /// Marketplace service packages offered by this artist
   services          Service[]
+  /// Commissions assigned to this artist
   commissions       Commission[]
+  /// Reviews received for completed work
   reviews           Review[]
 }
 
+/// User authorization roles governing platform permissions and endpoint access.
 enum Role {
+  /// Creative professional offering artwork, design, or multimedia services
   ARTIST
+  /// Individual commissioner purchasing bespoke creative work
   CLIENT
+  /// Corporate or agency account commissioning large-scale projects
   BUSINESS
+  /// Platform administrator with moderation, dispute resolution, and audit permissions
   ADMIN
 }
 
+/// Account lifecycle and moderation state for users.
 enum UserStatus {
+  /// Newly registered account awaiting email OTP / 2FA verification
   PENDING_VERIFICATION
+  /// Verified and fully active account
   ACTIVE
+  /// Temporarily suspended account pending moderation review
   SUSPENDED
+  /// Permanently banned account prohibited from authentication
   BANNED
 }
 
+// ----------------------------------------------------------------------------
+// Portfolio & Showcase Models
+// ----------------------------------------------------------------------------
+
+/// Represents a showcase project containing multiple artwork media items.
 model Portfolio {
+  /// Unique identifier (UUID v4)
   id            String            @id @default(uuid())
+  /// Foreign key referencing the owning Artist
   artistId      String
+  /// Relational reference to Artist model
   artist        Artist            @relation(fields: [artistId], references: [id])
+  /// Title of the portfolio project
   title         String
+  /// Detailed description of the project, tools used, and creative process
   description   String
+  /// Creative domain category for discovery filtering
   category      PortfolioCategory
+  /// Searchable tag strings
   tags          String[]
+  /// URL to main hero/thumbnail image
   coverImageUrl String
+  /// Visibility flag: true = publicly discoverable, false = draft
   isPublished   Boolean           @default(false)
+  /// Lifetime cumulative view count
   viewCount     Int               @default(0)
+  /// Timestamp when portfolio was created
   createdAt     DateTime          @default(now())
+  /// Timestamp when portfolio was last modified
   updatedAt     DateTime          @updatedAt
+
+  /// Ordered media assets included in this portfolio project
   items         PortfolioItem[]
+  /// Daily analytics tracking view impressions
   viewDays      PortfolioViewDay[]
 }
 
+/// Individual image, video, or design asset inside a Portfolio project.
 model PortfolioItem {
+  /// Unique identifier (UUID v4)
   id          String    @id @default(uuid())
+  /// Foreign key referencing parent Portfolio
   portfolioId String
+  /// Relational reference to Portfolio model
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  /// URL of the media asset in object storage
   imageUrl    String
+  /// Caption or title for this specific asset
   title       String
+  /// Narrative context or asset notes
   description String
+  /// Display sequence order (0-indexed) within the portfolio gallery
   order       Int
+  /// Lifetime asset view count
   viewCount   Int       @default(0)
+  /// Timestamp when item was uploaded
   createdAt   DateTime  @default(now())
 }
 
+/// Daily aggregated view counts for portfolio analytics and trend calculation.
 model PortfolioViewDay {
+  /// Unique identifier (UUID v4)
   id          String    @id @default(uuid())
+  /// Foreign key referencing parent Portfolio (cascaded on deletion)
   portfolioId String
+  /// Relational reference to Portfolio model with cascade delete
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  /// Calendar date of the analytics record (UTC Date format)
   date        DateTime  @db.Date
+  /// Total views recorded during this calendar day
   viewCount   Int       @default(0)
 
+  /// Ensure only one record exists per portfolio per date
   @@unique([portfolioId, date])
+  /// Index optimized for date range analytics queries
   @@index([portfolioId, date])
 }
 
+/// Creative categories for categorizing portfolios and marketplace discovery.
 enum PortfolioCategory {
+  /// Digital, vector, concept, and traditional illustration
   ILLUSTRATION
+  /// Branding, typography, marketing collateral, print
   GRAPHIC_DESIGN
+  /// User experience, wireframes, web & mobile interface design
   UI_UX
+  /// Digital, studio, product, and street photography
   PHOTOGRAPHY
+  /// 2D/3D animation, motion graphics, visual effects
   ANIMATION
+  /// Identity systems, logo suites, brand strategy
   BRANDING
+  /// Miscellaneous creative and generative disciplines
   OTHER
 }
 
+// ----------------------------------------------------------------------------
+// Marketplace & Services Models
+// ----------------------------------------------------------------------------
+
+/// Predefined service offering / gig package published by an artist.
 model Service {
+  /// Unique identifier (UUID v4)
   id           String       @id @default(uuid())
+  /// Foreign key referencing the offering Artist
   artistId     String
+  /// Relational reference to Artist model
   artist       Artist       @relation(fields: [artistId], references: [id])
+  /// Descriptive title of the service package
   title        String
+  /// Full scope of work and service details
   description  String
+  /// Category identifier matching portfolio or custom domain
   category     String
+  /// Fixed price in USDC currency
   priceUsdc    Decimal
+  /// Promised turnaround time in calendar days
   deliveryDays Int
+  /// Included revision rounds allowed for the client
   revisions    Int
+  /// Array of bullet-point features and deliverables included
   features     String[]
+  /// Availability toggle: true = active for ordering, false = paused
   isActive     Boolean      @default(true)
+  /// Timestamp when service was created
   createdAt    DateTime     @default(now())
+  /// Timestamp when service was last updated
   updatedAt    DateTime     @updatedAt
+
+  /// Commissions ordered directly from this service template
   commissions  Commission[]
 }
 
+// ----------------------------------------------------------------------------
+// Commission, Milestones & Escrow Models
+// ----------------------------------------------------------------------------
+
+/// Bespoke contract between a client and an artist with escrow-backed milestones.
 model Commission {
+  /// Unique identifier (UUID v4)
   id            String           @id @default(uuid())
+  /// Foreign key referencing the Client User
   clientId      String
+  /// Relational reference to Client User
   client        User             @relation(fields: [clientId], references: [id])
+  /// Foreign key referencing the assigned Artist
   artistId      String
+  /// Relational reference to Artist model
   artist        Artist           @relation(fields: [artistId], references: [id])
+  /// Optional foreign key if instantiated from a marketplace Service
   serviceId     String?
+  /// Relational reference to parent Service template (nullable)
   service       Service?         @relation(fields: [serviceId], references: [id])
+  /// Title of the commission project
   title         String
+  /// Detailed brief and deliverable requirements
   description   String
+  /// Total contracted budget in USDC
   budgetUsdc    Decimal
+  /// Agreed final completion deadline
   deadline      DateTime
+  /// Current state in the commission lifecycle state machine
   status        CommissionStatus @default(PENDING)
+  /// URLs of reference files, project briefs, or submitted deliverables
   attachments   String[]
+  /// Timestamp when commission proposal was submitted
   createdAt     DateTime         @default(now())
+  /// Timestamp when commission status or data was last updated
   updatedAt     DateTime         @updatedAt
+
+  /// Structured deliverable milestones within this commission
   milestones    Milestone[]
+  /// Escrow deposits, releases, and fee payment transactions
   payments      Payment[]
+  /// Optional review submitted upon successful completion
   review        Review?
+  /// Associated direct messaging channels
   conversations Conversation[]
 }
 
+/// Status lifecycle for commissions.
 enum CommissionStatus {
+  /// Proposal sent by client, awaiting artist acceptance
   PENDING
+  /// Accepted by artist, awaiting escrow deposit
   ACCEPTED
+  /// Declined by artist
   REJECTED
+  /// Escrow funded and work currently in active development
   IN_PROGRESS
+  /// Deliverable submitted by artist for client review
   SUBMITTED
+  /// Client requested adjustments to submitted deliverable
   REVISION_REQUESTED
+  /// Work approved by client and funds released to artist
   COMPLETED
+  /// Order cancelled prior to completion
   CANCELLED
+  /// Dispute raised requiring platform administrative mediation
   DISPUTED
 }
 
+/// Distinct milestone / deliverable phase within a Commission contract.
 model Milestone {
+  /// Unique identifier (UUID v4)
   id           String          @id @default(uuid())
+  /// Foreign key referencing parent Commission
   commissionId String
+  /// Relational reference to Commission model
   commission   Commission      @relation(fields: [commissionId], references: [id])
+  /// Title describing the milestone goal
   title        String
+  /// Detailed milestone deliverable requirements
   description  String
+  /// Allocated payout amount in USDC for this milestone
   amountUsdc   Decimal
+  /// Expected delivery date for this phase
   dueDate      DateTime
+  /// Current milestone execution state
   status       MilestoneStatus @default(PENDING)
+  /// Timestamp when milestone was completed and approved
   completedAt  DateTime?
+
+  /// Escrow payment associated with this specific milestone
   payments     Payment[]
 }
 
+/// Execution status for individual milestone deliverables.
 enum MilestoneStatus {
+  /// Milestone created, pending start or previous phase completion
   PENDING
+  /// Work currently in progress by the artist
   IN_PROGRESS
+  /// Milestone deliverable submitted for review
   SUBMITTED
+  /// Client approved milestone deliverable
   APPROVED
+  /// Milestone escrow funds released and settled to artist
   PAID
 }
 
+/// Settlement and escrow state for blockchain payments.
 enum PaymentStatus {
+  /// Escrow transaction constructed or awaiting on-chain confirmation
   PENDING
+  /// Funds locked into Stellar Soroban escrow smart contract
   CONFIRMED
+  /// Escrow successfully disbursed to artist wallet
   RELEASED
+  /// Escrow returned to client wallet (via dispute or cancellation)
   REFUNDED
+  /// Transaction failed on-chain or timed out
   FAILED
 }
 
+/// Stellar blockchain payment and escrow record.
 model Payment {
+  /// Unique identifier (UUID v4)
   id              String        @id @default(uuid())
+  /// Foreign key referencing parent Commission
   commissionId    String
+  /// Relational reference to Commission model
   commission      Commission    @relation(fields: [commissionId], references: [id])
+  /// Optional foreign key referencing specific Milestone
   milestoneId     String?
+  /// Relational reference to Milestone model (nullable)
   milestone       Milestone?    @relation(fields: [milestoneId], references: [id])
+  /// Stellar public key of the paying client (G-address)
   clientWallet    String
+  /// Stellar public key of the receiving artist (G-address)
   artistWallet    String
+  /// Gross principal payment amount in USDC
   amountUsdc      Decimal
+  /// Platform service fee retained in USDC (e.g. 2% standard platform fee)
   platformFeeUsdc Decimal
+  /// Stellar asset identifier (e.g., 'USDC', 'XLM', 'native')
   assetCode       String
+  /// Stellar transaction hash / ledger hash on-chain
   txHash          String?
+  /// Current payment/escrow status
   status          PaymentStatus @default(PENDING)
+  /// Timestamp when payment record was initiated
   createdAt       DateTime      @default(now())
 }
 
+// ----------------------------------------------------------------------------
+// Feedback & Reputation Models
+// ----------------------------------------------------------------------------
+
+/// Client review and star rating submitted for a completed commission.
 model Review {
+  /// Unique identifier (UUID v4)
   id           String     @id @default(uuid())
+  /// Foreign key referencing completed Commission (strictly 1:1)
   commissionId String     @unique
+  /// Relational reference to Commission model
   commission   Commission @relation(fields: [commissionId], references: [id])
+  /// Foreign key referencing the reviewing Client User
   reviewerId   String
+  /// Relational reference to Reviewer User
   reviewer     User       @relation(fields: [reviewerId], references: [id])
+  /// Foreign key referencing the rated Artist
   artistId     String
+  /// Relational reference to Artist model
   artist       Artist     @relation(fields: [artistId], references: [id])
+  /// Integer rating score from 1 (poor) to 5 (excellent)
   rating       Int
+  /// Written commentary and feedback
   comment      String?
+  /// Visibility flag: true = displayed on public profile, false = hidden
   isPublic     Boolean    @default(true)
+  /// Timestamp when review was submitted
   createdAt    DateTime   @default(now())
 }
 
+// ----------------------------------------------------------------------------
+// Messaging & Communication Models
+// ----------------------------------------------------------------------------
+
+/// Direct messaging channel between users, optionally attached to a Commission.
 model Conversation {
+  /// Unique identifier (UUID v4)
   id             String      @id @default(uuid())
+  /// Optional foreign key referencing related Commission
   commissionId   String?
+  /// Relational reference to Commission model (nullable)
   commission     Commission? @relation(fields: [commissionId], references: [id])
+  /// Array of participant User IDs engaged in this conversation
   participantIds String[]
+  /// Timestamp of the most recent message for inbox sorting
   lastMessageAt  DateTime    @default(now())
+  /// Timestamp when conversation thread was initiated
   createdAt      DateTime    @default(now())
+
+  /// Ordered chronological messages in this thread
   messages       Message[]
 }
 
+/// Individual chat message within a Conversation thread.
 model Message {
+  /// Unique identifier (UUID v4)
   id             String       @id @default(uuid())
+  /// Foreign key referencing parent Conversation
   conversationId String
+  /// Relational reference to Conversation model
   conversation   Conversation @relation(fields: [conversationId], references: [id])
+  /// Foreign key referencing sender User
   senderId       String
+  /// Relational reference to sender User
   sender         User         @relation(fields: [senderId], references: [id])
+  /// Text message content
   content        String
+  /// URL to optional media or file attachment
   attachmentUrl  String?
+  /// Read receipt indicator: true = recipient viewed message
   isRead         Boolean      @default(false)
+  /// Timestamp when message was dispatched
   createdAt      DateTime     @default(now())
 }
 
+// ----------------------------------------------------------------------------
+// System Notifications & Security Audit Log Models
+// ----------------------------------------------------------------------------
+
+/// In-app notification alert for real-time events and user notifications.
 model Notification {
+  /// Unique identifier (UUID v4)
   id        String   @id @default(uuid())
+  /// Foreign key referencing recipient User
   userId    String
+  /// Relational reference to recipient User
   user      User     @relation(fields: [userId], references: [id])
+  /// Notification category identifier (e.g., 'COMMISSION_UPDATE', 'PAYMENT_RECEIVED')
   type      String
+  /// Short headline summary of the alert
   title     String
+  /// Detailed notification message body
   message   String
+  /// Read status flag
   isRead    Boolean  @default(false)
+  /// Contextual JSON payload (e.g. commissionId, paymentId, direct link)
   metadata  Json?
+  /// Timestamp when notification was triggered
   createdAt DateTime @default(now())
 }
 
+/// Immutable, append-only security and administrative audit log.
 model AuditLog {
+  /// Unique identifier (UUID v4)
   id        String   @id @default(uuid())
+  /// Foreign key referencing actor User
   userId    String
+  /// Relational reference to actor User
   user      User     @relation(fields: [userId], references: [id])
+  /// Standardized action identifier from AuditAction enum
   action    String
+  /// Structured JSON payload detailing before/after state and event specifics
   metadata  Json?
+  /// IPv4/IPv6 address of the incoming request client
   ipAddress String?
+  /// Timestamp when audit log was recorded
   createdAt DateTime @default(now())
 }

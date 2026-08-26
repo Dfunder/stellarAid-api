@@ -1,0 +1,886 @@
+{
+  "info": {
+    "_postman_id": "7b8f9e0a-4c2d-481e-92a1-63829dc7b112",
+    "name": "Lumora / StellarAid API",
+    "description": "Comprehensive Postman collection for the Lumora / StellarAid API v1. Includes end-to-end authentication, wallet management, marketplace search, commission tracking, Stellar escrow payments, dispute resolution, and health verification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication & Wallet Verification",
+      "description": "User registration, login, JWT token management, and Stellar wallet verification.",
+      "item": [
+        {
+          "name": "Register Artist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"artist@lumora.io\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"Elena Rostova\",\n  \"role\": \"ARTIST\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "auth", "register"]
+            },
+            "description": "Registers a new artist account. Sends verification email."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"artist@lumora.io\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"Elena Rostova\",\n  \"role\": \"ARTIST\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiVersion}}/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiVersion}}", "auth", "register"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Registration successful. Please verify your email to activate your account.\",\n  \"userId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"client@lumora.io\",\n  \"password\": \"SecureClient123!\",\n  \"name\": \"Nova Studio Ltd\",\n  \"role\": \"CLIENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "auth", "register"]
+            },
+            "description": "Registers a new client or business account."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Artist)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.environment.set(\"jwtToken\", jsonData.accessToken);",
+                  "    pm.environment.set(\"artistJwtToken\", jsonData.accessToken);",
+                  "    console.log(\"Saved artistJwtToken to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"artist@lumora.io\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "auth", "login"]
+            },
+            "description": "Authenticates user and returns JWT bearer access token."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"artist@lumora.io\",\n  \"password\": \"SecurePass123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiVersion}}/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiVersion}}", "auth", "login"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"user\": {\n    \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n    \"email\": \"artist@lumora.io\",\n    \"name\": \"Elena Rostova\",\n    \"role\": \"ARTIST\",\n    \"walletAddress\": \"GCB2X5V76EAF4Z4ZTRKMSW3O36N5L2F4A5E4V5F5B5N5M5K5J5H5G5F5\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login (Client)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.environment.set(\"clientJwtToken\", jsonData.accessToken);",
+                  "    pm.environment.set(\"jwtToken\", jsonData.accessToken);",
+                  "    console.log(\"Saved clientJwtToken to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"client@lumora.io\",\n  \"password\": \"SecureClient123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "auth", "login"]
+            },
+            "description": "Authenticates client and saves clientJwtToken in environment."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Wallet Integration",
+      "description": "Connect and bind Stellar wallet public keys to user profiles.",
+      "item": [
+        {
+          "name": "Connect Stellar Wallet",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"publicKey\": \"{{clientWallet}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/wallet/connect",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "wallet", "connect"]
+            },
+            "description": "Connects and associates a Stellar ed25519 public key (starting with G) with the authenticated user account."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"publicKey\": \"GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiVersion}}/wallet/connect",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiVersion}}", "wallet", "connect"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Wallet connected successfully\",\n  \"walletAddress\": \"GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Marketplace & Search",
+      "description": "Browse active services, search with multiple filters, view portfolios and discover categories.",
+      "item": [
+        {
+          "name": "Search Services (Query, Category, Price Filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/marketplace/services/search?query=stellar&category=ILLUSTRATION&minPrice=10&maxPrice=500&sortBy=priceUsdc&sortOrder=asc&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "marketplace", "services", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "stellar",
+                  "description": "Full-text search keyword for title and description"
+                },
+                {
+                  "key": "category",
+                  "value": "ILLUSTRATION",
+                  "description": "Category filter (e.g. ILLUSTRATION, UI_UX, GRAPHIC_DESIGN, BRANDING)"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "10",
+                  "description": "Minimum price in USDC / base currency"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "500",
+                  "description": "Maximum price in USDC / base currency"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "priceUsdc",
+                  "description": "Field to sort by: priceUsdc, createdAt, etc."
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "Sort order: asc or desc"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Searches marketplace services with multi-criteria filtering and pagination."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"serv-7890-abcd\",\n      \"title\": \"Custom Stellar NFT Illustration & Vector Art\",\n      \"description\": \"High-resolution digital illustration and branding for Web3 and Stellar projects.\",\n      \"category\": \"ILLUSTRATION\",\n      \"priceUsdc\": 150,\n      \"deliveryDays\": 5,\n      \"revisions\": 3,\n      \"features\": [\"Vector Source File\", \"Commercial License\", \"High-Res PNG/SVG\"],\n      \"isActive\": true,\n      \"artist\": {\n        \"id\": \"art-1234\",\n        \"averageRating\": 4.9,\n        \"totalReviews\": 28,\n        \"user\": {\n          \"name\": \"Elena Rostova\",\n          \"walletAddress\": \"GCB2X5V76EAF4Z4ZTRKMSW3O36N5L2F4A5E4V5F5B5N5M5K5J5H5G5F5\"\n        }\n      }\n    }\n  ],\n  \"meta\": {\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 10,\n    \"totalPages\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Browse All Active Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/marketplace/services?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "marketplace", "services"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lists all active marketplace services with pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Global Multi-Entity Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/search?q=branding&type=services&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "branding"
+                },
+                {
+                  "key": "type",
+                  "value": "services"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Performs a global search across artists, portfolios, and services."
+          },
+          "response": []
+        },
+        {
+          "name": "Discover Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/discover/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "discover", "categories"]
+            },
+            "description": "Returns list of active portfolio categories with counts."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Featured Content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/marketplace/featured",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "marketplace", "featured"]
+            },
+            "description": "Returns featured artists and top-rated services."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Service (Artist)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"serviceId\", jsonData.id);",
+                  "    console.log(\"Saved serviceId: \" + jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{artistJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Custom Stellar DApp UI/UX Design System\",\n  \"description\": \"Comprehensive design system in Figma tailored for Soroban and Stellar decentralized applications.\",\n  \"category\": \"UI_UX\",\n  \"priceUsdc\": 250,\n  \"deliveryDays\": 7,\n  \"revisions\": 5,\n  \"features\": [\n    \"Complete Figma Source Files\",\n    \"Interactive Prototype\",\n    \"Component Library with Dark & Light Mode\",\n    \"Responsive Breakpoints\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/marketplace/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "marketplace", "services"]
+            },
+            "description": "Lists a new service in the marketplace (requires ARTIST role)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Commission Lifecycle",
+      "description": "Client creates commission request, artist accepts/submits work, client approves milestone.",
+      "item": [
+        {
+          "name": "Create Commission Request (Client)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set(\"commissionId\", jsonData.id);",
+                  "    console.log(\"Saved commissionId: \" + jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{clientJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"artistId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"serviceId\": \"{{serviceId}}\",\n  \"title\": \"Branding Package for Stellar Aid Hub\",\n  \"description\": \"Design vector logo, typography guidelines, and social media banner templates.\",\n  \"budgetUsdc\": 200,\n  \"deadline\": \"2026-10-31T23:59:59.000Z\",\n  \"attachments\": [\n    \"https://storage.lumora.io/briefs/project_brief.pdf\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/commissions",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "commissions"]
+            },
+            "description": "Client initiates a new commission request with budget and deadline."
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Commission (Artist)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{artistJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/commissions/{{commissionId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "commissions", "{{commissionId}}", "accept"]
+            },
+            "description": "Artist accepts the commission request, moving status to ACCEPTED."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Deliverables (Artist)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{artistJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deliverableUrl\": \"https://storage.lumora.io/deliverables/final_assets.zip\",\n  \"notes\": \"All vector SVG files and export presets are included in the archive.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/commissions/{{commissionId}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "commissions", "{{commissionId}}", "submit"]
+            },
+            "description": "Artist submits completed deliverables for client review (moves to SUBMITTED)."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Commission (Client)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{clientJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/commissions/{{commissionId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "commissions", "{{commissionId}}", "approve"]
+            },
+            "description": "Client approves the work. Commission status changes to COMPLETED, enabling payment release."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Stellar Payments & Escrow Flow",
+      "description": "3-Step On-Chain Escrow Lifecycle: Initiate Escrow -> Submit Signed XDR -> Release Escrow.",
+      "item": [
+        {
+          "name": "Step 1: Initiate Escrow (Build Unsigned XDR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.paymentId) {",
+                  "    pm.environment.set(\"paymentId\", jsonData.paymentId);",
+                  "    console.log(\"Saved paymentId: \" + jsonData.paymentId);",
+                  "}",
+                  "if (jsonData.unsignedXdr) {",
+                  "    pm.environment.set(\"unsignedXdr\", jsonData.unsignedXdr);",
+                  "    console.log(\"Saved unsignedXdr to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientWallet\": \"{{clientWallet}}\",\n  \"amount\": 200,\n  \"assetCode\": \"XLM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/payments/commissions/{{commissionId}}/escrow",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "payments", "commissions", "{{commissionId}}", "escrow"]
+            },
+            "description": "Builds the unsigned Soroban create_escrow transaction XDR and creates a PENDING payment record. Platform calculates 2% fee."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"paymentId\": \"pay-1234-abcd\",\n  \"unsignedXdr\": \"AAAAAgAAAA...\",\n  \"amount\": 200,\n  \"assetCode\": \"XLM\",\n  \"platformFee\": 4.0\n}"
+            }
+          ]
+        },
+        {
+          "name": "Step 2: Confirm Payment (Submit Signed XDR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"signedXdr\": \"{{signedXdr}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/payments/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "payments", "confirm"]
+            },
+            "description": "Submits the client's signed transaction XDR to the Stellar Horizon / Soroban network. Once confirmed on-chain, updates payment to CONFIRMED and moves commission to IN_PROGRESS."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"paymentId\": \"pay-1234-abcd\",\n  \"txHash\": \"5e6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123\",\n  \"status\": \"CONFIRMED\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Step 3: Release Payment to Artist",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/payments/commissions/{{commissionId}}/release",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "payments", "commissions", "{{commissionId}}", "release"]
+            },
+            "description": "Triggered when a commission is COMPLETED. Invokes Soroban release_payment on-chain, transferring the net amount to the artist wallet and platform fee to the platform wallet."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"paymentId\": \"pay-1234-abcd\",\n  \"txHash\": \"8f90abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567\",\n  \"status\": \"RELEASED\",\n  \"netAmount\": 196.0,\n  \"assetCode\": \"XLM\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Admin & Dispute Resolution",
+      "description": "Admin dispute resolution for escrow payments (Refund, Release, Partial Split), verification, and audit logs.",
+      "item": [
+        {
+          "name": "Resolve Dispute - Refund to Client",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution\": \"REFUND\",\n  \"notes\": \"Artist was unresponsive for 14 days after project deadline.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/admin/commissions/{{commissionId}}/resolve-dispute",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "admin", "commissions", "{{commissionId}}", "resolve-dispute"]
+            },
+            "description": "Admin resolves dispute by executing refund_payment on-chain back to the client wallet."
+          },
+          "response": []
+        },
+        {
+          "name": "Resolve Dispute - Partial Split",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolution\": \"PARTIAL\",\n  \"artistShareBps\": 6000,\n  \"notes\": \"Artist completed milestone 1 (60% work). Remaining 40% refunded to client.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/admin/commissions/{{commissionId}}/resolve-dispute",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "admin", "commissions", "{{commissionId}}", "resolve-dispute"]
+            },
+            "description": "Admin splits escrow funds based on artistShareBps (6000 bps = 60%)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminJwtToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/admin/audit-logs?page=1&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "admin", "audit-logs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                }
+              ]
+            },
+            "description": "Fetches system audit logs with pagination and filters."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. System Health",
+      "description": "Check database and Redis connection status.",
+      "item": [
+        {
+          "name": "Check Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiVersion}}", "health"]
+            },
+            "description": "Returns connection status of PostgreSQL database and Redis cluster."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"ok\",\n  \"timestamp\": \"2026-08-25T22:45:00.000Z\",\n  \"services\": {\n    \"database\": \"up\",\n    \"redis\": \"up\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,10 @@ import { ProjectsModule } from './projects/projects.module';
 import { ServiceCategoriesModule } from './service-categories/service-categories.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PaginationModule } from './common/pagination/pagination.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { MessagingModule } from './messaging/messaging.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
@@ -56,6 +60,10 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     ServiceCategoriesModule,
     PromotionsModule,
     PaginationModule,
+    PortfolioModule,
+    ReviewsModule,
+    MessagingModule,
+    NotificationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

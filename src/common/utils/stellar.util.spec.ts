@@ -1,3 +1,4 @@
+import { Keypair } from '@stellar/stellar-sdk';
 import {
   isValidStellarPublicKey,
   isValidStellarSecretKey,
@@ -7,10 +8,11 @@ import {
 } from './stellar.util';
 
 describe('StellarUtil', () => {
-  const validPublicKey = 'GBDEVU63Y6NTHJQQZIKVTC23NWLQVP3WJ2RI2OTSITOUsO2C72GJGDOL'.replace('s', 'S'); // Valid G... public key
-  const validKey = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7';
-  const validSecretKey = 'SDAXWYSWVQ3HNLNPJ2G5ZRF2TY43QL2R45HUP26PYF4B5LNLZ7K7BJJT';
-  const validHash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  const keypair = Keypair.random();
+  const validKey = keypair.publicKey();
+  const validSecretKey = keypair.secret();
+  const validHash =
+    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
   describe('isValidStellarPublicKey', () => {
     it('should return true for a valid Stellar ed25519 public key', () => {
@@ -51,15 +53,17 @@ describe('StellarUtil', () => {
   });
 
   describe('formatStellarAddress & maskWalletAddress', () => {
+    const abbreviated = `${validKey.slice(0, 4)}...${validKey.slice(-4)}`;
+
     it('should format address with first and last 4 characters', () => {
       const formatted = formatStellarAddress(validKey, 4);
-      expect(formatted).toBe('GAAZ...CWN7');
+      expect(formatted).toBe(abbreviated);
     });
 
     it('should handle short strings or invalid inputs', () => {
       expect(formatStellarAddress('')).toBe('');
       expect(formatStellarAddress('SHORT')).toBe('SHORT');
-      expect(maskWalletAddress(validKey)).toBe('GAAZ...CWN7');
+      expect(maskWalletAddress(validKey)).toBe(abbreviated);
     });
   });
 });

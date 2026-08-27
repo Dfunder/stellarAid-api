@@ -1,14 +1,14 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import type Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
 
 @ApiTags('Health')
 @Controller({ version: '1', path: 'health' })
 export class HealthController {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly redisService: RedisService,
+    @Inject('RedisClient') private readonly redisClient: Redis,
   ) {}
 
   @Get()
@@ -21,16 +21,16 @@ export class HealthController {
     try {
       await this.prismaService.$queryRaw`SELECT 1`;
       dbStatus = 'up';
-    } catch (e) {
+    } catch {
       dbStatus = 'down';
     }
 
     try {
-      const ping = await this.redisService.ping();
+      const ping = await this.redisClient.ping();
       if (ping === 'PONG' || ping) {
         redisStatus = 'up';
       }
-    } catch (e) {
+    } catch {
       redisStatus = 'down';
     }
 

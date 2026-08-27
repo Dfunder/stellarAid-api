@@ -1,14 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prisma: PrismaService;
-  let redis: RedisService;
 
   const mockPrismaService = {
     user: {
@@ -18,11 +15,13 @@ describe('AuthService', () => {
     },
   };
 
-  const mockRedisService = {
+  const mockRedisClient = {
     set: jest.fn(),
     get: jest.fn(),
     del: jest.fn(),
   };
+
+  const mockUsersService = {};
 
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
@@ -33,14 +32,13 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
-        { provide: RedisService, useValue: mockRedisService },
+        { provide: UsersService, useValue: mockUsersService },
+        { provide: 'RedisClient', useValue: mockRedisClient },
         { provide: JwtService, useValue: mockJwtService },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prisma = module.get<PrismaService>(PrismaService);
-    redis = module.get<RedisService>(RedisService);
   });
 
   it('should be defined', () => {

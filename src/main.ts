@@ -2,23 +2,39 @@ import { NestFactory } from '@nestjs/core';
 import { VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WinstonModule } from 'nest-winston';
+import compression from 'compression';
 import helmet from 'helmet';
 import { format, transports } from 'winston';
 import { AppModule } from './app.module';
+import { getCompressionSettings } from './config/compression.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { createValidationPipe } from './common/validation/validation.pipe';
+import {
+  getRequestId,
+  requestIdMiddleware,
+} from './common/request-context/request-context';
+
+/**
+ * Winston format that stamps every log entry emitted while a request is
+ * being handled with that request's id, so logs correlate end-to-end.
+ */
+const withRequestId = format((info) => {
+  const requestId = getRequestId();
+  if (requestId) {
+    info.requestId = requestId;
+  }
+  return info;
+})();
 
 async function bootstrap() {
   const isProduction = process.env.NODE_ENV === 'production';
   const logger = WinstonModule.createLogger({
     level: isProduction ? 'info' : 'debug',
     format: isProduction
-      ? format.combine(format.timestamp(), format.json())
-      : format.combine(format.timestamp(), format.simple()),
+      ? format.combine(withRequestId, format.timestamp(), format.json())
+      : format.combine(withRequestId, format.timestamp(), format.simple()),
     transports: [
-      new transports.Console({
-        stream: process.stdout,
-      }),
+      new transports.Console(),
     ],
   });
   const app = await NestFactory.create(AppModule, { logger });
@@ -28,6 +44,16 @@ async function bootstrap() {
     type: VersioningType.URI,
     defaultVersion: '1',
   });
+
+  // Assign/propagate a unique request id (X-Request-Id) for every request.
+  app.use(requestIdMiddleware);
+
+  // Compress responses (gzip/deflate); settings vary per environment.
+  const { enabled: compressionEnabled, options: compressionOptions } =
+    getCompressionSettings();
+  if (compressionEnabled) {
+    app.use(compression(compressionOptions));
+  }
 
   // Set secure HTTP response headers (CSP, HSTS, X-Frame-Options, etc.).
   app.use(helmet());
@@ -50,9 +76,10 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.NEXT_PUBLIC_FRONTEND_URL,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'If-None-Match'],
+    exposedHeaders: ['ETag', 'X-Request-Id'],
   });
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

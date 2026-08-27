@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -54,8 +55,8 @@ export class CreateServiceDto {
   })
   @IsArray()
   @IsString({ each: true })
-  @Transform(({ value }) =>
-    Array.isArray(value) ? value.map((item) => item.trim()) : value,
+  @Transform(({ value }: { value: unknown }) =>
+    Array.isArray(value) ? value.map((item: string) => item.trim()) : value,
   )
   features: string[];
 

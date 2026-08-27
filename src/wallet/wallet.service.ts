@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+} from '@nestjs/common';
 import { isValidStellarPublicKey } from '../common/utils';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConnectWalletDto } from './dto';

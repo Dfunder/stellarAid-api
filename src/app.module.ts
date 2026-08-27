@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import Redis from 'ioredis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -15,7 +15,6 @@ import { CommissionsModule } from './commissions/commissions.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WalletModule } from './wallet/wallet.module';
 import { SearchModule } from './search/search.module';
-import { validate } from './config/env.validation';
 import { DiscoverModule } from './discover/discover.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { QueryModule } from './common/query/query.module';
@@ -39,6 +38,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
 import { decodeJwt } from './common/throttling/rate-limit.decorator';
+import { RequestLoggerInterceptor } from './common/logging/request-logger.interceptor';
+import { ETagInterceptor } from './common/http/etag.interceptor';
 
 @Module({
   imports: [
@@ -49,8 +50,11 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
       useFactory: (redis: Redis) => ({
         throttlers: [{ ttl: 60000, limit: 100 }],
         storage: new RedisThrottlerStorage(redis),
-        getTracker: (req) =>
-          req.user?.sub || decodeJwt(req.headers.authorization)?.sub || req.ip,
+        getTracker: (req) => {
+          const user = req.user as { sub?: string } | undefined;
+          const headers = req.headers as { authorization?: string } | undefined;
+          return user?.sub ?? decodeJwt(headers?.authorization)?.sub ?? (req.ip as string);
+        },
       }),
     }),
     PrismaModule,
@@ -87,6 +91,8 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ETagInterceptor },
   ],
 })
 export class AppModule {}

@@ -20,6 +20,10 @@ import { DiscoverModule } from './discover/discover.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { QueryModule } from './common/query/query.module';
 import { VersioningModule } from './versioning/versioning.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { MessagingModule } from './messaging/messaging.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
@@ -52,6 +56,10 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     AnalyticsModule,
     QueryModule,
     VersioningModule,
+    PortfolioModule,
+    ReviewsModule,
+    MessagingModule,
+    NotificationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

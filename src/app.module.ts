@@ -18,6 +18,9 @@ import { SearchModule } from './search/search.module';
 import { validate } from './config/env.validation';
 import { DiscoverModule } from './discover/discover.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { CommissionRequestsModule } from './commission-requests/commission-requests.module';
 
 import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
@@ -48,6 +51,9 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     SearchModule,
     DiscoverModule,
     AnalyticsModule,
+    CatalogModule,
+    FavoritesModule,
+    CommissionRequestsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

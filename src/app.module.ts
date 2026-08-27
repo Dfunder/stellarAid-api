@@ -22,6 +22,10 @@ import { ProfileModule } from './profile/profile.module';
 import { DisputesModule } from './disputes/disputes.module';
 import { EscrowModule } from './escrow/escrow.module';
 import { VerificationModule } from './verification/verification.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { MessagingModule } from './messaging/messaging.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
@@ -56,6 +60,10 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     DisputesModule,
     EscrowModule,
     VerificationModule,
+    PortfolioModule,
+    ReviewsModule,
+    MessagingModule,
+    NotificationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

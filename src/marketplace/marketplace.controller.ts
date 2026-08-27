@@ -22,6 +22,11 @@ import { MarketplaceService } from './marketplace.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { SearchServicesDto } from './dto/search-services.dto';
+import {
+  BulkCreateServicesDto,
+  BulkDeleteServicesDto,
+  BulkUpdateServicesDto,
+} from './dto/bulk-operations.dto';
 import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
 
 @ApiTags('marketplace')
@@ -58,6 +63,58 @@ export class MarketplaceController {
     @Query('limit') limit?: number,
   ) {
     return this.marketplaceService.findAllActive(page, limit);
+  }
+
+  @Post('services/bulk')
+  @Roles(Role.ARTIST)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Bulk create services (artist only)' })
+  @ApiResponse({ status: 201, description: 'Bulk operation summary' })
+  @ApiResponse({ status: 403, description: 'Not an artist' })
+  async bulkCreateServices(
+    @CurrentUser() user: { sub: string },
+    @Body() dto: BulkCreateServicesDto,
+  ) {
+    return this.marketplaceService.bulkCreateServices(user.sub, dto);
+  }
+
+  @Patch('services/bulk')
+  @Roles(Role.ARTIST)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Bulk update owned services (artist only)' })
+  @ApiResponse({ status: 200, description: 'Bulk operation summary' })
+  @ApiResponse({ status: 403, description: 'Not an artist' })
+  async bulkUpdateServices(
+    @CurrentUser() user: { sub: string },
+    @Body() dto: BulkUpdateServicesDto,
+  ) {
+    return this.marketplaceService.bulkUpdateServices(user.sub, dto);
+  }
+
+  @Delete('services/bulk')
+  @Roles(Role.ARTIST)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Bulk delete owned services (requires confirm: true)',
+  })
+  @ApiResponse({ status: 200, description: 'Bulk operation summary' })
+  @ApiResponse({ status: 400, description: 'Missing deletion confirmation' })
+  @ApiResponse({ status: 403, description: 'Not an artist' })
+  async bulkDeleteServices(
+    @CurrentUser() user: { sub: string },
+    @Body() dto: BulkDeleteServicesDto,
+  ) {
+    return this.marketplaceService.bulkDeleteServices(user.sub, dto);
+  }
+
+  @Get('services/bulk-operations/:operationId')
+  @Roles(Role.ARTIST)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get the status of a bulk operation' })
+  @ApiResponse({ status: 200, description: 'Bulk operation summary' })
+  @ApiResponse({ status: 404, description: 'Operation not found or expired' })
+  async getBulkOperation(@Param('operationId') operationId: string) {
+    return this.marketplaceService.getBulkOperation(operationId);
   }
 
   @Public()

@@ -77,6 +77,8 @@ model Artist {
   coverPhotoUrl     String?
   /// Array of creative skills, software proficiencies, and tags
   skills            String[]
+  /// Free-text location / region used for marketplace location filtering
+  location          String?
   /// Verification badge status granted by platform administrators
   isVerified        Boolean     @default(false)
   /// Timestamp when artist was officially verified
@@ -87,6 +89,12 @@ model Artist {
   totalReviews      Int         @default(0)
   /// Cumulative USDC revenue earned across completed commissions
   totalEarningsUsdc Decimal     @default(0)
+  /// Social media / external profile links (e.g. { twitter, instagram, website })
+  socialLinks       Json?
+  /// Profile visibility: true = publicly discoverable, false = hidden
+  isProfilePublic   Boolean     @default(true)
+  /// Computed reputation trust score (0-100)
+  trustScore        Int         @default(0)
   /// Timestamp when artist profile was created
   createdAt         DateTime    @default(now())
 
@@ -98,6 +106,8 @@ model Artist {
   commissions       Commission[]
   /// Reviews received for completed work
   reviews           Review[]
+  /// Verification requests submitted by this artist
+  verificationRequests VerificationRequest[]
 }
 
 /// User authorization roles governing platform permissions and endpoint access.
@@ -261,6 +271,8 @@ model Service {
   serviceCategory ServiceCategory? @relation(fields: [categoryId], references: [id])
   /// Promotion / featured campaigns for this service
   promotions   Promotion[]
+  /// Users who have favourited this service
+  favorites    Favorite[]
 }
 
 // ----------------------------------------------------------------------------
@@ -295,6 +307,12 @@ model Commission {
   status        CommissionStatus @default(PENDING)
   /// URLs of reference files, project briefs, or submitted deliverables
   attachments   String[]
+  /// Target delivery date for the commissioned work
+  deliveryDueAt DateTime?
+  /// When the artist marked the work delivered
+  deliveredAt   DateTime?
+  /// When the client verified/accepted delivery
+  deliveryVerifiedAt DateTime?
   /// Timestamp when commission proposal was submitted
   createdAt     DateTime         @default(now())
   /// Timestamp when commission status or data was last updated
@@ -308,6 +326,14 @@ model Commission {
   review        Review?
   /// Associated direct messaging channels
   conversations Conversation[]
+  /// Revision requests raised against submitted work
+  revisionRequests CommissionRevision[]
+  /// Completion checklist items
+  checklist     CommissionChecklistItem[]
+  /// Disputes filed against this commission
+  disputes      Dispute[]
+  /// Escrow holdings backing this commission
+  escrows       Escrow[]
 }
 
 /// Status lifecycle for commissions.
@@ -603,63 +629,275 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 // ----------------------------------------------------------------------------
-// Service Category & Promotion Models (#608, #609)
+// Search, Favorites & Commission-Request Models (#603, #605, #606)
 // ----------------------------------------------------------------------------
 
-/// Hierarchical marketplace category taxonomy (#608).
-model ServiceCategory {
+/// A user's saved marketplace search (filter set) for quick re-run (#603).
+model SavedSearch {
   /// Unique identifier (UUID v4)
-  id          String            @id @default(uuid())
-  /// Display name
-  name        String
-  /// URL-safe unique slug
-  slug        String            @unique
-  /// Optional description
-  description String?
-  /// Category tags for cross-cutting grouping
-  tags        String[]
-  /// Optional parent category id for subcategory hierarchy
-  parentId    String?
-  /// Parent category relation
-  parent      ServiceCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  /// Child subcategories
-  children    ServiceCategory[] @relation("CategoryHierarchy")
-  /// Services classified under this category
-  services    Service[]
+  id        String   @id @default(uuid())
+  /// Owning user id
+  userId    String
+  /// Human label for the saved search
+  name      String
+  /// Serialized filter/sort parameters
+  query     Json
   /// Creation timestamp
-  createdAt   DateTime          @default(now())
+  createdAt DateTime @default(now())
 
-  @@index([parentId])
+  @@index([userId])
 }
 
-/// Promotion tier controlling featured placement weight (#609).
-enum PromotionTier {
-  STANDARD
-  PREMIUM
-  SPOTLIGHT
-}
-
-/// A paid/scheduled promotion that features a service (#609).
-model Promotion {
+/// Recorded search term for analytics and ranking (#603).
+model SearchQuery {
   /// Unique identifier (UUID v4)
-  id             String        @id @default(uuid())
-  /// Promoted service
-  serviceId      String
+  id          String   @id @default(uuid())
+  /// Normalised search term
+  term        String
+  /// Optional user id that issued the search
+  userId      String?
+  /// Number of results returned
+  resultCount Int      @default(0)
+  /// Creation timestamp
+  createdAt   DateTime @default(now())
+
+  @@index([term])
+}
+
+/// A service a user has favourited / wishlisted (#605).
+model Favorite {
+  /// Unique identifier (UUID v4)
+  id                  String   @id @default(uuid())
+  /// Owning user id
+  userId              String
+  /// Favourited service
+  serviceId           String
   /// Relational reference to Service model
-  service        Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  /// Placement tier
-  tier           PromotionTier @default(STANDARD)
-  /// Window start
-  startsAt       DateTime
-  /// Window end
-  endsAt         DateTime
-  /// Manual active toggle (in addition to the time window)
-  isActive       Boolean       @default(true)
-  /// Amount paid for the promotion in USDC
-  amountPaidUsdc Decimal       @default(0)
+  service             Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  /// Service price captured at favourite time (for price-drop alerts)
+  priceAtFavoriteUsdc Decimal
   /// Creation timestamp
-  createdAt      DateTime      @default(now())
+  createdAt           DateTime @default(now())
 
+  @@unique([userId, serviceId])
   @@index([serviceId])
-  @@index([isActive, startsAt, endsAt])
+}
+
+/// Status of a commission revision request (#606).
+enum CommissionRevisionStatus {
+  REQUESTED
+  ADDRESSED
+}
+
+/// A revision request with client feedback against a commission (#606).
+model CommissionRevision {
+  /// Unique identifier (UUID v4)
+  id            String                   @id @default(uuid())
+  /// Parent commission
+  commissionId  String
+  /// Relational reference to Commission model
+  commission    Commission               @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  /// User id that requested the revision
+  requestedById String
+  /// Revision feedback / change request text
+  feedback      String
+  /// Current revision state
+  status        CommissionRevisionStatus @default(REQUESTED)
+  /// Creation timestamp
+  createdAt     DateTime                 @default(now())
+
+  @@index([commissionId])
+}
+
+/// A completion-checklist item on a commission (#606).
+model CommissionChecklistItem {
+  /// Unique identifier (UUID v4)
+  id           String     @id @default(uuid())
+  /// Parent commission
+  commissionId String
+  /// Relational reference to Commission model
+  commission   Commission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  /// Checklist item label
+  label        String
+  /// Whether the item is completed
+  isDone       Boolean    @default(false)
+  /// Creation timestamp
+  createdAt    DateTime   @default(now())
+
+  @@index([commissionId])
+// Dispute Resolution Models (#600)
+// ----------------------------------------------------------------------------
+
+/// Lifecycle state of a commission dispute.
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+  APPEALED
+  CLOSED
+}
+
+/// Outcome applied when a dispute is resolved.
+enum DisputeResolution {
+  NONE
+  REFUND_CLIENT
+  RELEASE_ARTIST
+  SPLIT
+}
+
+/// A formal dispute raised against a commission, reviewed by administrators.
+model Dispute {
+  /// Unique identifier (UUID v4)
+  id             String            @id @default(uuid())
+  /// Foreign key referencing the disputed Commission
+  commissionId   String
+  /// Relational reference to Commission model
+  commission     Commission        @relation(fields: [commissionId], references: [id])
+  /// User id that filed the dispute
+  filedById      String
+  /// User id of the counter-party
+  againstId      String
+  /// Reason / description supplied by the filer
+  reason         String
+  /// Current dispute state
+  status         DisputeStatus     @default(OPEN)
+  /// Applied resolution outcome
+  resolution     DisputeResolution @default(NONE)
+  /// Administrator's resolution note
+  resolutionNote String?
+  /// Evidence attachment URLs
+  evidence       String[]
+  /// Administrator user id that reviewed the dispute
+  reviewedById   String?
+  /// When the dispute was resolved
+  resolvedAt     DateTime?
+  /// Appeal justification (if reopened)
+  appealNote     String?
+  /// When an appeal was filed
+  appealedAt     DateTime?
+  /// Creation timestamp
+  createdAt      DateTime          @default(now())
+  /// Last update timestamp
+  updatedAt      DateTime          @updatedAt
+
+  @@index([commissionId])
+  @@index([status])
+}
+
+// ----------------------------------------------------------------------------
+// Escrow Management Models (#601)
+// ----------------------------------------------------------------------------
+
+/// Lifecycle state of an escrow holding.
+enum EscrowStatus {
+  HELD
+  RELEASED
+  REFUNDED
+  DISPUTED
+  PARTIALLY_RELEASED
+}
+
+/// Tracks funds held in escrow for a commission / milestone.
+model Escrow {
+  /// Unique identifier (UUID v4)
+  id           String        @id @default(uuid())
+  /// Foreign key referencing the backing Commission
+  commissionId String
+  /// Relational reference to Commission model
+  commission   Commission    @relation(fields: [commissionId], references: [id])
+  /// Optional milestone this escrow is scoped to
+  milestoneId  String?
+  /// USDC amount held in escrow
+  amountUsdc   Decimal
+  /// Current escrow state
+  status       EscrowStatus  @default(HELD)
+  /// Stellar transaction hash of the on-chain hold, if any
+  txHash       String?
+  /// When funds were placed in escrow
+  heldAt       DateTime      @default(now())
+  /// When funds were released to the artist
+  releasedAt   DateTime?
+  /// When funds were refunded to the client
+  refundedAt   DateTime?
+  /// Creation timestamp
+  createdAt    DateTime      @default(now())
+  /// Last update timestamp
+  updatedAt    DateTime      @updatedAt
+
+  /// Immutable audit trail of escrow state transitions
+  events       EscrowEvent[]
+
+  @@index([commissionId])
+  @@index([status])
+}
+
+/// Append-only audit record for every escrow state transition.
+model EscrowEvent {
+  /// Unique identifier (UUID v4)
+  id        String   @id @default(uuid())
+  /// Foreign key referencing the parent Escrow (cascade on delete)
+  escrowId  String
+  /// Relational reference to Escrow model
+  escrow    Escrow   @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  /// Action performed (HOLD, RELEASE, REFUND, DISPUTE_HOLD, ...)
+  action    String
+  /// Optional contextual note
+  note      String?
+  /// User id that triggered the action
+  actorId   String?
+  /// Timestamp of the event
+  createdAt DateTime @default(now())
+
+  @@index([escrowId])
+}
+
+// ----------------------------------------------------------------------------
+// Reputation & Verification Models (#602)
+// ----------------------------------------------------------------------------
+
+/// The kind of verification being requested.
+enum VerificationType {
+  EMAIL
+  IDENTITY
+  PORTFOLIO
+}
+
+/// Lifecycle state of a verification request.
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+/// An artist's request for a specific type of platform verification.
+model VerificationRequest {
+  /// Unique identifier (UUID v4)
+  id           String             @id @default(uuid())
+  /// Foreign key referencing the requesting Artist
+  artistId     String
+  /// Relational reference to Artist model
+  artist       Artist             @relation(fields: [artistId], references: [id])
+  /// Kind of verification requested
+  type         VerificationType
+  /// Current request state
+  status       VerificationStatus @default(PENDING)
+  /// Supporting document / evidence URLs
+  evidence     String[]
+  /// Administrator review note
+  reviewNote   String?
+  /// Administrator user id that reviewed the request
+  reviewedById String?
+  /// When the request was approved
+  approvedAt   DateTime?
+  /// When the verification expires and must be renewed
+  expiresAt    DateTime?
+  /// Creation timestamp
+  createdAt    DateTime           @default(now())
+  /// Last update timestamp
+  updatedAt    DateTime           @updatedAt
+
+  @@index([artistId, type])
+  @@index([status])
 }

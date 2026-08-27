@@ -22,6 +22,13 @@ import { ProjectsModule } from './projects/projects.module';
 import { ServiceCategoriesModule } from './service-categories/service-categories.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { PaginationModule } from './common/pagination/pagination.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { CommissionRequestsModule } from './commission-requests/commission-requests.module';
+import { ProfileModule } from './profile/profile.module';
+import { DisputesModule } from './disputes/disputes.module';
+import { EscrowModule } from './escrow/escrow.module';
+import { VerificationModule } from './verification/verification.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { MessagingModule } from './messaging/messaging.module';
@@ -60,6 +67,13 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     ServiceCategoriesModule,
     PromotionsModule,
     PaginationModule,
+    CatalogModule,
+    FavoritesModule,
+    CommissionRequestsModule,
+    ProfileModule,
+    DisputesModule,
+    EscrowModule,
+    VerificationModule,
     PortfolioModule,
     ReviewsModule,
     MessagingModule,

@@ -77,6 +77,8 @@ model Artist {
   coverPhotoUrl     String?
   /// Array of creative skills, software proficiencies, and tags
   skills            String[]
+  /// Free-text location / region used for marketplace location filtering
+  location          String?
   /// Verification badge status granted by platform administrators
   isVerified        Boolean     @default(false)
   /// Timestamp when artist was officially verified
@@ -263,6 +265,8 @@ model Service {
 
   /// Commissions ordered directly from this service template
   commissions  Commission[]
+  /// Users who have favourited this service
+  favorites    Favorite[]
 }
 
 // ----------------------------------------------------------------------------
@@ -297,6 +301,12 @@ model Commission {
   status        CommissionStatus @default(PENDING)
   /// URLs of reference files, project briefs, or submitted deliverables
   attachments   String[]
+  /// Target delivery date for the commissioned work
+  deliveryDueAt DateTime?
+  /// When the artist marked the work delivered
+  deliveredAt   DateTime?
+  /// When the client verified/accepted delivery
+  deliveryVerifiedAt DateTime?
   /// Timestamp when commission proposal was submitted
   createdAt     DateTime         @default(now())
   /// Timestamp when commission status or data was last updated
@@ -310,6 +320,10 @@ model Commission {
   review        Review?
   /// Associated direct messaging channels
   conversations Conversation[]
+  /// Revision requests raised against submitted work
+  revisionRequests CommissionRevision[]
+  /// Completion checklist items
+  checklist     CommissionChecklistItem[]
   /// Disputes filed against this commission
   disputes      Dispute[]
   /// Escrow holdings backing this commission
@@ -609,6 +623,102 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 // ----------------------------------------------------------------------------
+// Search, Favorites & Commission-Request Models (#603, #605, #606)
+// ----------------------------------------------------------------------------
+
+/// A user's saved marketplace search (filter set) for quick re-run (#603).
+model SavedSearch {
+  /// Unique identifier (UUID v4)
+  id        String   @id @default(uuid())
+  /// Owning user id
+  userId    String
+  /// Human label for the saved search
+  name      String
+  /// Serialized filter/sort parameters
+  query     Json
+  /// Creation timestamp
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Recorded search term for analytics and ranking (#603).
+model SearchQuery {
+  /// Unique identifier (UUID v4)
+  id          String   @id @default(uuid())
+  /// Normalised search term
+  term        String
+  /// Optional user id that issued the search
+  userId      String?
+  /// Number of results returned
+  resultCount Int      @default(0)
+  /// Creation timestamp
+  createdAt   DateTime @default(now())
+
+  @@index([term])
+}
+
+/// A service a user has favourited / wishlisted (#605).
+model Favorite {
+  /// Unique identifier (UUID v4)
+  id                  String   @id @default(uuid())
+  /// Owning user id
+  userId              String
+  /// Favourited service
+  serviceId           String
+  /// Relational reference to Service model
+  service             Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  /// Service price captured at favourite time (for price-drop alerts)
+  priceAtFavoriteUsdc Decimal
+  /// Creation timestamp
+  createdAt           DateTime @default(now())
+
+  @@unique([userId, serviceId])
+  @@index([serviceId])
+}
+
+/// Status of a commission revision request (#606).
+enum CommissionRevisionStatus {
+  REQUESTED
+  ADDRESSED
+}
+
+/// A revision request with client feedback against a commission (#606).
+model CommissionRevision {
+  /// Unique identifier (UUID v4)
+  id            String                   @id @default(uuid())
+  /// Parent commission
+  commissionId  String
+  /// Relational reference to Commission model
+  commission    Commission               @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  /// User id that requested the revision
+  requestedById String
+  /// Revision feedback / change request text
+  feedback      String
+  /// Current revision state
+  status        CommissionRevisionStatus @default(REQUESTED)
+  /// Creation timestamp
+  createdAt     DateTime                 @default(now())
+
+  @@index([commissionId])
+}
+
+/// A completion-checklist item on a commission (#606).
+model CommissionChecklistItem {
+  /// Unique identifier (UUID v4)
+  id           String     @id @default(uuid())
+  /// Parent commission
+  commissionId String
+  /// Relational reference to Commission model
+  commission   Commission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  /// Checklist item label
+  label        String
+  /// Whether the item is completed
+  isDone       Boolean    @default(false)
+  /// Creation timestamp
+  createdAt    DateTime   @default(now())
+
+  @@index([commissionId])
 // Dispute Resolution Models (#600)
 // ----------------------------------------------------------------------------
 

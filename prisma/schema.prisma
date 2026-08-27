@@ -248,6 +248,8 @@ model Service {
   description  String
   /// Category identifier matching portfolio or custom domain
   category     String
+  /// Optional link to the structured ServiceCategory taxonomy
+  categoryId   String?
   /// Fixed price in USDC currency
   priceUsdc    Decimal
   /// Promised turnaround time in calendar days
@@ -265,6 +267,10 @@ model Service {
 
   /// Commissions ordered directly from this service template
   commissions  Commission[]
+  /// Structured category taxonomy entry
+  serviceCategory ServiceCategory? @relation(fields: [categoryId], references: [id])
+  /// Promotion / featured campaigns for this service
+  promotions   Promotion[]
   /// Users who have favourited this service
   favorites    Favorite[]
 }

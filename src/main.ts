@@ -16,9 +16,7 @@ async function bootstrap() {
       ? format.combine(format.timestamp(), format.json())
       : format.combine(format.timestamp(), format.simple()),
     transports: [
-      new transports.Console({
-        stream: process.stdout,
-      }),
+      new transports.Console(),
     ],
   });
   const app = await NestFactory.create(AppModule, { logger });
@@ -55,4 +53,4 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

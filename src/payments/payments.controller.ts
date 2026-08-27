@@ -4,7 +4,7 @@ import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { InitiateEscrowDto } from './dto/initiate-escrow.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 @ApiTags('payments')
 @Controller({ version: '1', path: 'payments' })

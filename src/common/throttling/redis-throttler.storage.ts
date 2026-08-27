@@ -1,6 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
-import { ThrottlerStorage, ThrottlerStorageRecord } from '@nestjs/throttler';
+import { ThrottlerStorage } from '@nestjs/throttler';
+
+/** Result shape of a throttler increment (not re-exported by @nestjs/throttler v6). */
+type ThrottlerStorageRecord = Awaited<
+  ReturnType<ThrottlerStorage['increment']>
+>;
 
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage {

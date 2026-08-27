@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchDto, SearchType } from './dto';
 
-interface ArtistResult {
+export interface ArtistResult {
   id: string;
   name: string;
   bio: string | null;
@@ -13,7 +13,7 @@ interface ArtistResult {
   rank: number;
 }
 
-interface PortfolioResult {
+export interface PortfolioResult {
   id: string;
   title: string;
   description: string;
@@ -25,7 +25,7 @@ interface PortfolioResult {
   rank: number;
 }
 
-interface ServiceResult {
+export interface ServiceResult {
   id: string;
   title: string;
   description: string;

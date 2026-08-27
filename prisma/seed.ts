@@ -1,4 +1,4 @@
-import { PrismaClient, Role, UserStatus, PortfolioCategory } from '@prisma/client';
+import { PrismaClient, Role, UserStatus, PortfolioCategory, User, Artist } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +21,7 @@ async function main() {
   console.log(`Created Admin: ${admin.email}`);
 
   // 3 Artist Accounts with Portfolios
-  const artistUsers = [];
+  const artistUsers: Array<User & { artist: Artist | null }> = [];
   for (let i = 1; i <= 3; i++) {
     const artistUser = await prisma.user.upsert({
       where: { email: `artist${i}@stellaraid.com` },
@@ -60,7 +60,7 @@ async function main() {
   }
 
   // 3 Client Accounts
-  const clientUsers = [];
+  const clientUsers: User[] = [];
   for (let i = 1; i <= 3; i++) {
     const clientUser = await prisma.user.upsert({
       where: { email: `client${i}@stellaraid.com` },

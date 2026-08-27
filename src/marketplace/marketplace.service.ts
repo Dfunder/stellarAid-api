@@ -309,8 +309,8 @@ export class MarketplaceService {
       dto.maxPrice?.toString() ?? '',
       dto.deliveryDays?.toString() ?? '',
       dto.sortBy ?? '',
-      dto.offset?.toString() ?? '0',
-      dto.limit?.toString() ?? '10',
+      dto.page?.toString() ?? '1',
+      dto.limit?.toString() ?? '20',
     ];
     return parts.join(':');
   }

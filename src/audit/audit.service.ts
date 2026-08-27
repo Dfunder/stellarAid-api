@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuditLog, User, Artist, Role, UserStatus } from '@prisma/client';
+import { Prisma, AuditLog, Artist, Role, UserStatus, CommissionStatus } from '@prisma/client';
 import { paginate } from '../common/utils/pagination.util';
 
 @Injectable()
@@ -46,7 +46,7 @@ export class AuditService {
     page?: number | string,
     limit?: number | string,
   ) {
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (filters.userId) {
       where.userId = filters.userId;
@@ -57,13 +57,10 @@ export class AuditService {
     }
 
     if (filters.startDate || filters.endDate) {
-      where.createdAt = {};
-      if (filters.startDate) {
-        where.createdAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.createdAt.lte = filters.endDate;
-      }
+      where.createdAt = {
+        ...(filters.startDate ? { gte: filters.startDate } : {}),
+        ...(filters.endDate ? { lte: filters.endDate } : {}),
+      };
     }
 
     return paginate({
@@ -96,7 +93,7 @@ export class AuditService {
     page?: number | string,
     limit?: number | string,
   ) {
-    const where: any = {};
+    const where: Prisma.CommissionWhereInput = {};
     if (status) {
       where.status = status;
     }
@@ -124,11 +121,12 @@ export class AuditService {
   }
 
   async getAnalytics(from?: Date, to?: Date) {
-    const dateFilter: any = {};
+    const dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {};
     if (from || to) {
-      dateFilter.createdAt = {};
-      if (from) dateFilter.createdAt.gte = from;
-      if (to) dateFilter.createdAt.lte = to;
+      dateFilter.createdAt = {
+        ...(from ? { gte: from } : {}),
+        ...(to ? { lte: to } : {}),
+      };
     }
 
     const today = new Date();
@@ -149,7 +147,7 @@ export class AuditService {
       // Total artists
       this.prisma.artist.count({ where: dateFilter }),
       // Total clients
-      this.prisma.user.count({ where: { ...dateFilter, role: 'CLIENT' } }),
+      this.prisma.user.count({ where: { ...dateFilter, role: Role.CLIENT } }),
       // Total commissions
       this.prisma.commission.count({ where: dateFilter }),
       // Commissions grouped by status
@@ -164,7 +162,7 @@ export class AuditService {
         where: dateFilter,
       }),
       // Open disputes (DISPUTED status)
-      this.prisma.commission.count({ where: { ...dateFilter, status: 'DISPUTED' } }),
+      this.prisma.commission.count({ where: { ...dateFilter, status: CommissionStatus.DISPUTED } }),
       // New users created today
       this.prisma.user.count({
         where: {
@@ -217,7 +215,7 @@ export class AuditService {
     page?: number | string,
     limit?: number | string,
   ) {
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (filters.search) {
       where.OR = [
@@ -270,7 +268,7 @@ export class AuditService {
    * @param id - User ID
    * @param status - New user status
    */
-  async updateUserStatus(id: string, status: UserStatus): Promise<User> {
+  async updateUserStatus(id: string, status: UserStatus) {
     return this.prisma.user.update({
       where: { id },
       data: { status },

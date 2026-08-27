@@ -18,6 +18,10 @@ import { SearchModule } from './search/search.module';
 import { validate } from './config/env.validation';
 import { DiscoverModule } from './discover/discover.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { ProfileModule } from './profile/profile.module';
+import { DisputesModule } from './disputes/disputes.module';
+import { EscrowModule } from './escrow/escrow.module';
+import { VerificationModule } from './verification/verification.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { MessagingModule } from './messaging/messaging.module';
@@ -52,6 +56,10 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     SearchModule,
     DiscoverModule,
     AnalyticsModule,
+    ProfileModule,
+    DisputesModule,
+    EscrowModule,
+    VerificationModule,
     PortfolioModule,
     ReviewsModule,
     MessagingModule,

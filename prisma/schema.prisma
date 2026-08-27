@@ -238,6 +238,8 @@ model Service {
   description  String
   /// Category identifier matching portfolio or custom domain
   category     String
+  /// Optional link to the structured ServiceCategory taxonomy
+  categoryId   String?
   /// Fixed price in USDC currency
   priceUsdc    Decimal
   /// Promised turnaround time in calendar days
@@ -255,6 +257,10 @@ model Service {
 
   /// Commissions ordered directly from this service template
   commissions  Commission[]
+  /// Structured category taxonomy entry
+  serviceCategory ServiceCategory? @relation(fields: [categoryId], references: [id])
+  /// Promotion / featured campaigns for this service
+  promotions   Promotion[]
 }
 
 // ----------------------------------------------------------------------------
@@ -526,4 +532,65 @@ model AuditLog {
   ipAddress String?
   /// Timestamp when audit log was recorded
   createdAt DateTime @default(now())
+}
+// ----------------------------------------------------------------------------
+// Service Category & Promotion Models (#608, #609)
+// ----------------------------------------------------------------------------
+
+/// Hierarchical marketplace category taxonomy (#608).
+model ServiceCategory {
+  /// Unique identifier (UUID v4)
+  id          String            @id @default(uuid())
+  /// Display name
+  name        String
+  /// URL-safe unique slug
+  slug        String            @unique
+  /// Optional description
+  description String?
+  /// Category tags for cross-cutting grouping
+  tags        String[]
+  /// Optional parent category id for subcategory hierarchy
+  parentId    String?
+  /// Parent category relation
+  parent      ServiceCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  /// Child subcategories
+  children    ServiceCategory[] @relation("CategoryHierarchy")
+  /// Services classified under this category
+  services    Service[]
+  /// Creation timestamp
+  createdAt   DateTime          @default(now())
+
+  @@index([parentId])
+}
+
+/// Promotion tier controlling featured placement weight (#609).
+enum PromotionTier {
+  STANDARD
+  PREMIUM
+  SPOTLIGHT
+}
+
+/// A paid/scheduled promotion that features a service (#609).
+model Promotion {
+  /// Unique identifier (UUID v4)
+  id             String        @id @default(uuid())
+  /// Promoted service
+  serviceId      String
+  /// Relational reference to Service model
+  service        Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  /// Placement tier
+  tier           PromotionTier @default(STANDARD)
+  /// Window start
+  startsAt       DateTime
+  /// Window end
+  endsAt         DateTime
+  /// Manual active toggle (in addition to the time window)
+  isActive       Boolean       @default(true)
+  /// Amount paid for the promotion in USDC
+  amountPaidUsdc Decimal       @default(0)
+  /// Creation timestamp
+  createdAt      DateTime      @default(now())
+
+  @@index([serviceId])
+  @@index([isActive, startsAt, endsAt])
 }

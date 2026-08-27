@@ -26,6 +26,7 @@ import { HealthController } from './health/health.controller';
 import { RedisThrottlerStorage } from './common/throttling/redis-throttler.storage';
 import { decodeJwt } from './common/throttling/rate-limit.decorator';
 import { RequestLoggerInterceptor } from './common/logging/request-logger.interceptor';
+import { ETagInterceptor } from './common/http/etag.interceptor';
 
 @Module({
   imports: [
@@ -36,8 +37,11 @@ import { RequestLoggerInterceptor } from './common/logging/request-logger.interc
       useFactory: (redis: Redis) => ({
         throttlers: [{ ttl: 60000, limit: 100 }],
         storage: new RedisThrottlerStorage(redis),
-        getTracker: (req) =>
-          req.user?.sub || decodeJwt(req.headers.authorization)?.sub || req.ip,
+        getTracker: (req) => {
+          const user = req.user as { sub?: string } | undefined;
+          const headers = req.headers as { authorization?: string } | undefined;
+          return user?.sub ?? decodeJwt(headers?.authorization)?.sub ?? (req.ip as string);
+        },
       }),
     }),
     PrismaModule,
@@ -62,6 +66,7 @@ import { RequestLoggerInterceptor } from './common/logging/request-logger.interc
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ETagInterceptor },
   ],
 })
 export class AppModule {}

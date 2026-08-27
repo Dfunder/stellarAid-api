@@ -5,6 +5,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { getRequestId } from '../request-context/request-context';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -22,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       errorResponse !== null &&
       'message' in errorResponse
     ) {
-      message = (errorResponse as any).message;
+      message = (errorResponse as { message: string | string[] }).message;
     } else {
       message = errorResponse as string | string[];
     }
@@ -31,6 +32,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message: message,
       error: exception.name,
+      requestId: getRequestId(),
       timestamp: new Date().toISOString(),
       path: request.url,
     });

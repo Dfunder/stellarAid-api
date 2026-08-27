@@ -89,6 +89,12 @@ model Artist {
   totalReviews      Int         @default(0)
   /// Cumulative USDC revenue earned across completed commissions
   totalEarningsUsdc Decimal     @default(0)
+  /// Social media / external profile links (e.g. { twitter, instagram, website })
+  socialLinks       Json?
+  /// Profile visibility: true = publicly discoverable, false = hidden
+  isProfilePublic   Boolean     @default(true)
+  /// Computed reputation trust score (0-100)
+  trustScore        Int         @default(0)
   /// Timestamp when artist profile was created
   createdAt         DateTime    @default(now())
 
@@ -100,6 +106,8 @@ model Artist {
   commissions       Commission[]
   /// Reviews received for completed work
   reviews           Review[]
+  /// Verification requests submitted by this artist
+  verificationRequests VerificationRequest[]
 }
 
 /// User authorization roles governing platform permissions and endpoint access.
@@ -316,6 +324,10 @@ model Commission {
   revisionRequests CommissionRevision[]
   /// Completion checklist items
   checklist     CommissionChecklistItem[]
+  /// Disputes filed against this commission
+  disputes      Dispute[]
+  /// Escrow holdings backing this commission
+  escrows       Escrow[]
 }
 
 /// Status lifecycle for commissions.
@@ -707,4 +719,179 @@ model CommissionChecklistItem {
   createdAt    DateTime   @default(now())
 
   @@index([commissionId])
+// Dispute Resolution Models (#600)
+// ----------------------------------------------------------------------------
+
+/// Lifecycle state of a commission dispute.
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+  APPEALED
+  CLOSED
+}
+
+/// Outcome applied when a dispute is resolved.
+enum DisputeResolution {
+  NONE
+  REFUND_CLIENT
+  RELEASE_ARTIST
+  SPLIT
+}
+
+/// A formal dispute raised against a commission, reviewed by administrators.
+model Dispute {
+  /// Unique identifier (UUID v4)
+  id             String            @id @default(uuid())
+  /// Foreign key referencing the disputed Commission
+  commissionId   String
+  /// Relational reference to Commission model
+  commission     Commission        @relation(fields: [commissionId], references: [id])
+  /// User id that filed the dispute
+  filedById      String
+  /// User id of the counter-party
+  againstId      String
+  /// Reason / description supplied by the filer
+  reason         String
+  /// Current dispute state
+  status         DisputeStatus     @default(OPEN)
+  /// Applied resolution outcome
+  resolution     DisputeResolution @default(NONE)
+  /// Administrator's resolution note
+  resolutionNote String?
+  /// Evidence attachment URLs
+  evidence       String[]
+  /// Administrator user id that reviewed the dispute
+  reviewedById   String?
+  /// When the dispute was resolved
+  resolvedAt     DateTime?
+  /// Appeal justification (if reopened)
+  appealNote     String?
+  /// When an appeal was filed
+  appealedAt     DateTime?
+  /// Creation timestamp
+  createdAt      DateTime          @default(now())
+  /// Last update timestamp
+  updatedAt      DateTime          @updatedAt
+
+  @@index([commissionId])
+  @@index([status])
+}
+
+// ----------------------------------------------------------------------------
+// Escrow Management Models (#601)
+// ----------------------------------------------------------------------------
+
+/// Lifecycle state of an escrow holding.
+enum EscrowStatus {
+  HELD
+  RELEASED
+  REFUNDED
+  DISPUTED
+  PARTIALLY_RELEASED
+}
+
+/// Tracks funds held in escrow for a commission / milestone.
+model Escrow {
+  /// Unique identifier (UUID v4)
+  id           String        @id @default(uuid())
+  /// Foreign key referencing the backing Commission
+  commissionId String
+  /// Relational reference to Commission model
+  commission   Commission    @relation(fields: [commissionId], references: [id])
+  /// Optional milestone this escrow is scoped to
+  milestoneId  String?
+  /// USDC amount held in escrow
+  amountUsdc   Decimal
+  /// Current escrow state
+  status       EscrowStatus  @default(HELD)
+  /// Stellar transaction hash of the on-chain hold, if any
+  txHash       String?
+  /// When funds were placed in escrow
+  heldAt       DateTime      @default(now())
+  /// When funds were released to the artist
+  releasedAt   DateTime?
+  /// When funds were refunded to the client
+  refundedAt   DateTime?
+  /// Creation timestamp
+  createdAt    DateTime      @default(now())
+  /// Last update timestamp
+  updatedAt    DateTime      @updatedAt
+
+  /// Immutable audit trail of escrow state transitions
+  events       EscrowEvent[]
+
+  @@index([commissionId])
+  @@index([status])
+}
+
+/// Append-only audit record for every escrow state transition.
+model EscrowEvent {
+  /// Unique identifier (UUID v4)
+  id        String   @id @default(uuid())
+  /// Foreign key referencing the parent Escrow (cascade on delete)
+  escrowId  String
+  /// Relational reference to Escrow model
+  escrow    Escrow   @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  /// Action performed (HOLD, RELEASE, REFUND, DISPUTE_HOLD, ...)
+  action    String
+  /// Optional contextual note
+  note      String?
+  /// User id that triggered the action
+  actorId   String?
+  /// Timestamp of the event
+  createdAt DateTime @default(now())
+
+  @@index([escrowId])
+}
+
+// ----------------------------------------------------------------------------
+// Reputation & Verification Models (#602)
+// ----------------------------------------------------------------------------
+
+/// The kind of verification being requested.
+enum VerificationType {
+  EMAIL
+  IDENTITY
+  PORTFOLIO
+}
+
+/// Lifecycle state of a verification request.
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+/// An artist's request for a specific type of platform verification.
+model VerificationRequest {
+  /// Unique identifier (UUID v4)
+  id           String             @id @default(uuid())
+  /// Foreign key referencing the requesting Artist
+  artistId     String
+  /// Relational reference to Artist model
+  artist       Artist             @relation(fields: [artistId], references: [id])
+  /// Kind of verification requested
+  type         VerificationType
+  /// Current request state
+  status       VerificationStatus @default(PENDING)
+  /// Supporting document / evidence URLs
+  evidence     String[]
+  /// Administrator review note
+  reviewNote   String?
+  /// Administrator user id that reviewed the request
+  reviewedById String?
+  /// When the request was approved
+  approvedAt   DateTime?
+  /// When the verification expires and must be renewed
+  expiresAt    DateTime?
+  /// Creation timestamp
+  createdAt    DateTime           @default(now())
+  /// Last update timestamp
+  updatedAt    DateTime           @updatedAt
+
+  @@index([artistId, type])
+  @@index([status])
 }

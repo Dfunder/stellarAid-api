@@ -18,6 +18,8 @@ import { SearchModule } from './search/search.module';
 import { validate } from './config/env.validation';
 import { DiscoverModule } from './discover/discover.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { QueryModule } from './common/query/query.module';
+import { VersioningModule } from './versioning/versioning.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ServiceCategoriesModule } from './service-categories/service-categories.module';
 import { PromotionsModule } from './promotions/promotions.module';
@@ -63,6 +65,8 @@ import { decodeJwt } from './common/throttling/rate-limit.decorator';
     SearchModule,
     DiscoverModule,
     AnalyticsModule,
+    QueryModule,
+    VersioningModule,
     ProjectsModule,
     ServiceCategoriesModule,
     PromotionsModule,

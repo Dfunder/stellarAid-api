@@ -449,8 +449,30 @@ model Review {
   comment      String?
   /// Visibility flag: true = displayed on public profile, false = hidden
   isPublic     Boolean    @default(true)
+  /// Denormalised count of "helpful" votes for fast sorting/display
+  helpfulCount Int        @default(0)
   /// Timestamp when review was submitted
   createdAt    DateTime   @default(now())
+
+  /// Per-user helpful votes cast on this review
+  helpfulVotes ReviewHelpfulVote[]
+}
+
+/// Tracks a single "helpful" vote by a user on a review (one vote per user).
+model ReviewHelpfulVote {
+  /// Unique identifier (UUID v4)
+  id        String   @id @default(uuid())
+  /// Foreign key referencing the voted-on Review
+  reviewId  String
+  /// Relational reference to Review model
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  /// Foreign key referencing the voting User
+  userId    String
+  /// Timestamp when the vote was cast
+  createdAt DateTime @default(now())
+
+  /// A user may cast at most one helpful vote per review
+  @@unique([reviewId, userId])
 }
 
 // ----------------------------------------------------------------------------
@@ -518,10 +540,57 @@ model Notification {
   message   String
   /// Read status flag
   isRead    Boolean  @default(false)
+  /// Delivery channel: IN_APP | EMAIL | PUSH
+  channel   String   @default("IN_APP")
   /// Contextual JSON payload (e.g. commissionId, paymentId, direct link)
   metadata  Json?
+  /// When the notification is due to be delivered (null = immediate)
+  scheduledFor DateTime?
+  /// When the notification was actually dispatched
+  sentAt    DateTime?
   /// Timestamp when notification was triggered
   createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([scheduledFor, sentAt])
+}
+
+/// Per-user notification delivery preferences.
+model NotificationPreference {
+  /// Unique identifier (UUID v4)
+  id           String   @id @default(uuid())
+  /// Owning user (unique — one preference row per user)
+  userId       String   @unique
+  /// Whether email delivery is enabled
+  emailEnabled Boolean  @default(true)
+  /// Whether push delivery is enabled
+  pushEnabled  Boolean  @default(true)
+  /// Whether in-app delivery is enabled
+  inAppEnabled Boolean  @default(true)
+  /// Notification types the user has opted out of
+  mutedTypes   String[]
+  /// Last update timestamp
+  updatedAt    DateTime @updatedAt
+  /// Creation timestamp
+  createdAt    DateTime @default(now())
+}
+
+/// Reusable notification template with {{placeholder}} interpolation.
+model NotificationTemplate {
+  /// Unique identifier (UUID v4)
+  id        String   @id @default(uuid())
+  /// Stable lookup key (e.g. 'commission.accepted')
+  key       String   @unique
+  /// Template title, may contain {{placeholders}}
+  title     String
+  /// Template body, may contain {{placeholders}}
+  body      String
+  /// Default channel for notifications created from this template
+  channel   String   @default("IN_APP")
+  /// Creation timestamp
+  createdAt DateTime @default(now())
+  /// Last update timestamp
+  updatedAt DateTime @updatedAt
 }
 
 /// Immutable, append-only security and administrative audit log.

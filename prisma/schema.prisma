@@ -901,3 +901,51 @@ model VerificationRequest {
   @@index([artistId, type])
   @@index([status])
 }
+
+model WebhookEndpoint {
+  id        String   @id @default(uuid())
+  ownerId   String
+  url       String
+  secret    String
+  events    String[]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+  @@index([ownerId, active])
+}
+
+model WebhookEvent {
+  id        String   @id @default(uuid())
+  type      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  deliveries WebhookDelivery[]
+  @@index([type, createdAt])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  RETRYING
+  DELIVERED
+  FAILED
+}
+
+model WebhookDelivery {
+  id            String                 @id @default(uuid())
+  endpointId    String
+  eventId       String
+  status        WebhookDeliveryStatus  @default(PENDING)
+  attempts      Int                    @default(0)
+  lastError     String?
+  nextAttemptAt DateTime               @default(now())
+  deliveredAt   DateTime?
+  createdAt     DateTime               @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event    WebhookEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@unique([endpointId, eventId])
+  @@index([status, nextAttemptAt])
+}

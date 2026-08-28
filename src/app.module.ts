@@ -40,6 +40,9 @@ import { RedisThrottlerStorage } from './common/throttling/redis-throttler.stora
 import { decodeJwt } from './common/throttling/rate-limit.decorator';
 import { RequestLoggerInterceptor } from './common/logging/request-logger.interceptor';
 import { ETagInterceptor } from './common/http/etag.interceptor';
+import { ApiResponseInterceptor } from './common/http/api-response.interceptor';
+import { BatchModule } from './batch/batch.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -86,6 +89,8 @@ import { ETagInterceptor } from './common/http/etag.interceptor';
     ReviewsModule,
     MessagingModule,
     NotificationsModule,
+    BatchModule,
+    WebhooksModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
@@ -93,6 +98,7 @@ import { ETagInterceptor } from './common/http/etag.interceptor';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ETagInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ApiResponseInterceptor },
   ],
 })
 export class AppModule {}

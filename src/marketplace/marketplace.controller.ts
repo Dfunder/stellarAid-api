@@ -11,7 +11,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorators';
@@ -28,6 +34,12 @@ import {
   BulkUpdateServicesDto,
 } from './dto/bulk-operations.dto';
 import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
+import {
+  FeaturedContentResponse,
+  PortfolioResponse,
+  ServiceResponse,
+  ServicesResponse,
+} from './ro/marketplace.ro';
 
 @ApiTags('marketplace')
 @Controller({ version: '1', path: 'marketplace' })
@@ -44,7 +56,25 @@ export class MarketplaceController {
   })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'List a new service (artist only)' })
-  @ApiResponse({ status: 201, description: 'Service created' })
+  @ApiBody({
+    type: CreateServiceDto,
+    examples: {
+      a: {
+        summary: 'Create a new service',
+        value: {
+          title: 'New Service',
+          description: 'This is a new service',
+          price: 100,
+          category: 'ART',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Service created',
+    type: ServiceResponse,
+  })
   @ApiResponse({ status: 403, description: 'Not an artist' })
   async createService(
     @CurrentUser() user: { sub: string },
@@ -57,7 +87,13 @@ export class MarketplaceController {
   @Get('services')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Browse all active services' })
-  @ApiResponse({ status: 200, description: 'List of active services' })
+  @ApiQuery({ name: 'page', type: Number, required: false })
+  @ApiQuery({ name: 'limit', type: Number, required: false })
+  @ApiResponse({
+    status: 200,
+    description: 'List of active services',
+    type: ServicesResponse,
+  })
   async findAllActive(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -121,7 +157,19 @@ export class MarketplaceController {
   @Get('services/search')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Search and filter services' })
-  @ApiResponse({ status: 200, description: 'Paginated search results' })
+  @ApiQuery({ name: 'query', type: String, required: false })
+  @ApiQuery({ name: 'category', type: String, required: false })
+  @ApiQuery({ name: 'minPrice', type: Number, required: false })
+  @ApiQuery({ name: 'maxPrice', type: Number, required: false })
+  @ApiQuery({ name: 'sortBy', type: String, required: false })
+  @ApiQuery({ name: 'sortOrder', type: String, required: false })
+  @ApiQuery({ name: 'page', type: Number, required: false })
+  @ApiQuery({ name: 'limit', type: Number, required: false })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated search results',
+    type: ServicesResponse,
+  })
   async search(@Query() query: SearchServicesDto) {
     return this.marketplaceService.search(query);
   }
@@ -130,7 +178,11 @@ export class MarketplaceController {
   @Get('services/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'View service detail' })
-  @ApiResponse({ status: 200, description: 'Service details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service details',
+    type: ServiceResponse,
+  })
   @ApiResponse({ status: 404, description: 'Service not found' })
   async findOne(@Param('id') id: string) {
     return this.marketplaceService.findOne(id);
@@ -140,7 +192,11 @@ export class MarketplaceController {
   @Get('portfolios/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'View a published portfolio' })
-  @ApiResponse({ status: 200, description: 'Portfolio details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Portfolio details',
+    type: PortfolioResponse,
+  })
   @ApiResponse({ status: 404, description: 'Portfolio not found' })
   async findPortfolio(@Param('id') id: string) {
     return this.marketplaceService.findPortfolio(id);
@@ -150,7 +206,11 @@ export class MarketplaceController {
   @Get('featured')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get featured artists and services' })
-  @ApiResponse({ status: 200, description: 'Featured content' })
+  @ApiResponse({
+    status: 200,
+    description: 'Featured content',
+    type: FeaturedContentResponse,
+  })
   async getFeatured() {
     return this.marketplaceService.getFeatured();
   }
@@ -159,7 +219,25 @@ export class MarketplaceController {
   @Roles(Role.ARTIST)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a service (owner only)' })
-  @ApiResponse({ status: 200, description: 'Service updated' })
+  @ApiBody({
+    type: UpdateServiceDto,
+    examples: {
+      a: {
+        summary: 'Update a service',
+        value: {
+          title: 'Updated Service',
+          description: 'This is an updated service',
+          price: 150,
+          category: 'DESIGN',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service updated',
+    type: ServiceResponse,
+  })
   @ApiResponse({ status: 403, description: 'Not the service owner' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   async update(
@@ -174,7 +252,11 @@ export class MarketplaceController {
   @Roles(Role.ARTIST)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Deactivate a service (owner only)' })
-  @ApiResponse({ status: 200, description: 'Service deactivated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Service deactivated',
+    type: ServiceResponse,
+  })
   @ApiResponse({ status: 403, description: 'Not the service owner' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   async deactivate(

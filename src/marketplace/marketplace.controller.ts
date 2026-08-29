@@ -101,12 +101,17 @@ export class MarketplaceController {
     return this.marketplaceService.findAllActive(page, limit);
   }
 
+  import { Deprecated } from '../common/decorators/deprecated.decorator';
+
+//... some code
+
   @Post('services/bulk')
   @Roles(Role.ARTIST)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Bulk create services (artist only)' })
   @ApiResponse({ status: 201, description: 'Bulk operation summary' })
   @ApiResponse({ status: 403, description: 'Not an artist' })
+  @Deprecated('2028-01-01T00:00:00Z', '/v2/services/bulk')
   async bulkCreateServices(
     @CurrentUser() user: { sub: string },
     @Body() dto: BulkCreateServicesDto,

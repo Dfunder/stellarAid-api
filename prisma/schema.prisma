@@ -401,6 +401,7 @@ enum MilestoneStatus {
 enum PaymentStatus {
   /// Escrow transaction constructed or awaiting on-chain confirmation
   PENDING
+  SUBMITTED
   /// Funds locked into Stellar Soroban escrow smart contract
   CONFIRMED
   /// Escrow successfully disbursed to artist wallet
@@ -437,6 +438,10 @@ model Payment {
   txHash          String?
   /// Current payment/escrow status
   status          PaymentStatus @default(PENDING)
+  /// When the transaction status was last checked
+  lastCheckedAt   DateTime?
+  /// Number of retries for checking transaction status
+  retryCount      Int           @default(0)
   /// Timestamp when payment record was initiated
   createdAt       DateTime      @default(now())
 }

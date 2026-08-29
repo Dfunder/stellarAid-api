@@ -10,7 +10,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorators';
@@ -20,6 +26,7 @@ import { CommissionsService } from './commissions.service';
 import { CreateCommissionDto } from './dto/create-commission.dto';
 import { RoleRateLimit } from '../common/throttling/rate-limit.decorator';
 import { SubmitCommissionDto } from './dto/submit-revision.dto';
+import { CommissionResponse, CommissionsResponse } from './ro/commissions.ro';
 
 @ApiTags('commissions')
 @Controller({ version: '1', path: 'commissions' })
@@ -36,7 +43,27 @@ export class CommissionsController {
   })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Send a commission request (client only)' })
-  @ApiResponse({ status: 201, description: 'Commission created' })
+  @ApiBody({
+    type: CreateCommissionDto,
+    examples: {
+      a: {
+        summary: 'Create a new commission',
+        value: {
+          artistId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          serviceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          title: 'New Commission',
+          description: 'This is a new commission',
+          budget: 100,
+          deadline: '2022-12-31T23:59:59.999Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Commission created',
+    type: CommissionResponse,
+  })
   @ApiResponse({ status: 403, description: 'Not a client' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
   async create(
@@ -48,12 +75,36 @@ export class CommissionsController {
 
   @Patch(':id/accept')
   @Roles(Role.ARTIST)
+  @ApiOperation({ summary: 'Accept a commission (artist only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Commission accepted',
+    type: CommissionResponse,
+  })
   async accept(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
     return this.commissionsService.accept(id, user.sub);
   }
 
   @Patch(':id/submit')
   @Roles(Role.ARTIST)
+  @ApiOperation({ summary: 'Submit a commission for review (artist only)' })
+  @ApiBody({
+    type: SubmitCommissionDto,
+    examples: {
+      a: {
+        summary: 'Submit a commission for review',
+        value: {
+          url: 'https://example.com/submission.zip',
+          notes: 'Here is the first draft.',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Commission submitted',
+    type: CommissionResponse,
+  })
   async submit(
     @Param('id') id: string,
     @CurrentUser() user: { sub: string },
@@ -64,6 +115,12 @@ export class CommissionsController {
 
   @Patch(':id/approve')
   @Roles(Role.CLIENT)
+  @ApiOperation({ summary: 'Approve a commission (client only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Commission approved',
+    type: CommissionResponse,
+  })
   async approve(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
     return this.commissionsService.approve(id, user.sub);
   }
@@ -71,7 +128,13 @@ export class CommissionsController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List own commissions' })
-  @ApiResponse({ status: 200, description: 'List of commissions' })
+  @ApiQuery({ name: 'page', type: Number, required: false })
+  @ApiQuery({ name: 'limit', type: Number, required: false })
+  @ApiResponse({
+    status: 200,
+    description: 'List of commissions',
+    type: CommissionsResponse,
+  })
   async findAll(
     @CurrentUser() user: { sub: string },
     @Query('page') page?: number,
@@ -83,7 +146,11 @@ export class CommissionsController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'View commission detail (participants only)' })
-  @ApiResponse({ status: 200, description: 'Commission details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Commission details',
+    type: CommissionResponse,
+  })
   @ApiResponse({ status: 403, description: 'Not a participant' })
   @ApiResponse({ status: 404, description: 'Commission not found' })
   async findOne(@Param('id') id: string, @CurrentUser() user: { sub: string }) {

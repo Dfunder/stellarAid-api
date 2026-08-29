@@ -447,6 +447,50 @@ model Payment {
 }
 
 // ----------------------------------------------------------------------------
+// Multi-Asset & Currency Models
+// ----------------------------------------------------------------------------
+
+/// Type of a financial asset (e.g., fiat currency or cryptocurrency).
+enum AssetType {
+  FIAT
+  CRYPTO
+}
+
+/// Represents a supported financial asset on the platform (e.g., USDC, XLM).
+model Asset {
+  /// Unique identifier (UUID v4)
+  id        String    @id @default(uuid())
+  /// Unique asset code (e.g., 'USDC', 'EUR')
+  code      String    @unique
+  /// For Stellar assets, the issuer's public key. Null for native (XLM).
+  issuer    String?
+  /// The type of asset (FIAT or CRYPTO)
+  type      AssetType
+  /// Flag indicating if this is the default platform currency
+  isDefault Boolean   @default(false)
+  /// Timestamp of asset creation
+  createdAt DateTime  @default(now())
+  /// Timestamp of last asset update
+  updatedAt DateTime  @updatedAt
+}
+
+/// Stores the exchange rate between two assets at a specific point in time.
+model ExchangeRate {
+  /// Unique identifier (UUID v4)
+  id        String   @id @default(uuid())
+  /// The asset code to convert from
+  fromAsset String
+  /// The asset code to convert to
+  toAsset   String
+  /// The conversion rate (1 'fromAsset' = X 'toAsset')
+  rate      Decimal  @db.Decimal(18, 9)
+  /// Timestamp when the rate was recorded
+  createdAt DateTime @default(now())
+  /// Timestamp when the rate was last updated
+  updatedAt DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------------------
 // Feedback & Reputation Models
 // ----------------------------------------------------------------------------
 

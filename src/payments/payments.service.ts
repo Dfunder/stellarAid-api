@@ -7,6 +7,7 @@ import {
 import { CommissionStatus, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StellarService } from './stellar.service';
+import { AssetService } from '../assets/asset.service';
 import { InitiateEscrowDto } from './dto/initiate-escrow.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import {
@@ -28,6 +29,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stellar: StellarService,
+    private readonly assetService: AssetService,
   ) {}
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -35,7 +37,14 @@ export class PaymentsService {
   // ──────────────────────────────────────────────────────────────────────────
 
   async initiateEscrow(commissionId: string, dto: InitiateEscrowDto) {
-    if (dto.assetCode !== 'XLM' && !dto.assetIssuer) {
+    const asset = await this.assetService
+      .getAssets()
+      .then((assets) => assets.find((a) => a.code === dto.assetCode));
+    if (!asset) {
+      throw new BadRequestException(`Asset ${dto.assetCode} is not supported`);
+    }
+
+    if (asset.type === 'CRYPTO' && asset.code !== 'XLM' && !dto.assetIssuer) {
       throw new BadRequestException(
         `assetIssuer is required for asset ${dto.assetCode}`,
       );
@@ -220,10 +229,23 @@ export class PaymentsService {
     const gross = Number(payment.amountUsdc);
     const fee = Number(payment.platformFeeUsdc);
 
+    const exchangeRate = await this.assetService.getExchangeRate(
+      'USDC',
+      payment.assetCode,
+    );
+    if (!exchangeRate) {
+      throw new BadRequestException(
+        `Exchange rate for ${payment.assetCode} not found`,
+      );
+    }
+
+    const grossInAsset = gross * Number(exchangeRate.rate);
+    const feeInAsset = fee * Number(exchangeRate.rate);
+
     const { txHash } = await this.stellar.releaseFundsOnChain(
       artistWallet,
-      gross,
-      fee,
+      grossInAsset,
+      feeInAsset,
       payment.assetCode,
       commissionId,
     );

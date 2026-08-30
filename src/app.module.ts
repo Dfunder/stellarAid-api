@@ -27,6 +27,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { CommissionRequestsModule } from './commission-requests/commission-requests.module';
 import { ProfileModule } from './profile/profile.module';
+import { CachingModule } from './caching/caching.module';
 import { DisputesModule } from './disputes/disputes.module';
 import { EscrowModule } from './escrow/escrow.module';
 import { VerificationModule } from './verification/verification.module';
@@ -56,7 +57,11 @@ import { WebhooksModule } from './webhooks/webhooks.module';
         getTracker: (req) => {
           const user = req.user as { sub?: string } | undefined;
           const headers = req.headers as { authorization?: string } | undefined;
-          return user?.sub ?? decodeJwt(headers?.authorization)?.sub ?? (req.ip as string);
+          return (
+            user?.sub ??
+            decodeJwt(headers?.authorization)?.sub ??
+            (req.ip as string)
+          );
         },
       }),
     }),
@@ -91,6 +96,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     NotificationsModule,
     BatchModule,
     WebhooksModule,
+    CachingModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

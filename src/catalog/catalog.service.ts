@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveSearchDto, SearchServicesDto } from './dto/search.dto';
+import { CachingService } from '../caching/caching.service';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cachingService: CachingService,
+  ) {}
 
   private buildWhere(dto: SearchServicesDto): Prisma.ServiceWhereInput {
     const where: Prisma.ServiceWhereInput = { isActive: true };
@@ -99,6 +103,13 @@ export class CatalogService {
   /** Autocomplete suggestions drawn from service titles and categories. */
   async suggestions(prefix: string) {
     if (!prefix || prefix.trim().length === 0) return { suggestions: [] };
+
+    const cacheKey = `suggestions:${prefix}`;
+    const cachedSuggestions = await this.cachingService.get(cacheKey);
+    if (cachedSuggestions) {
+      return cachedSuggestions;
+    }
+
     const services = await this.prisma.service.findMany({
       where: {
         isActive: true,
@@ -115,11 +126,14 @@ export class CatalogService {
       set.add(s.title);
       set.add(s.category);
     }
-    return {
+    const suggestions = {
       suggestions: Array.from(set)
         .filter((s) => s.toLowerCase().includes(prefix.toLowerCase()))
         .slice(0, 10),
     };
+
+    await this.cachingService.set(cacheKey, suggestions, 3600); // Cache for 1 hour
+    return suggestions;
   }
 
   /** Aggregate search analytics: most frequent terms. */

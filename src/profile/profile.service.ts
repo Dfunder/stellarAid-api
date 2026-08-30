@@ -6,10 +6,14 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto, UpdateSocialLinksDto } from './dto/profile.dto';
+import { CachingService } from '../caching/caching.service';
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cachingService: CachingService,
+  ) {}
 
   private async requireArtist(userId: string) {
     const artist = await this.prisma.artist.findUnique({ where: { userId } });
@@ -25,41 +29,57 @@ export class ProfileService {
   }
 
   async getPublicProfile(artistId: string) {
+    const cacheKey = `artist-profile:${artistId}`;
+    const cachedProfile = await this.cachingService.get(cacheKey);
+    if (cachedProfile) {
+      return cachedProfile;
+    }
+
     const artist = await this.prisma.artist.findUnique({
       where: { id: artistId },
     });
     if (!artist || !artist.isProfilePublic) {
       throw new NotFoundException('Profile not found');
     }
+
+    await this.cachingService.set(cacheKey, artist, 3600); // Cache for 1 hour
     return artist;
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    await this.requireArtist(userId);
+    const artist = await this.requireArtist(userId);
     const updated = await this.prisma.artist.update({
       where: { userId },
       data: { ...dto },
     });
+
+    await this.cachingService.del(`artist-profile:${artist.id}`);
     return { ...updated, completeness: this.completeness(updated) };
   }
 
   async updateSocialLinks(userId: string, dto: UpdateSocialLinksDto) {
-    await this.requireArtist(userId);
+    const artist = await this.requireArtist(userId);
     const socialLinks = Object.fromEntries(
       Object.entries(dto).filter(([, v]) => v !== undefined),
     ) as Prisma.InputJsonValue;
-    return this.prisma.artist.update({
+    const updated = await this.prisma.artist.update({
       where: { userId },
       data: { socialLinks },
     });
+
+    await this.cachingService.del(`artist-profile:${artist.id}`);
+    return updated;
   }
 
   async setVisibility(userId: string, isProfilePublic: boolean) {
-    await this.requireArtist(userId);
-    return this.prisma.artist.update({
+    const artist = await this.requireArtist(userId);
+    const updated = await this.prisma.artist.update({
       where: { userId },
       data: { isProfilePublic },
     });
+
+    await this.cachingService.del(`artist-profile:${artist.id}`);
+    return updated;
   }
 
   async getCompleteness(userId: string) {

@@ -5,10 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import { CachingService } from '../caching/caching.service';
 
 @Injectable()
 export class ServiceCategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cachingService: CachingService,
+  ) {}
 
   async create(dto: CreateCategoryDto) {
     const existing = await this.prisma.serviceCategory.findUnique({
@@ -25,7 +29,7 @@ export class ServiceCategoriesService {
         throw new NotFoundException('Parent category not found');
       }
     }
-    return this.prisma.serviceCategory.create({
+    const category = await this.prisma.serviceCategory.create({
       data: {
         name: dto.name,
         slug: dto.slug,
@@ -34,18 +38,34 @@ export class ServiceCategoriesService {
         parentId: dto.parentId,
       },
     });
+    await this.cachingService.del('categories:tree');
+    return category;
   }
 
   /** Full category tree (top-level categories with nested children). */
   async tree() {
-    return this.prisma.serviceCategory.findMany({
+    const cachedTree = await this.cachingService.get('categories:tree');
+    if (cachedTree) {
+      return cachedTree;
+    }
+
+    const tree = await this.prisma.serviceCategory.findMany({
       where: { parentId: null },
       include: { children: true },
       orderBy: { name: 'asc' },
     });
+
+    await this.cachingService.set('categories:tree', tree, 3600); // Cache for 1 hour
+    return tree;
   }
 
   async findBySlug(slug: string) {
+    const cacheKey = `category:${slug}`;
+    const cachedCategory = await this.cachingService.get(cacheKey);
+    if (cachedCategory) {
+      return cachedCategory;
+    }
+
     const category = await this.prisma.serviceCategory.findUnique({
       where: { slug },
       include: { children: true },
@@ -53,20 +73,29 @@ export class ServiceCategoriesService {
     if (!category) {
       throw new NotFoundException('Category not found');
     }
+
+    await this.cachingService.set(cacheKey, category, 3600); // Cache for 1 hour
     return category;
   }
 
   async update(id: string, dto: UpdateCategoryDto) {
     await this.requireCategory(id);
-    return this.prisma.serviceCategory.update({
+    const updatedCategory = await this.prisma.serviceCategory.update({
       where: { id },
       data: { ...dto },
     });
+
+    await this.cachingService.del('categories:tree');
+    await this.cachingService.del(`category:${updatedCategory.slug}`);
+    return updatedCategory;
   }
 
   async remove(id: string) {
-    await this.requireCategory(id);
+    const category = await this.requireCategory(id);
     await this.prisma.serviceCategory.delete({ where: { id } });
+
+    await this.cachingService.del('categories:tree');
+    await this.cachingService.del(`category:${category.slug}`);
     return { deleted: true };
   }
 

@@ -7,10 +7,17 @@ import {
 import { CommissionStatus, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StellarService } from './stellar.service';
+import { AssetService } from '../assets/asset.service';
 import { InitiateEscrowDto } from './dto/initiate-escrow.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
-import { ResolveDisputeDto, DisputeResolution } from '../audit/dto/resolve-dispute.dto';
-import { calculatePlatformFee, DEFAULT_PLATFORM_FEE_RATE } from '../common/utils';
+import {
+  ResolveDisputeDto,
+  DisputeResolution,
+} from '../audit/dto/resolve-dispute.dto';
+import {
+  calculatePlatformFee,
+  DEFAULT_PLATFORM_FEE_RATE,
+} from '../common/utils';
 
 /** Platform fee expressed as a fraction (2 %). */
 const PLATFORM_FEE_RATE = DEFAULT_PLATFORM_FEE_RATE;
@@ -22,6 +29,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stellar: StellarService,
+    private readonly assetService: AssetService,
   ) {}
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -29,7 +37,14 @@ export class PaymentsService {
   // ──────────────────────────────────────────────────────────────────────────
 
   async initiateEscrow(commissionId: string, dto: InitiateEscrowDto) {
-    if (dto.assetCode !== 'XLM' && !dto.assetIssuer) {
+    const asset = await this.assetService
+      .getAssets()
+      .then((assets) => assets.find((a) => a.code === dto.assetCode));
+    if (!asset) {
+      throw new BadRequestException(`Asset ${dto.assetCode} is not supported`);
+    }
+
+    if (asset.type === 'CRYPTO' && asset.code !== 'XLM' && !dto.assetIssuer) {
       throw new BadRequestException(
         `assetIssuer is required for asset ${dto.assetCode}`,
       );
@@ -132,7 +147,9 @@ export class PaymentsService {
         data: { status: PaymentStatus.FAILED },
       });
 
-      throw new BadRequestException(`Transaction submission failed: ${message}`);
+      throw new BadRequestException(
+        `Transaction submission failed: ${message}`,
+      );
     }
 
     if (!success) {
@@ -147,8 +164,9 @@ export class PaymentsService {
       this.prisma.payment.update({
         where: { id: dto.paymentId },
         data: {
-          status: PaymentStatus.CONFIRMED,
+          status: PaymentStatus.SUBMITTED,
           txHash,
+          lastCheckedAt: new Date(),
         },
       }),
       this.prisma.commission.update({
@@ -211,10 +229,23 @@ export class PaymentsService {
     const gross = Number(payment.amountUsdc);
     const fee = Number(payment.platformFeeUsdc);
 
+    const exchangeRate = await this.assetService.getExchangeRate(
+      'USDC',
+      payment.assetCode,
+    );
+    if (!exchangeRate) {
+      throw new BadRequestException(
+        `Exchange rate for ${payment.assetCode} not found`,
+      );
+    }
+
+    const grossInAsset = gross * Number(exchangeRate.rate);
+    const feeInAsset = fee * Number(exchangeRate.rate);
+
     const { txHash } = await this.stellar.releaseFundsOnChain(
       artistWallet,
-      gross,
-      fee,
+      grossInAsset,
+      feeInAsset,
       payment.assetCode,
       commissionId,
     );
@@ -269,15 +300,20 @@ export class PaymentsService {
     }
 
     if (commission.status !== CommissionStatus.DISPUTED) {
-      throw new BadRequestException('Only disputed commissions can be resolved');
+      throw new BadRequestException(
+        'Only disputed commissions can be resolved',
+      );
     }
 
     const payment = commission.payments[0];
     if (!payment) {
-      throw new NotFoundException('No confirmed payment found for this commission');
+      throw new NotFoundException(
+        'No confirmed payment found for this commission',
+      );
     }
 
-    const artistWallet = commission.artist.user?.walletAddress ?? payment.artistWallet;
+    const artistWallet =
+      commission.artist.user?.walletAddress ?? payment.artistWallet;
     const clientWallet = payment.clientWallet;
 
     if (!clientWallet) {
@@ -302,7 +338,7 @@ export class PaymentsService {
         txHash = refundResult.txHash;
         paymentStatus = PaymentStatus.REFUNDED;
         newCommissionStatus = CommissionStatus.CANCELLED;
-        
+
         // Create client notification
         await this.prisma.notification.create({
           data: {
@@ -326,7 +362,7 @@ export class PaymentsService {
         );
         txHash = releaseResult.txHash;
         paymentStatus = PaymentStatus.RELEASED;
-        
+
         // Create artist notification
         await this.prisma.notification.create({
           data: {
@@ -340,11 +376,19 @@ export class PaymentsService {
         break;
 
       case DisputeResolution.PARTIAL:
-        if (dto.artistShareBps === undefined || dto.artistShareBps < 0 || dto.artistShareBps > 10000) {
-          throw new BadRequestException('artistShareBps is required for PARTIAL resolution and must be between 0 and 10000');
+        if (
+          dto.artistShareBps === undefined ||
+          dto.artistShareBps < 0 ||
+          dto.artistShareBps > 10000
+        ) {
+          throw new BadRequestException(
+            'artistShareBps is required for PARTIAL resolution and must be between 0 and 10000',
+          );
         }
         if (!artistWallet) {
-          throw new BadRequestException('Artist has no registered wallet address');
+          throw new BadRequestException(
+            'Artist has no registered wallet address',
+          );
         }
         // Split funds based on artistShareBps (basis points, 10000 = 100%)
         const partialResult = await this.stellar.partialReleaseFundsOnChain(
@@ -358,10 +402,10 @@ export class PaymentsService {
         );
         txHash = partialResult.txHash;
         paymentStatus = PaymentStatus.RELEASED;
-        
+
         // Notify both parties
-        const artistAmount = (gross * dto.artistShareBps / 10000) - fee;
-        const clientAmount = gross * (10000 - dto.artistShareBps) / 10000;
+        const artistAmount = (gross * dto.artistShareBps) / 10000 - fee;
+        const clientAmount = (gross * (10000 - dto.artistShareBps)) / 10000;
         await Promise.all([
           this.prisma.notification.create({
             data: {
@@ -369,7 +413,11 @@ export class PaymentsService {
               type: 'PARTIAL_PAYMENT_RELEASED',
               title: 'Partial Payment Released',
               message: `Your partial payment of ${artistAmount} ${payment.assetCode} for commission "${commission.title}" has been released.`,
-              metadata: { txHash, paymentId: payment.id, artistShareBps: dto.artistShareBps },
+              metadata: {
+                txHash,
+                paymentId: payment.id,
+                artistShareBps: dto.artistShareBps,
+              },
             },
           }),
           this.prisma.notification.create({
@@ -378,9 +426,13 @@ export class PaymentsService {
               type: 'PARTIAL_REFUND_PROCESSED',
               title: 'Partial Refund Processed',
               message: `Your partial refund of ${clientAmount} ${payment.assetCode} for commission "${commission.title}" has been processed.`,
-              metadata: { txHash, paymentId: payment.id, clientShareBps: 10000 - dto.artistShareBps },
+              metadata: {
+                txHash,
+                paymentId: payment.id,
+                clientShareBps: 10000 - dto.artistShareBps,
+              },
             },
-          })
+          }),
         ]);
         break;
 

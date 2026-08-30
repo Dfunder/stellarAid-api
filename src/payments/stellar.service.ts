@@ -34,10 +34,7 @@ export class StellarService implements OnModuleInit {
       this.networkPassphrase = StellarSdk.Networks.TESTNET;
     }
 
-    const secret = this.configService.get<string>(
-      'PLATFORM_WALLET_SECRET',
-      '',
-    );
+    const secret = this.configService.get<string>('PLATFORM_WALLET_SECRET', '');
     if (secret) {
       this.platformKeypair = StellarSdk.Keypair.fromSecret(secret);
     }
@@ -85,10 +82,10 @@ export class StellarService implements OnModuleInit {
 
     const clientAddr = this.addressToScVal(clientPublicKey);
     const artistAddr = this.addressToScVal(artistPublicKey);
-    const amountScVal = this.i128ToScVal(BigInt(Math.round(parseFloat(amount) * 10_000_000)));
-    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(
-      Buffer.from(assetCode),
+    const amountScVal = this.i128ToScVal(
+      BigInt(Math.round(parseFloat(amount) * 10_000_000)),
     );
+    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(Buffer.from(assetCode));
     const commissionScVal = StellarSdk.xdr.ScVal.scvBytes(
       Buffer.from(commissionId),
     );
@@ -131,18 +128,14 @@ export class StellarService implements OnModuleInit {
     );
 
     const artistAddr = this.addressToScVal(artistWallet);
-    const platformAddr = this.addressToScVal(
-      this.platformKeypair.publicKey(),
-    );
+    const platformAddr = this.addressToScVal(this.platformKeypair.publicKey());
     const grossScVal = this.i128ToScVal(
       BigInt(Math.round(grossAmount * 10_000_000)),
     );
     const feeScVal = this.i128ToScVal(
       BigInt(Math.round(platformFee * 10_000_000)),
     );
-    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(
-      Buffer.from(assetCode),
-    );
+    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(Buffer.from(assetCode));
     const commissionScVal = StellarSdk.xdr.ScVal.scvBytes(
       Buffer.from(commissionId),
     );
@@ -304,9 +297,7 @@ export class StellarService implements OnModuleInit {
     const grossScVal = this.i128ToScVal(
       BigInt(Math.round(grossAmount * 10_000_000)),
     );
-    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(
-      Buffer.from(assetCode),
-    );
+    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(Buffer.from(assetCode));
     const commissionScVal = StellarSdk.xdr.ScVal.scvBytes(
       Buffer.from(commissionId),
     );
@@ -354,9 +345,7 @@ export class StellarService implements OnModuleInit {
 
     const artistAddr = this.addressToScVal(artistWallet);
     const clientAddr = this.addressToScVal(clientWallet);
-    const platformAddr = this.addressToScVal(
-      this.platformKeypair.publicKey(),
-    );
+    const platformAddr = this.addressToScVal(this.platformKeypair.publicKey());
     const grossScVal = this.i128ToScVal(
       BigInt(Math.round(grossAmount * 10_000_000)),
     );
@@ -364,9 +353,7 @@ export class StellarService implements OnModuleInit {
     const feeScVal = this.i128ToScVal(
       BigInt(Math.round(platformFee * 10_000_000)),
     );
-    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(
-      Buffer.from(assetCode),
-    );
+    const assetScVal = StellarSdk.xdr.ScVal.scvBytes(Buffer.from(assetCode));
     const commissionScVal = StellarSdk.xdr.ScVal.scvBytes(
       Buffer.from(commissionId),
     );
@@ -397,7 +384,29 @@ export class StellarService implements OnModuleInit {
     return { txHash: result.hash };
   }
 
+  // ... existing code
+
+  async verifyTransaction(
+    txHash: string,
+  ): Promise<{ status: 'SUCCESS' | 'NOT_FOUND' | 'FAILED' }> {
+    try {
+      const tx = await this.sorobanServer.getTransaction(txHash);
+
+      if (tx.status === 'SUCCESS') {
+        return { status: 'SUCCESS' };
+      } else {
+        return { status: 'FAILED' };
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        return { status: 'NOT_FOUND' };
+      }
+      throw error;
+    }
+  }
+
   private i128ToScVal(value: bigint): StellarSdk.xdr.ScVal {
+    // ... existing code
     const hi = new StellarSdk.xdr.Hyper(BigInt.asIntN(64, value >> BigInt(64)));
     const lo = new StellarSdk.xdr.UnsignedHyper(BigInt.asUintN(64, value));
     return StellarSdk.xdr.ScVal.scvI128(

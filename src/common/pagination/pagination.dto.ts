@@ -54,3 +54,9 @@ export interface CursorPaginatedResult<T> {
   data: T[];
   meta: { limit: number; nextCursor: string | null; hasNext: boolean };
 }
+
+/**
+ * Backwards-compatible alias for the offset/limit pagination query params.
+ * Kept so feature DTOs that extend `PaginationRequest` keep resolving.
+ */
+export { PaginationQueryDto as PaginationRequest };

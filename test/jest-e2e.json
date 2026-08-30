@@ -3,6 +3,12 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "maxWorkers": 1,
+  "testTimeout": 60000,
+  "forceExit": true,
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1"
+  },
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   }

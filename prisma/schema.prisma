@@ -732,6 +732,64 @@ model Favorite {
   @@index([serviceId])
 }
 
+/// Structured taxonomy of service categories (#608).
+model ServiceCategory {
+  /// Unique identifier (UUID v4)
+  id          String   @id @default(uuid())
+  /// Display name of the category
+  name        String
+  /// URL-friendly unique slug
+  slug        String   @unique
+  /// Category description
+  description String?
+  /// Search/discovery tags
+  tags        String[]
+  /// Optional parent category for nesting
+  parentId    String?
+  /// Relational reference to parent category (self-relation)
+  parent      ServiceCategory? @relation("ServiceCategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  /// Child categories under this category
+  children    ServiceCategory[] @relation("ServiceCategoryTree")
+  /// Services tagged with this category
+  services    Service[]
+  /// Creation timestamp
+  createdAt   DateTime @default(now())
+
+  @@index([parentId])
+}
+
+/// Promotional campaign tier for featured services (#609).
+enum PromotionTier {
+  STANDARD
+  PREMIUM
+  SPOTLIGHT
+}
+
+/// A paid promotion / featured campaign applied to a service (#609).
+model Promotion {
+  /// Unique identifier (UUID v4)
+  id              String        @id @default(uuid())
+  /// Promoted service
+  serviceId       String
+  /// Relational reference to Service model
+  service         Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  /// Promotional tier purchased
+  tier            PromotionTier @default(STANDARD)
+  /// Campaign start time
+  startsAt        DateTime
+  /// Campaign end time
+  endsAt          DateTime
+  /// Whether the campaign is currently active
+  isActive        Boolean       @default(true)
+  /// Amount paid for the campaign in USDC
+  amountPaidUsdc  Decimal       @default(0)
+  /// Creation timestamp
+  createdAt       DateTime      @default(now())
+
+  @@index([serviceId])
+  @@index([isActive, startsAt, endsAt])
+}
+
 /// Status of a commission revision request (#606).
 enum CommissionRevisionStatus {
   REQUESTED
@@ -774,6 +832,8 @@ model CommissionChecklistItem {
   createdAt    DateTime   @default(now())
 
   @@index([commissionId])
+}
+
 // Dispute Resolution Models (#600)
 // ----------------------------------------------------------------------------
 

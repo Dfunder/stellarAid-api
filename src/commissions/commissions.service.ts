@@ -26,9 +26,14 @@ const VALID_TRANSITIONS: Record<CommissionStatus, CommissionStatus[]> = {
 export class CommissionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private validateTransition(current: CommissionStatus, next: CommissionStatus) {
+  private validateTransition(
+    current: CommissionStatus,
+    next: CommissionStatus,
+  ) {
     if (!VALID_TRANSITIONS[current]?.includes(next)) {
-      throw new BadRequestException(`Invalid status transition from ${current} to ${next}`);
+      throw new BadRequestException(
+        `Invalid status transition from ${current} to ${next}`,
+      );
     }
   }
 
@@ -38,7 +43,8 @@ export class CommissionsService {
       include: { artist: true },
     });
     if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.artist.userId !== artistId) throw new BadRequestException('Only the assigned artist can accept');
+    if (commission.artist.userId !== artistId)
+      throw new BadRequestException('Only the assigned artist can accept');
     this.validateTransition(commission.status, CommissionStatus.ACCEPTED);
     return this.prisma.commission.update({
       where: { id: commissionId },
@@ -46,24 +52,35 @@ export class CommissionsService {
     });
   }
 
-  async submit(commissionId: string, artistId: string, dto: SubmitCommissionDto) {
+  async submit(
+    commissionId: string,
+    artistId: string,
+    dto: SubmitCommissionDto,
+  ) {
     const commission = await this.prisma.commission.findUnique({
       where: { id: commissionId },
       include: { artist: true },
     });
     if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.artist.userId !== artistId) throw new BadRequestException('Only the assigned artist can submit');
+    if (commission.artist.userId !== artistId)
+      throw new BadRequestException('Only the assigned artist can submit');
     this.validateTransition(commission.status, CommissionStatus.SUBMITTED);
     return this.prisma.commission.update({
       where: { id: commissionId },
-      data: { status: CommissionStatus.SUBMITTED, attachments: dto.deliverableUrls },
+      data: {
+        status: CommissionStatus.SUBMITTED,
+        attachments: dto.deliverableUrls,
+      },
     });
   }
 
   async approve(commissionId: string, clientId: string) {
-    const commission = await this.prisma.commission.findUnique({ where: { id: commissionId } });
+    const commission = await this.prisma.commission.findUnique({
+      where: { id: commissionId },
+    });
     if (!commission) throw new NotFoundException('Commission not found');
-    if (commission.clientId !== clientId) throw new BadRequestException('Only the client can approve');
+    if (commission.clientId !== clientId)
+      throw new BadRequestException('Only the client can approve');
     this.validateTransition(commission.status, CommissionStatus.COMPLETED);
     return this.prisma.commission.update({
       where: { id: commissionId },
@@ -122,14 +139,14 @@ export class CommissionsService {
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { artist: true },
+      select: { role: true, artist: { select: { id: true } } },
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.CommissionWhereInput = {};
 
     if (user.role === 'ARTIST' && user.artist) {
       where.artistId = user.artist.id;
@@ -146,11 +163,11 @@ export class CommissionsService {
           skip,
           take,
           include: {
-        client: { select: { id: true, name: true } },
-        artist: {
-          include: { user: { select: { id: true, name: true } } },
-        },
-        service: { select: { id: true, title: true } },
+            client: { select: { id: true, name: true } },
+            artist: {
+              include: { user: { select: { id: true, name: true } } },
+            },
+            service: { select: { id: true, title: true } },
           },
           orderBy: { createdAt: 'desc' },
         }),
@@ -164,7 +181,9 @@ export class CommissionsService {
       include: {
         client: { select: { id: true, name: true, email: true } },
         artist: {
-          include: { user: { select: { id: true, name: true } } },
+          include: {
+            user: { select: { id: true, name: true } },
+          },
         },
         service: true,
         milestones: true,
@@ -178,7 +197,9 @@ export class CommissionsService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { artist: true },
+      select: {
+        artist: { select: { id: true } },
+      },
     });
 
     if (!user) {

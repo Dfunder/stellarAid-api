@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DiscoverPaginationDto } from './dto/pagination.dto';
 import { toSkipTake, paginate } from '../common/pagination/pagination.util';
 import { parseFields } from '../common/query/fields.util';
+import { deduplicate } from '../common/utils/deduplicate.util';
 
 const CACHE_TTL_SECONDS = 300;
 
@@ -17,34 +18,23 @@ export class DiscoverService {
 
   async getCategories() {
     const cacheKey = 'discover:categories';
-    const cached = await this.redisClient.get(cacheKey);
-
-    if (cached) {
-      return JSON.parse(cached) as Array<{
-        category: PortfolioCategory;
-        count: number;
-      }>;
-    }
-
-    const categories = await this.prisma.portfolio.groupBy({
-      by: ['category'],
-      where: { isPublished: true },
-      _count: { _all: true },
-      orderBy: { category: 'asc' },
-    });
-    const result = categories.map(({ category, _count }) => ({
-      category,
-      count: _count._all,
-    }));
-
-    await this.redisClient.set(
+    return deduplicate(
+      this.redisClient,
       cacheKey,
-      JSON.stringify(result),
-      'EX',
+      async () => {
+        const categories = await this.prisma.portfolio.groupBy({
+          by: ['category'],
+          where: { isPublished: true },
+          _count: { _all: true },
+          orderBy: { category: 'asc' },
+        });
+        return categories.map(({ category, _count }) => ({
+          category,
+          count: _count._all,
+        }));
+      },
       CACHE_TTL_SECONDS,
     );
-
-    return result;
   }
 
   async getPortfolios(pagination: DiscoverPaginationDto) {
@@ -55,42 +45,36 @@ export class DiscoverService {
     const cacheKey = `discover:portfolios:${portfolioCategory}:${skip}:${take}:${JSON.stringify(
       select,
     )}`;
-    const cached = await this.redisClient.get(cacheKey);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const where = { category: portfolioCategory, isPublished: true };
-    const findManyArgs: Prisma.PortfolioFindManyArgs = {
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take,
-    };
-
-    if (Object.keys(select).length > 0) {
-      findManyArgs.select = select;
-    } else {
-      findManyArgs.include = {
-        artist: { include: { user: { select: { id: true, name: true } } } },
-      };
-    }
-
-    const [data, total] = await Promise.all([
-      this.prisma.portfolio.findMany(findManyArgs),
-      this.prisma.portfolio.count({ where }),
-    ]);
-
-    const result = paginate(data, total, page, limit);
-    await this.redisClient.set(
+    return deduplicate(
+      this.redisClient,
       cacheKey,
-      JSON.stringify(result),
-      'EX',
+      async () => {
+        const where = { category: portfolioCategory, isPublished: true };
+        const findManyArgs: Prisma.PortfolioFindManyArgs = {
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take,
+        };
+
+        if (Object.keys(select).length > 0) {
+          findManyArgs.select = select;
+        } else {
+          findManyArgs.include = {
+            artist: { include: { user: { select: { id: true, name: true } } } },
+          };
+        }
+
+        const [data, total] = await Promise.all([
+          this.prisma.portfolio.findMany(findManyArgs),
+          this.prisma.portfolio.count({ where }),
+        ]);
+
+        return paginate(data, total, page, limit);
+      },
       CACHE_TTL_SECONDS,
     );
-
-    return result;
   }
 
   async getServices(pagination: DiscoverPaginationDto) {
@@ -100,42 +84,36 @@ export class DiscoverService {
     const cacheKey = `discover:services:${category}:${skip}:${take}:${JSON.stringify(
       select,
     )}`;
-    const cached = await this.redisClient.get(cacheKey);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const where = { category, isActive: true };
-    const findManyArgs: Prisma.ServiceFindManyArgs = {
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take,
-    };
-
-    if (Object.keys(select).length > 0) {
-      findManyArgs.select = select;
-    } else {
-      findManyArgs.include = {
-        artist: { include: { user: { select: { id: true, name: true } } } },
-      };
-    }
-
-    const [data, total] = await Promise.all([
-      this.prisma.service.findMany(findManyArgs),
-      this.prisma.service.count({ where }),
-    ]);
-
-    const result = paginate(data, total, page, limit);
-    await this.redisClient.set(
+    return deduplicate(
+      this.redisClient,
       cacheKey,
-      JSON.stringify(result),
-      'EX',
+      async () => {
+        const where = { category, isActive: true };
+        const findManyArgs: Prisma.ServiceFindManyArgs = {
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take,
+        };
+
+        if (Object.keys(select).length > 0) {
+          findManyArgs.select = select;
+        } else {
+          findManyArgs.include = {
+            artist: { include: { user: { select: { id: true, name: true } } } },
+          };
+        }
+
+        const [data, total] = await Promise.all([
+          this.prisma.service.findMany(findManyArgs),
+          this.prisma.service.count({ where }),
+        ]);
+
+        return paginate(data, total, page, limit);
+      },
       CACHE_TTL_SECONDS,
     );
-
-    return result;
   }
 
   private parsePortfolioCategory(category: string): PortfolioCategory {

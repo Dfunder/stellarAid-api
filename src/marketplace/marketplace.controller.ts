@@ -24,6 +24,7 @@ import { Roles } from '../auth/decorators/roles.decorators';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/sync/jwt.auth.guard';
 import { RolesGuard } from '../auth/sync/roles.guard';
+import { Deprecated } from '../common/decorators/deprecated.decorator';
 import { MarketplaceService } from './marketplace.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
@@ -100,10 +101,6 @@ export class MarketplaceController {
   ) {
     return this.marketplaceService.findAllActive(page, limit);
   }
-
-  import { Deprecated } from '../common/decorators/deprecated.decorator';
-
-//... some code
 
   @Post('services/bulk')
   @Roles(Role.ARTIST)

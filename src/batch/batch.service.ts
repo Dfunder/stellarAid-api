@@ -1,19 +1,5 @@
-import { PrismaService case 'update': {
-        if (!operation.data || !Array.isArray(operation.data)) {
-          throw new Error('Update operation requires a data array.');
-        }
-        const validatedData = await validateAndTransformArray(
-          operation.data,
-          UpdateServiceDto,
-        );
-        const updates = validatedData.map((item) =>
-          this.prisma.service.update({
-            where: { id: item.id },
-            data: item,
-          }),
-        );
-        return this.prisma.$transaction(updates);
-      } from 'src/prisma/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { BatchOperationDto, BatchRequestDto } from './dto/batch.dto';
 import {
   validate,
@@ -72,6 +58,22 @@ export class BatchService {
           data: validatedData,
           skipDuplicates: true,
         });
+      }
+      case 'update': {
+        if (!operation.data || !Array.isArray(operation.data)) {
+          throw new Error('Update operation requires a data array.');
+        }
+        const validatedData = await validateAndTransformArray(
+          operation.data,
+          UpdateServiceDto,
+        );
+        const updates = validatedData.map((item) =>
+          this.prisma.service.update({
+            where: { id: item.id },
+            data: item,
+          }),
+        );
+        return this.prisma.$transaction(updates);
       }
       case 'delete': {
         if (!operation.data || !Array.isArray(operation.data)) {

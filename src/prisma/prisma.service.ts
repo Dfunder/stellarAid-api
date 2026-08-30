@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -21,8 +26,14 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
-    const connectionLimit = parseInt(process.env.DATABASE_CONNECTION_LIMIT ?? '10', 10);
-    const connectTimeout = parseInt(process.env.DATABASE_CONNECT_TIMEOUT ?? '10', 10);
+    const connectionLimit = parseInt(
+      process.env.DATABASE_CONNECTION_LIMIT ?? '10',
+      10,
+    );
+    const connectTimeout = parseInt(
+      process.env.DATABASE_CONNECT_TIMEOUT ?? '10',
+      10,
+    );
 
     const databaseUrl = process.env.DATABASE_URL ?? '';
     // Append pool params if not already present in the URL
@@ -32,9 +43,24 @@ export class PrismaService
 
     super({
       datasources: { db: { url: poolUrl } },
-      log: process.env.NODE_ENV === 'development'
-        ? ['query', 'info', 'warn', 'error']
-        : ['warn', 'error'],
+      log: [
+        {
+          emit: 'event',
+          level: 'query',
+        },
+        {
+          emit: 'stdout',
+          level: 'info',
+        },
+        {
+          emit: 'stdout',
+          level: 'warn',
+        },
+        {
+          emit: 'stdout',
+          level: 'error',
+        },
+      ],
     });
   }
 

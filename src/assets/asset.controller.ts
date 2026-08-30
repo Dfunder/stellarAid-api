@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AssetService } from './asset.service';
+import { GeneratePresignedUrlDto } from './dto/generate-presigned-url.dto';
 
 @Controller('assets')
 export class AssetController {
@@ -8,5 +9,15 @@ export class AssetController {
   @Get()
   async getAssets() {
     return this.assetService.getAssets();
+  }
+
+  @Post('generate-presigned-url')
+  async generatePresignedUrl(
+    @Body() generatePresignedUrlDto: GeneratePresignedUrlDto,
+  ) {
+    return this.assetService.generatePresignedUrl(
+      generatePresignedUrlDto.filename,
+      generatePresignedUrlDto.contentType,
+    );
   }
 }

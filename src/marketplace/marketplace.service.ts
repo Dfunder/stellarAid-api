@@ -104,7 +104,6 @@ export class MarketplaceService {
             artist: {
               include: {
                 user: { select: { id: true, name: true } },
-                reviews: { select: { rating: true } },
               },
             },
           },
@@ -117,9 +116,22 @@ export class MarketplaceService {
   async findOne(id: string) {
     const service = await this.prisma.service.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        priceUsdc: true,
+        deliveryDays: true,
+        revisions: true,
+        features: true,
+        isActive: true,
+        createdAt: true,
         artist: {
-          include: {
+          select: {
+            id: true,
+            isVerified: true,
+            averageRating: true,
             user: { select: { id: true, name: true } },
             reviews: {
               select: { rating: true, comment: true, createdAt: true },
@@ -311,18 +323,33 @@ export class MarketplaceService {
         where: { isVerified: true },
         orderBy: { averageRating: 'desc' },
         take: 6,
-        include: {
+        select: {
+          id: true,
+          isVerified: true,
+          averageRating: true,
           user: { select: { id: true, name: true } },
-          services: { where: { isActive: true }, take: 3 },
+          services: {
+            where: { isActive: true },
+            take: 3,
+            select: { id: true, title: true, priceUsdc: true },
+          },
         },
       }),
       this.prisma.service.findMany({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' },
         take: 6,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          priceUsdc: true,
           artist: {
-            include: { user: { select: { id: true, name: true } } },
+            select: {
+              id: true,
+              isVerified: true,
+              averageRating: true,
+              user: { select: { id: true, name: true } },
+            },
           },
         },
       }),

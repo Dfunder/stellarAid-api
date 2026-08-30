@@ -2,7 +2,8 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PortfolioCategory } from '@prisma/client';
 import Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
-import { DiscoverPaginationDto } from './dto/discover-pagination.dto';
+import { DiscoverPaginationDto } from './dto/pagination.dto';
+import { toSkipTake, paginate } from '../common/pagination/pagination.util';
 
 const CACHE_TTL_SECONDS = 300;
 
@@ -45,18 +46,15 @@ export class DiscoverService {
     return result;
   }
 
-  async getPortfolios(
-    category: string,
-    pagination: DiscoverPaginationDto,
-  ) {
+  async getPortfolios(pagination: DiscoverPaginationDto) {
+    const { category, page, limit } = pagination;
     const portfolioCategory = this.parsePortfolioCategory(category);
-    const offset = pagination.offset ?? 0;
-    const limit = pagination.limit ?? 10;
-    const cacheKey = `discover:portfolios:${portfolioCategory}:${offset}:${limit}`;
+    const { skip, take } = toSkipTake(page, limit);
+    const cacheKey = `discover:portfolios:${portfolioCategory}:${skip}:${take}`;
     const cached = await this.redisClient.get(cacheKey);
 
     if (cached) {
-      return JSON.parse(cached) as Record<string, unknown>;
+      return JSON.parse(cached);
     }
 
     const where = { category: portfolioCategory, isPublished: true };
@@ -64,8 +62,8 @@ export class DiscoverService {
       this.prisma.portfolio.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: offset,
-        take: limit,
+        skip,
+        take,
         include: {
           artist: { include: { user: { select: { id: true, name: true } } } },
         },
@@ -73,7 +71,7 @@ export class DiscoverService {
       this.prisma.portfolio.count({ where }),
     ]);
 
-    const result = { data, total, offset, limit, hasMore: offset + limit < total };
+    const result = paginate(data, total, page, limit);
     await this.redisClient.set(
       cacheKey,
       JSON.stringify(result),
@@ -84,14 +82,14 @@ export class DiscoverService {
     return result;
   }
 
-  async getServices(category: string, pagination: DiscoverPaginationDto) {
-    const offset = pagination.offset ?? 0;
-    const limit = pagination.limit ?? 10;
-    const cacheKey = `discover:services:${category}:${offset}:${limit}`;
+  async getServices(pagination: DiscoverPaginationDto) {
+    const { category, page, limit } = pagination;
+    const { skip, take } = toSkipTake(page, limit);
+    const cacheKey = `discover:services:${category}:${skip}:${take}`;
     const cached = await this.redisClient.get(cacheKey);
 
     if (cached) {
-      return JSON.parse(cached) as Record<string, unknown>;
+      return JSON.parse(cached);
     }
 
     const where = { category, isActive: true };
@@ -99,8 +97,8 @@ export class DiscoverService {
       this.prisma.service.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: offset,
-        take: limit,
+        skip,
+        take,
         include: {
           artist: { include: { user: { select: { id: true, name: true } } } },
         },
@@ -108,7 +106,7 @@ export class DiscoverService {
       this.prisma.service.count({ where }),
     ]);
 
-    const result = { data, total, offset, limit, hasMore: offset + limit < total };
+    const result = paginate(data, total, page, limit);
     await this.redisClient.set(
       cacheKey,
       JSON.stringify(result),
@@ -120,7 +118,9 @@ export class DiscoverService {
   }
 
   private parsePortfolioCategory(category: string): PortfolioCategory {
-    if (!Object.values(PortfolioCategory).includes(category as PortfolioCategory)) {
+    if (
+      !Object.values(PortfolioCategory).includes(category as PortfolioCategory)
+    ) {
       throw new BadRequestException(`Invalid portfolio category: ${category}`);
     }
 

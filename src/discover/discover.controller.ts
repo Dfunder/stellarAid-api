@@ -1,8 +1,8 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
-import { DiscoverPaginationDto } from './dto/discover-pagination.dto';
 import { DiscoverService } from './discover.service';
+import { DiscoverPaginationDto } from './dto/pagination.dto';
 
 @ApiTags('discover')
 @Controller({ version: '1', path: 'discover' })
@@ -11,28 +11,24 @@ export class DiscoverController {
 
   @Public()
   @Get('categories')
-  @ApiOperation({ summary: 'List active portfolio categories with item counts' })
+  @ApiOperation({
+    summary: 'List active portfolio categories with item counts',
+  })
   getCategories() {
     return this.discoverService.getCategories();
   }
 
   @Public()
-  @Get('categories/:category/portfolios')
+  @Get('portfolios')
   @ApiOperation({ summary: 'Browse published portfolios by category' })
-  getPortfolios(
-    @Param('category') category: string,
-    @Query() pagination: DiscoverPaginationDto,
-  ) {
-    return this.discoverService.getPortfolios(category, pagination);
+  getPortfolios(@Query() pagination: DiscoverPaginationDto) {
+    return this.discoverService.getPortfolios(pagination);
   }
 
   @Public()
-  @Get('categories/:category/services')
+  @Get('services')
   @ApiOperation({ summary: 'Browse active services by category' })
-  getServices(
-    @Param('category') category: string,
-    @Query() pagination: DiscoverPaginationDto,
-  ) {
-    return this.discoverService.getServices(category, pagination);
+  getServices(@Query() pagination: DiscoverPaginationDto) {
+    return this.discoverService.getServices(pagination);
   }
 }

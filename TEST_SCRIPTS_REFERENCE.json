@@ -1,0 +1,65 @@
+{
+  "scripts-reference": {
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e:watch": "jest --config ./test/jest-e2e.json --watch",
+    "test:e2e:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --config ./test/jest-e2e.json",
+    "test:e2e:coverage": "jest --config ./test/jest-e2e.json --coverage",
+    "test:db:setup": "bash scripts/test-setup.sh",
+    "test:db:reset": "dropdb lumora_test; createdb lumora_test; npx prisma migrate deploy"
+  },
+  "jest-configuration-for-e2e": {
+    "description": "Jest configuration for e2e/integration tests",
+    "location": "test/jest-e2e.json",
+    "configuration": {
+      "moduleFileExtensions": ["js", "json", "ts"],
+      "rootDir": ".",
+      "testEnvironment": "node",
+      "testRegex": ".(integration\\.)?e2e-spec\\.ts$",
+      "transform": {
+        "^.+\\.(t|j)s$": "ts-jest"
+      },
+      "collectCoverageFrom": [
+        "src/**/*.ts",
+        "!src/**/*.spec.ts",
+        "!src/main.ts"
+      ],
+      "coverageDirectory": "../coverage",
+      "testTimeout": 30000
+    }
+  },
+  "test-dependencies": {
+    "@nestjs/testing": "^11.0.1",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^7.0.0",
+    "@types/jest": "^30.0.0"
+  },
+  "running-tests": {
+    "all-tests": "npm run test:e2e",
+    "database-tests": "npm run test:e2e -- database.integration.spec.ts",
+    "auth-tests": "npm run test:e2e -- auth.integration.e2e-spec.ts",
+    "api-tests": "npm run test:e2e -- api-endpoints.integration.e2e-spec.ts",
+    "stellar-tests": "npm run test:e2e -- stellar.integration.e2e-spec.ts",
+    "watch-mode": "npm run test:e2e:watch",
+    "with-coverage": "npm run test:e2e:coverage",
+    "debug-mode": "npm run test:e2e:debug"
+  },
+  "setup": {
+    "automated": "npm run test:db:setup",
+    "manual": [
+      "createdb lumora_test",
+      "export DATABASE_URL=postgresql://postgres:@localhost:5432/lumora_test",
+      "npx prisma migrate deploy",
+      "npm install"
+    ]
+  },
+  "notes": {
+    "database": "Uses PostgreSQL for test database",
+    "fixtures": "UserFixture, CommissionFixture provide test data",
+    "helpers": "DatabaseHelper, AuthHelper, TestAppHelper simplify test setup",
+    "cleanup": "Database cleaned after each test to ensure isolation",
+    "parallel": "Tests can run in parallel (Jest default)",
+    "timeout": "30 second timeout for long operations"
+  }
+}

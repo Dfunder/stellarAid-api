@@ -1,27 +1,38 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
   IsIn,
-  IsObject,
   IsOptional,
   IsString,
-  MaxLength,
   ValidateNested,
   ArrayMaxSize,
   ArrayMinSize,
+  IsUUID,
 } from 'class-validator';
 
 export class BatchOperationDto {
+  @ApiProperty({
+    description: 'A client-generated ID for the operation',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
+  @IsUUID()
+  id: string;
+
+  @ApiProperty({
+    description: 'The type of operation to perform',
+    example: 'insert',
+  })
   @IsString()
-  @MaxLength(64)
-  id!: string;
+  @IsIn(['health', 'insert', 'update', 'delete'])
+  type: string;
 
-  @IsIn(['echo', 'health'])
-  type!: 'echo' | 'health';
-
+  @ApiProperty({
+    description: 'The data for the operation',
+    example: [{ name: 'Service 1' }, { name: 'Service 2' }],
+  })
   @IsOptional()
-  @IsObject()
-  data?: Record<string, unknown>;
+  data?: any;
 }
 
 export class BatchRequestDto {

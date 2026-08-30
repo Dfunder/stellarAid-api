@@ -1,64 +1,27 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
-import { SanitizeString } from '../../common/validation/sanitize-string.decorator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsUUID, IsOptional } from 'class-validator';
 
 export class UpdateServiceDto {
-  @ApiPropertyOptional({ description: 'Service title' })
-  @IsOptional()
-  @SanitizeString()
-  @IsString()
-  title?: string;
+  @ApiProperty({
+    description: 'The ID of the service to update',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
+  @IsUUID()
+  id: string;
 
-  @ApiPropertyOptional({ description: 'Service description' })
-  @IsOptional()
-  @SanitizeString()
+  @ApiProperty({
+    description: 'The updated name of the service',
+    example: 'My Awesome Service',
+  })
   @IsString()
+  @IsOptional()
+  name?: string;
+
+  @ApiProperty({
+    description: 'The updated description of the service',
+    example: 'A very cool service that does amazing things.',
+  })
+  @IsString()
+  @IsOptional()
   description?: string;
-
-  @ApiPropertyOptional({ description: 'Service category' })
-  @IsOptional()
-  @SanitizeString()
-  @IsString()
-  category?: string;
-
-  @ApiPropertyOptional({ description: 'Price in USDC' })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  priceUsdc?: number;
-
-  @ApiPropertyOptional({ description: 'Delivery time in days' })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  deliveryDays?: number;
-
-  @ApiPropertyOptional({ description: 'Number of revisions' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  revisions?: number;
-
-  @ApiPropertyOptional({ description: 'List of features', type: [String] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @Transform(({ value }: { value: unknown }) =>
-    Array.isArray(value) ? value.map((item: string) => item.trim()) : value,
-  )
-  features?: string[];
-
-  @ApiPropertyOptional({ description: 'Whether service is active' })
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
 }

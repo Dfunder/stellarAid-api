@@ -33,9 +33,7 @@ async function bootstrap() {
     format: isProduction
       ? format.combine(withRequestId, format.timestamp(), format.json())
       : format.combine(withRequestId, format.timestamp(), format.simple()),
-    transports: [
-      new transports.Console(),
-    ],
+    transports: [new transports.Console()],
   });
   const app = await NestFactory.create(AppModule, { logger });
 
@@ -60,15 +58,29 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  app.useGlobalPipes(
-    createValidationPipe(),
-  );
+  app.useGlobalPipes(createValidationPipe());
 
   const config = new DocumentBuilder()
     .setTitle('Lumora API')
     .setDescription('Lumora Creative Marketplace API - Version 1')
     .setVersion('1.0')
-    .addTag('versioning', 'API uses URI versioning. All endpoints are prefixed with /v1/')
+    .addTag('auth', 'Authentication and user onboarding endpoints')
+    .addTag(
+      'versioning',
+      'API uses URI versioning. All endpoints are prefixed with /v1/',
+    )
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description:
+          'Enter your JWT Bearer token in the format: Bearer <token>',
+        in: 'header',
+      },
+      'bearer',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

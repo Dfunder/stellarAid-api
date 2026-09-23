@@ -69,6 +69,19 @@ async function bootstrap() {
     .setDescription('Lumora Creative Marketplace API - Version 1')
     .setVersion('1.0')
     .addTag('versioning', 'API uses URI versioning. All endpoints are prefixed with /v1/')
+    .addTag('marketplace', 'Creative marketplace service listings and discovery')
+    .addTag('portfolio', 'Artist portfolio management and media items')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Enter your JWT Bearer token in the format: Bearer <token>',
+        in: 'header',
+      },
+      'bearer',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

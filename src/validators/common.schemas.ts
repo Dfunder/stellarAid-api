@@ -36,3 +36,5 @@ export const slugSchema = z
   .min(1)
   .max(120)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Must be a URL-safe slug.');
+
+export type PaginationSchema = z.infer<typeof paginationSchema>;

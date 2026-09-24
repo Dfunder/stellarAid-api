@@ -34,7 +34,21 @@ export const artworkSchema = z.object({
   published: z.boolean().default(false),
 });
 
+export const artworkParamsSchema = z.object({ id: uuidSchema });
+
 export const categorySchema = z.object({ slug: slugSchema });
+
+const tagName = z.string().trim().min(1).max(40);
+
+export const createTagSchema = z.object({ name: tagName });
+
+export const syncArtworkTagsSchema = z.object({
+  tags: z.array(tagName).max(30),
+});
+
+export const tagListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
 
 export const marketplaceListSchema = z.object({
   query: paginationSchema.extend({ category: z.string().optional() }),
@@ -69,3 +83,8 @@ export const notificationParamsSchema = z.object({ notificationId: uuidSchema })
 
 export const adminParamsSchema = z.object({ userId: uuidSchema });
 export const reportParamsSchema = z.object({ reportId: uuidSchema });
+
+export type ArtworkParamsSchema = z.infer<typeof artworkParamsSchema>;
+export type CreateTagSchema = z.infer<typeof createTagSchema>;
+export type SyncArtworkTagsSchema = z.infer<typeof syncArtworkTagsSchema>;
+export type TagListQuerySchema = z.infer<typeof tagListQuerySchema>;

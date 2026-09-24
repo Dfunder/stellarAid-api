@@ -31,6 +31,9 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
+      { name: 'Marketplace', description: 'Browsing, featured, and trending published artworks.' },
+      { name: 'Search', description: 'Full-text search across published artworks.' },
+      { name: 'Orders', description: 'Purchasing (order creation).' },
     ],
     components: {
       securitySchemes: {
@@ -255,6 +258,92 @@ export const openApiSpec = swaggerJsdoc({
               nullable: true,
               additionalProperties: { type: 'string', format: 'uri' },
               example: { github: 'https://github.com/ada' },
+            },
+          },
+        },
+        Artwork: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            price: { type: 'string', nullable: true, example: '120.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'], nullable: true },
+            published: { type: 'boolean' },
+            sold: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        ArtworkListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+          },
+        },
+        ArtworkPageResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                nextCursor: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+        Order: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            buyerId: { type: 'string', format: 'uuid' },
+            sellerId: { type: 'string', format: 'uuid' },
+            artworkId: { type: 'string', format: 'uuid' },
+            amount: { type: 'string', example: '120.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+            platformFee: { type: 'string', example: '6.00' },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED'],
+            },
+            idempotencyKey: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        OrderResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                order: { $ref: '#/components/schemas/Order' },
+                total: {
+                  type: 'string',
+                  description: 'amount + platformFee, formatted to 2 decimal places.',
+                  example: '126.00',
+                },
+              },
+            },
+          },
+        },
+        CreateOrderRequest: {
+          type: 'object',
+          required: ['artworkId'],
+          properties: {
+            artworkId: { type: 'string', format: 'uuid' },
+            idempotencyKey: {
+              type: 'string',
+              maxLength: 200,
+              description: 'A repeated request with the same key returns the original order.',
             },
           },
         },

@@ -20,6 +20,7 @@ import { paymentsRouter } from './payments.routes';
 import { portfoliosRouter } from './portfolios.routes';
 import { profilesRouter } from './profiles.routes';
 import { reviewsRouter } from './reviews.routes';
+import { searchRouter } from './search.routes';
 import { usersRouter } from './users.routes';
 
 export const v1Router: Router = Router();
@@ -31,6 +32,7 @@ v1Router.use('/profiles', profilesRouter);
 v1Router.use('/portfolios', portfoliosRouter);
 v1Router.use('/artworks', artworksRouter);
 v1Router.use('/marketplace', marketplaceRouter);
+v1Router.use('/search', searchRouter);
 v1Router.use('/orders', ordersRouter);
 v1Router.use('/payments', paymentsRouter);
 v1Router.use('/commissions', commissionsRouter);

@@ -83,17 +83,48 @@
  *         description: Username already taken
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
+ * /api/v1/users/me/recently-viewed:
+ *   get:
+ *     summary: List the current user's recently viewed artworks
+ *     description: >
+ *       Backed by Redis, not the database. Capped at the 50 most recent
+ *       views (see POST /api/v1/artworks/{id}/view).
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *     responses:
+ *       200:
+ *         description: Paginated recently viewed artworks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RecentlyViewedResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
 
-import { updateMe, updateUserById } from '@/controllers';
+import { getMyRecentlyViewed, updateMe, updateUserById } from '@/controllers';
 import { authenticate, validate } from '@/middlewares';
-import { updateProfileSchema, userIdParamsSchema } from '@/validators';
+import { paginationSchema, updateProfileSchema, userIdParamsSchema } from '@/validators';
 
 import { createFeatureRouter } from './router-factory';
 
 export const usersRouter = createFeatureRouter('users');
 
 usersRouter.patch('/me', authenticate, validate({ body: updateProfileSchema }), updateMe);
+usersRouter.get(
+  '/me/recently-viewed',
+  authenticate,
+  validate({ query: paginationSchema }),
+  getMyRecentlyViewed,
+);
 usersRouter.patch(
   '/:id',
   authenticate,

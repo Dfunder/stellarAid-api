@@ -31,6 +31,13 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
+      { name: 'Artworks', description: 'Artwork detail, view tracking, and save/unsave.' },
+      {
+        name: 'Marketplace',
+        description: 'Browsing, trending, and recommended published artworks.',
+      },
+      { name: 'Search', description: 'Full-text search across published artworks.' },
+      { name: 'Categories', description: 'Browsable category taxonomy.' },
     ],
     components: {
       securitySchemes: {
@@ -256,6 +263,71 @@ export const openApiSpec = swaggerJsdoc({
               additionalProperties: { type: 'string', format: 'uri' },
               example: { github: 'https://github.com/ada' },
             },
+          },
+        },
+        Artwork: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            published: { type: 'boolean' },
+            sold: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        ArtworkResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/Artwork' },
+          },
+        },
+        ArtworkListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+          },
+        },
+        ArtworkOffsetPageResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: {
+                  type: 'integer',
+                  description: 'Omitted (not tracked) for search result pages.',
+                },
+              },
+            },
+          },
+        },
+        CategoryNode: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            slug: { type: 'string' },
+            parentId: { type: 'string', format: 'uuid', nullable: true },
+            children: { type: 'array', items: { type: 'object' } },
+          },
+        },
+        CategoryListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/CategoryNode' } },
           },
         },
         Health: {

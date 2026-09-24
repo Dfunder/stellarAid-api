@@ -8,6 +8,23 @@
 import { z } from 'zod';
 import { paginationSchema, slugSchema, uuidSchema } from './common.schemas';
 
+const ARTWORK_CATEGORIES = [
+  'ART',
+  'ILLUSTRATION',
+  'GRAPHIC_DESIGN',
+  'PHOTOGRAPHY',
+  'DIGITAL_PAINTING',
+  'THREE_D_ART',
+  'ANIMATION',
+  'UX_UI',
+  'MUSIC',
+  'WRITING',
+  'OTHER',
+] as const;
+const artworkCategorySchema = z.enum(ARTWORK_CATEGORIES);
+
+export const artworkIdParamsSchema = z.object({ id: uuidSchema });
+
 export const userParamsSchema = z.object({ userId: uuidSchema });
 export const listUsersSchema = z.object({ query: paginationSchema });
 
@@ -36,8 +53,13 @@ export const artworkSchema = z.object({
 
 export const categorySchema = z.object({ slug: slugSchema });
 
-export const marketplaceListSchema = z.object({
-  query: paginationSchema.extend({ category: z.string().optional() }),
+export const marketplaceListSchema = paginationSchema.extend({
+  category: artworkCategorySchema.optional(),
+});
+
+export const searchQuerySchema = paginationSchema.extend({
+  q: z.string().trim().max(200).default(''),
+  category: artworkCategorySchema.optional(),
 });
 
 export const orderParamsSchema = z.object({ orderId: uuidSchema });
@@ -69,3 +91,7 @@ export const notificationParamsSchema = z.object({ notificationId: uuidSchema })
 
 export const adminParamsSchema = z.object({ userId: uuidSchema });
 export const reportParamsSchema = z.object({ reportId: uuidSchema });
+
+export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
+export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
+export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;

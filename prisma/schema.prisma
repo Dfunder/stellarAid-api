@@ -470,10 +470,24 @@ model Artwork {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   media        ArtworkMedia[]
+  saves        Save[]
 
   @@index([userId])
   @@index([category])
   @@index([userId, published])
+}
+
+/// A user bookmarking an artwork. Toggled (save/unsave), not a like counter.
+model Save {
+  id        String   @id @default(uuid())
+  userId    String
+  artworkId String
+  createdAt DateTime @default(now())
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artworkId])
+  @@index([userId])
+  @@index([artworkId])
 }
 
 /// Browsable category taxonomy. One level of nesting (parent → child).

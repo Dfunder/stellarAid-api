@@ -8,6 +8,22 @@
 import { z } from 'zod';
 import { paginationSchema, slugSchema, uuidSchema } from './common.schemas';
 
+const ARTWORK_CATEGORIES = [
+  'ART',
+  'ILLUSTRATION',
+  'GRAPHIC_DESIGN',
+  'PHOTOGRAPHY',
+  'DIGITAL_PAINTING',
+  'THREE_D_ART',
+  'ANIMATION',
+  'UX_UI',
+  'MUSIC',
+  'WRITING',
+  'OTHER',
+] as const;
+const artworkCategorySchema = z.enum(ARTWORK_CATEGORIES);
+const assetSchema = z.enum(['USDC', 'XLM']);
+
 export const userParamsSchema = z.object({ userId: uuidSchema });
 export const listUsersSchema = z.object({ query: paginationSchema });
 
@@ -20,24 +36,54 @@ export const profileBodySchema = z.object({
   socialLinks: z.record(z.string(), z.string().url()).optional(),
 });
 
-export const portfolioItemSchema = z.object({
+export const portfolioItemIdParamsSchema = z.object({ id: uuidSchema });
+
+export const createPortfolioItemSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(5000).optional(),
   tags: z.array(z.string()).max(30).optional(),
-  published: z.boolean().default(false),
+});
+
+export const updatePortfolioItemSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  tags: z.array(z.string()).max(30).optional(),
+  published: z.boolean().optional(),
+});
+
+export const reorderPortfolioItemsSchema = z.object({
+  orderedIds: z.array(uuidSchema).min(1).max(500),
 });
 
 export const artworkSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(5000).optional(),
+  category: artworkCategorySchema,
   tags: z.array(z.string()).max(30).optional(),
-  published: z.boolean().default(false),
+  price: z.coerce.number().min(0).optional(),
+  asset: assetSchema.optional(),
 });
+
+export const updateArtworkSchema = artworkSchema.partial();
+
+export const artworkIdParamsSchema = z.object({ id: uuidSchema });
+
+export const setArtworkPublishedSchema = z.object({ published: z.boolean() });
 
 export const categorySchema = z.object({ slug: slugSchema });
 
-export const marketplaceListSchema = z.object({
-  query: paginationSchema.extend({ category: z.string().optional() }),
+const cursorPaginationSchema = z.object({
+  cursor: z.string().trim().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const marketplaceListSchema = cursorPaginationSchema.extend({
+  category: artworkCategorySchema.optional(),
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().min(0).optional(),
+  asset: assetSchema.optional(),
+  verifiedOnly: z.coerce.boolean().optional(),
+  sort: z.enum(['newest', 'price_asc', 'price_desc', 'popular', 'rating']).default('newest'),
 });
 
 export const orderParamsSchema = z.object({ orderId: uuidSchema });
@@ -69,3 +115,13 @@ export const notificationParamsSchema = z.object({ notificationId: uuidSchema })
 
 export const adminParamsSchema = z.object({ userId: uuidSchema });
 export const reportParamsSchema = z.object({ reportId: uuidSchema });
+
+export type ArtworkSchema = z.infer<typeof artworkSchema>;
+export type UpdateArtworkSchema = z.infer<typeof updateArtworkSchema>;
+export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
+export type SetArtworkPublishedSchema = z.infer<typeof setArtworkPublishedSchema>;
+export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
+export type PortfolioItemIdParamsSchema = z.infer<typeof portfolioItemIdParamsSchema>;
+export type CreatePortfolioItemSchema = z.infer<typeof createPortfolioItemSchema>;
+export type UpdatePortfolioItemSchema = z.infer<typeof updatePortfolioItemSchema>;
+export type ReorderPortfolioItemsSchema = z.infer<typeof reorderPortfolioItemsSchema>;

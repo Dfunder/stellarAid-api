@@ -31,6 +31,12 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
+      { name: 'Artworks', description: 'Artwork CRUD, publishing, and detail lookup.' },
+      { name: 'Marketplace', description: 'Browsing and discovering published artworks.' },
+      {
+        name: 'Portfolios',
+        description: 'Showcase (not-for-sale) portfolio items and ordering.',
+      },
     ],
     components: {
       securitySchemes: {
@@ -255,6 +261,158 @@ export const openApiSpec = swaggerJsdoc({
               nullable: true,
               additionalProperties: { type: 'string', format: 'uri' },
               example: { github: 'https://github.com/ada' },
+            },
+          },
+        },
+        Artwork: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            price: { type: 'string', nullable: true, example: '120.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'], nullable: true },
+            published: { type: 'boolean' },
+            sold: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        ArtworkResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/Artwork' },
+          },
+        },
+        ArtworkListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+          },
+        },
+        ArtworkPageResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                nextCursor: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+        ArtworkDetailResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                artwork: { $ref: '#/components/schemas/Artwork' },
+                mediaIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
+                relatedArtworks: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Artwork' },
+                },
+                reviewSummary: {
+                  type: 'object',
+                  description: 'Aggregated from the owning artist\'s reviews.',
+                  properties: {
+                    averageRating: { type: 'number', nullable: true },
+                    count: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        CreateArtworkRequest: {
+          type: 'object',
+          required: ['title', 'category'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        UpdateArtworkRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        PortfolioItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            order: { type: 'integer' },
+            published: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PortfolioItemResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/PortfolioItem' },
+          },
+        },
+        PortfolioItemListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/PortfolioItem' } },
+          },
+        },
+        CreatePortfolioItemRequest: {
+          type: 'object',
+          required: ['title'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+          },
+        },
+        UpdatePortfolioItemRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            published: { type: 'boolean' },
+          },
+        },
+        ReorderPortfolioItemsRequest: {
+          type: 'object',
+          required: ['orderedIds'],
+          properties: {
+            orderedIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              minItems: 1,
+              description: 'Must contain exactly the caller\'s portfolio item ids.',
             },
           },
         },

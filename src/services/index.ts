@@ -3,6 +3,7 @@ export * from './artworks.service';
 export * from './auth.service';
 export * from './cache.service';
 export * from './catalog.service';
+export * from './commissions.service';
 export * from './health.service';
 export * from './media-cleanup.service';
 export * from './prisma.service';

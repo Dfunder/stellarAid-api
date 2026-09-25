@@ -198,20 +198,22 @@ enum ReviewReportStatus {
 /// Purchase of an artwork. `artworkId` references the Artwork table
 /// delivered elsewhere.
 model Order {
-  id           String        @id @default(uuid())
-  buyerId      String
-  sellerId     String
-  artworkId    String
-  amount       Decimal       @db.Decimal(12, 2)
-  asset        Asset
-  platformFee  Decimal       @db.Decimal(12, 2)
-  status       OrderStatus   @default(PENDING)
-  txHash       String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
-  reviews      Review[]
+  id             String        @id @default(uuid())
+  buyerId        String
+  sellerId       String
+  artworkId      String
+  amount         Decimal       @db.Decimal(12, 2)
+  asset          Asset
+  platformFee    Decimal       @db.Decimal(12, 2)
+  status         OrderStatus   @default(PENDING)
+  idempotencyKey String?
+  txHash         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  transactions   Transaction[]
+  reviews        Review[]
 
+  @@unique([buyerId, idempotencyKey])
   @@index([buyerId])
   @@index([sellerId])
   @@index([artworkId])
@@ -465,6 +467,8 @@ model Artwork {
   category     ArtworkCategory
   tags         Json?
   coverMediaId String?
+  price        Decimal?        @db.Decimal(12, 2)
+  asset        Asset?
   published    Boolean         @default(false)
   sold         Boolean         @default(false)
   createdAt    DateTime        @default(now())
@@ -475,6 +479,24 @@ model Artwork {
   @@index([userId])
   @@index([category])
   @@index([userId, published])
+  @@index([price])
+}
+
+/// A user saving/favoriting an artwork. `userId` is a plain indexed column
+/// (User is delivered elsewhere, per the cross-scope convention documented
+/// at the top of this file); `artworkId` is a real relation since Artwork
+/// is defined in this same schema. Unique per (userId, artworkId) so
+/// toggling save/unsave is idempotent at the database level too.
+model Save {
+  id        String   @id @default(uuid())
+  userId    String
+  artworkId String
+  createdAt DateTime @default(now())
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artworkId])
+  @@index([userId])
+  @@index([artworkId])
 }
 
 /// A user bookmarking an artwork. Toggled (save/unsave), not a like counter.
@@ -512,6 +534,11 @@ model Tag {
 }
 
 /// Metadata for every uploaded file (S3 bucket/key + dimensions).
+///
+/// Processed variants (thumbnail, WebP) are their own `Media` rows pointing
+/// back at the original via `variantOfId`/`variantLabel`, rather than extra
+/// columns on the original — this keeps a variant's own bucket/key/size/
+/// dimensions modeled the same way as any other Media row.
 model Media {
   id           String             @id @default(uuid())
   userId       String
@@ -522,12 +549,17 @@ model Media {
   size         BigInt             @db.BigInt
   width        Int?
   height       Int?
+  variantOfId  String?
+  variantLabel String?
   createdAt    DateTime           @default(now())
+  variantOf    Media?             @relation("MediaVariants", fields: [variantOfId], references: [id], onDelete: Cascade)
+  variants     Media[]            @relation("MediaVariants")
   artworks     ArtworkMedia[]
   portfolio    PortfolioMedia[]
   deliverables OrderDeliverable[]
 
   @@index([userId])
+  @@index([variantOfId])
 }
 
 /// Artwork ↔ media join with editable sort order.

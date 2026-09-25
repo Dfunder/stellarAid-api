@@ -1,5 +1,6 @@
 /**
  * Category taxonomy routes (v1).
+ * Categories routes (v1).
  *
  * @openapi
  * /api/v1/categories:
@@ -12,6 +13,11 @@
  *     responses:
  *       200:
  *         description: Categories
+ *     summary: List all categories, with sub-categories nested
+ *     tags: [Taxonomy]
+ *     responses:
+ *       200:
+ *         description: Category tree
  *         content:
  *           application/json:
  *             schema:

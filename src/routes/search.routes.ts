@@ -6,6 +6,10 @@
  *   get:
  *     summary: Full-text search across published artworks
  *     description: >
+ *       Ranks by Postgres `ts_rank` over a GIN expression index on title +
+ *       description + tags. Falls back to trigram similarity on title
+ *       (fuzzy/typo-tolerant) when the full-text query matches nothing.
+ *       Results are cached for 60 seconds per unique query/filter/page.
  *       Ranks by Postgres `ts_rank` over title + description. An empty `q`
  *       falls back to a plain filtered browse (newest first). Pagination
  *       uses an opaque offset cursor, not the id-based keyset cursor used
@@ -28,6 +32,8 @@
  *           type: string
  *           enum: [ART, ILLUSTRATION, GRAPHIC_DESIGN, PHOTOGRAPHY, DIGITAL_PAINTING, THREE_D_ART, ANIMATION, UX_UI, MUSIC, WRITING, OTHER]
  *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
  *         name: minPrice
  *         schema: { type: number, minimum: 0 }
  *       - in: query
@@ -55,6 +61,10 @@
  *     responses:
  *       200:
  *         description: Page of search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ArtworkOffsetPageResponse'
  *         description: Ranked search results
  *         content:
  *           application/json:

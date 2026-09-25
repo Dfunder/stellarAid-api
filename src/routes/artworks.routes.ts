@@ -2,6 +2,9 @@
  * Artworks routes (v1).
  *
  * @openapi
+ * /api/v1/artworks/{id}:
+ *   get:
+ *     summary: Get artwork detail
  * /api/v1/artworks:
  *   post:
  *     summary: Create an artwork listing
@@ -42,6 +45,19 @@
  *         schema: { type: string, format: uuid }
  *     responses:
  *       200:
+ *         description: Artwork
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ArtworkResponse'
+ *       404:
+ *         description: Artwork not found
+ * /api/v1/artworks/{id}/view:
+ *   post:
+ *     summary: Record a view of this artwork
+ *     description: >
+ *       Debounced to once per hour per user per artwork; also feeds the
+ *       marketplace trending score. Stored in Redis, not the database.
  *         description: Artwork detail
  *         content:
  *           application/json:
@@ -100,6 +116,24 @@
  *         required: true
  *         schema: { type: string, format: uuid }
  *     responses:
+ *       200:
+ *         description: Whether this call recorded a new view
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, enum: [true] }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     recorded: { type: boolean }
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ * /api/v1/artworks/{id}/save:
+ *   post:
+ *     summary: Toggle saving this artwork (save/unsave)
+ *     description: Creates the save if it doesn't exist, removes it if it does.
  *       204:
  *         description: Deleted
  *             $ref: '#/components/schemas/SyncArtworkTagsRequest'
@@ -142,6 +176,28 @@
  *         name: id
  *         required: true
  *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: The resulting save state
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, enum: [true] }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     saved: { type: boolean }
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         description: Artwork not found
+ */
+
+import { getArtwork, postArtworkSave, postArtworkView } from '@/controllers';
+import { authenticate, validate } from '@/middlewares';
+import { artworkIdParamsSchema } from '@/validators';
  *     requestBody:
  *       required: true
  *       content:
@@ -246,6 +302,7 @@ import { createFeatureRouter } from './router-factory';
 
 export const artworksRouter = createFeatureRouter('artworks');
 
+artworksRouter.get('/:id', validate({ params: artworkIdParamsSchema }), getArtwork);
 artworksRouter.post('/', authenticate, validate({ body: artworkSchema }), postArtwork);
 artworksRouter.get('/:id', validate({ params: artworkIdParamsSchema }), getArtwork);
 artworksRouter.patch(
@@ -280,6 +337,8 @@ artworksRouter.put(
 artworksRouter.post(
   '/:id/save',
   authenticate,
+  validate({ params: artworkIdParamsSchema }),
+  postArtworkSave,
   validate({ params: artworkParamsSchema }),
   toggleSave,
 );

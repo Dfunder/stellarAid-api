@@ -31,6 +31,13 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
+      { name: 'Artworks', description: 'Artwork detail, view tracking, and save/unsave.' },
+      {
+        name: 'Marketplace',
+        description: 'Browsing, trending, and recommended published artworks.',
+      },
+      { name: 'Search', description: 'Full-text search across published artworks.' },
+      { name: 'Categories', description: 'Browsable category taxonomy.' },
       { name: 'Artworks', description: 'Artwork CRUD, publishing, and view tracking.' },
       { name: 'Marketplace', description: 'Browsing and discovering published artworks.' },
       { name: 'Search', description: 'Full-text search across artworks.' },
@@ -296,6 +303,7 @@ export const openApiSpec = swaggerJsdoc({
             data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
           },
         },
+        ArtworkOffsetPageResponse: {
         ArtworkPageResponse: {
         PresignUploadRequest: {
           type: 'object',
@@ -317,6 +325,16 @@ export const openApiSpec = swaggerJsdoc({
               type: 'object',
               properties: {
                 items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: {
+                  type: 'integer',
+                  description: 'Omitted (not tracked) for search result pages.',
+                },
+              },
+            },
+          },
+        },
                 nextCursor: { type: 'string', nullable: true },
               },
             },
@@ -448,6 +466,10 @@ export const openApiSpec = swaggerJsdoc({
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            slug: { type: 'string' },
+            parentId: { type: 'string', format: 'uuid', nullable: true },
+            children: { type: 'array', items: { type: 'object' } },
             name: { type: 'string', example: 'Illustration' },
             slug: { type: 'string', example: 'illustration' },
             children: {

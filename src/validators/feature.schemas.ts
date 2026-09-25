@@ -22,6 +22,8 @@ const ARTWORK_CATEGORIES = [
   'OTHER',
 ] as const;
 const artworkCategorySchema = z.enum(ARTWORK_CATEGORIES);
+
+export const artworkIdParamsSchema = z.object({ id: uuidSchema });
 const assetSchema = z.enum(['USDC', 'XLM']);
 
 export const userParamsSchema = z.object({ userId: uuidSchema });
@@ -72,6 +74,13 @@ export const setArtworkPublishedSchema = z.object({ published: z.boolean() });
 
 export const categorySchema = z.object({ slug: slugSchema });
 
+export const marketplaceListSchema = paginationSchema.extend({
+  category: artworkCategorySchema.optional(),
+});
+
+export const searchQuerySchema = paginationSchema.extend({
+  q: z.string().trim().max(200).default(''),
+  category: artworkCategorySchema.optional(),
 const cursorPaginationSchema = z.object({
   cursor: z.string().trim().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -142,6 +151,9 @@ export const notificationParamsSchema = z.object({ notificationId: uuidSchema })
 export const adminParamsSchema = z.object({ userId: uuidSchema });
 export const reportParamsSchema = z.object({ reportId: uuidSchema });
 
+export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
+export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
+export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;
 export type ArtworkSchema = z.infer<typeof artworkSchema>;
 export type UpdateArtworkSchema = z.infer<typeof updateArtworkSchema>;
 export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;

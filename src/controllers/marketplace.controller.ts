@@ -1,4 +1,5 @@
 /**
+ * Marketplace browse, trending, and recommended controller.
  * Marketplace browse controller.
  */
 
@@ -7,6 +8,10 @@ import type { Response } from 'express';
 
 import { catchAsync, getValidated } from '@/middlewares';
 import {
+  getRecommendedArtworks,
+  getTrendingArtworks,
+  listPublishedArtworks,
+  type ArtworkPage,
   browseArtworks,
   listFeaturedArtworks,
   listTrendingArtworks,
@@ -17,6 +22,11 @@ import type { MarketplaceListSchema } from '@/validators';
 
 /** GET /api/v1/marketplace */
 export const getMarketplace = catchAsync(
+  async (req, res: Response<ApiResponse<ArtworkPage>>) => {
+    const { query } = getValidated<unknown, unknown, MarketplaceListSchema>(req);
+    const result = await listPublishedArtworks(
+      { category: query.category },
+      query.page,
   async (req, res: Response<ApiResponse<BrowsePage>>) => {
     const { query } = getValidated<unknown, unknown, MarketplaceListSchema>(req);
     const result = await browseArtworks(
@@ -35,6 +45,10 @@ export const getMarketplace = catchAsync(
   },
 );
 
+/** GET /api/v1/marketplace/trending */
+export const getTrending = catchAsync(
+  async (_req, res: Response<ApiResponse<readonly Artwork[]>>) => {
+    const items = await getTrendingArtworks();
 /** GET /api/v1/marketplace/featured */
 export const getFeatured = catchAsync(
   async (_req, res: Response<ApiResponse<readonly Artwork[]>>) => {
@@ -43,6 +57,10 @@ export const getFeatured = catchAsync(
   },
 );
 
+/** GET /api/v1/marketplace/recommended */
+export const getRecommended = catchAsync(
+  async (_req, res: Response<ApiResponse<readonly Artwork[]>>) => {
+    const items = await getRecommendedArtworks();
 /** GET /api/v1/marketplace/trending */
 export const getTrending = catchAsync(
   async (_req, res: Response<ApiResponse<readonly Artwork[]>>) => {

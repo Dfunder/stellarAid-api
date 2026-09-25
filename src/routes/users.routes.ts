@@ -85,6 +85,10 @@
  *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/users/me/recently-viewed:
  *   get:
+ *     summary: The caller's recently viewed artworks
+ *     description: >
+ *       Most-recently-viewed first. Stored in Redis, not the database;
+ *       empty when Redis isn't configured.
  *     summary: List the current user's recently viewed artworks
  *     description: >
  *       Backed by Redis, not the database. Capped at the 50 most recent
@@ -104,6 +108,11 @@
  *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
  *     responses:
  *       200:
+ *         description: Recently viewed artworks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ArtworkOffsetPageResponse'
  *         description: Paginated recently viewed artworks
  *         content:
  *           application/json:

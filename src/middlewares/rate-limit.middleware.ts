@@ -110,3 +110,11 @@ export const passwordResetLimiter: RateLimitRequestHandler = createRateLimiter({
   limit: 3,
   message: 'Too many password reset attempts. Please try again later.',
 });
+
+/** 30 requests/minute on analytics event ingestion (batches, not single events). */
+export const analyticsLimiter: RateLimitRequestHandler = createRateLimiter({
+  name: 'analytics',
+  windowMs: ONE_MINUTE,
+  limit: 30,
+  message: 'Too many analytics requests. Please try again later.',
+});

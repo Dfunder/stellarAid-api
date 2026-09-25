@@ -596,3 +596,27 @@ model OrderDeliverable {
   @@id([orderId, mediaId])
   @@index([mediaId])
 }
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  ARTWORK_VIEW
+  SAVE
+  PURCHASE_START
+  PURCHASE_COMPLETE
+  COMMISSION_REQUEST
+}
+
+/// Product-analytics event. `userId` is nullable (anonymous events are
+/// allowed); `properties` is a free-form JSON bag validated at the
+/// application layer to reject anything that looks like PII.
+model AnalyticsEvent {
+  id         String             @id @default(uuid())
+  type       AnalyticsEventType
+  userId     String?
+  properties Json?
+  createdAt  DateTime           @default(now())
+
+  @@index([type])
+  @@index([userId])
+  @@index([createdAt])
+}

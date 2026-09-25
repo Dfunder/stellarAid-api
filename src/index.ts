@@ -13,8 +13,10 @@
 
 import { createApp } from './app';
 import { env } from '@/config';
+import { scheduleDailyMediaCleanup } from '@/queues';
 import { connectDatabase, disconnectDatabase } from '@/services';
 import { logger } from '@/utils';
+import { startMediaCleanupWorker } from '@/workers';
 import { startMediaWorker } from '@/workers';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -30,6 +32,9 @@ async function bootstrap(): Promise<void> {
     });
     process.exit(1);
   }
+
+  const mediaCleanupWorker = startMediaCleanupWorker();
+  await scheduleDailyMediaCleanup();
 
   const server = createApp().listen(env.port, () => {
     logger.info('Server started', {
@@ -48,6 +53,7 @@ async function bootstrap(): Promise<void> {
     shuttingDown = true;
     logger.info('Shutdown requested', { signal });
     server.close(() => {
+      void (mediaCleanupWorker?.close() ?? Promise.resolve())
       void Promise.resolve(mediaWorker?.close())
         .catch(() => undefined)
         .then(() => disconnectDatabase())

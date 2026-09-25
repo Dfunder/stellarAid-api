@@ -31,6 +31,8 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
+      { name: 'Stats', description: 'Public, aggregate platform metrics.' },
+      { name: 'Analytics', description: 'Product-analytics event ingestion.' },
       { name: 'Artworks', description: 'Artwork detail, view tracking, and save/unsave.' },
       {
         name: 'Marketplace',
@@ -271,6 +273,60 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
+        PlatformStats: {
+          type: 'object',
+          properties: {
+            totalUsers: { type: 'integer' },
+            totalArtists: { type: 'integer' },
+            totalArtworks: { type: 'integer' },
+            totalSales: { type: 'integer', description: 'Count of COMPLETED orders.' },
+            totalVolume: {
+              type: 'string',
+              description: 'Sum of COMPLETED order amounts.',
+              example: '128450.00',
+            },
+          },
+        },
+        PlatformStatsResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/PlatformStats' },
+          },
+        },
+        AnalyticsEvent: {
+          type: 'object',
+          required: ['type'],
+          properties: {
+            type: {
+              type: 'string',
+              enum: [
+                'PAGE_VIEW',
+                'ARTWORK_VIEW',
+                'SAVE',
+                'PURCHASE_START',
+                'PURCHASE_COMPLETE',
+                'COMMISSION_REQUEST',
+              ],
+            },
+            userId: { type: 'string', format: 'uuid' },
+            properties: {
+              type: 'object',
+              description: 'Must not contain PII keys (email, password, phone, etc.).',
+              additionalProperties: true,
+            },
+            timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
+        AnalyticsEventBatchRequest: {
+          type: 'object',
+          required: ['events'],
+          properties: {
+            events: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 100,
+              items: { $ref: '#/components/schemas/AnalyticsEvent' },
         Artwork: {
           type: 'object',
           properties: {

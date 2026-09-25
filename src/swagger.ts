@@ -31,6 +31,9 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
+      { name: 'Artworks', description: 'Artwork CRUD, publishing, and view tracking.' },
+      { name: 'Marketplace', description: 'Browsing and discovering published artworks.' },
+      { name: 'Search', description: 'Full-text search across artworks.' },
       { name: 'Media', description: 'File uploads for artworks, portfolios and deliverables.' },
       { name: 'Taxonomy', description: 'Browsable categories and the shared tag vocabulary.' },
       { name: 'Artworks', description: 'Artwork listings, tags and saves.' },
@@ -261,6 +264,39 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
+        Artwork: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            price: { type: 'string', nullable: true, example: '120.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'], nullable: true },
+            published: { type: 'boolean' },
+            sold: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        ArtworkResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/Artwork' },
+          },
+        },
+        ArtworkListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+          },
+        },
+        ArtworkPageResponse: {
         PresignUploadRequest: {
           type: 'object',
           required: ['type', 'mimeType', 'filename', 'size'],
@@ -385,6 +421,36 @@ export const openApiSpec = swaggerJsdoc({
             data: {
               type: 'object',
               properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                nextCursor: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+        CreateArtworkRequest: {
+          type: 'object',
+          required: ['title', 'category'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        UpdateArtworkRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        RecentlyViewedResponse: {
                 tags: { type: 'array', items: { type: 'string' } },
               },
             },
@@ -422,6 +488,15 @@ export const openApiSpec = swaggerJsdoc({
               properties: {
                 items: {
                   type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string', format: 'uuid' },
+                      title: { type: 'string' },
+                      category: { type: 'string' },
+                      coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+                    },
+                  },
                   items: { $ref: '#/components/schemas/SavedArtworkSummary' },
                 },
                 page: { type: 'integer' },

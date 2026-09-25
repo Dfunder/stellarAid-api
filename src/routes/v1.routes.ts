@@ -22,6 +22,7 @@ import { paymentsRouter } from './payments.routes';
 import { portfoliosRouter } from './portfolios.routes';
 import { profilesRouter } from './profiles.routes';
 import { reviewsRouter } from './reviews.routes';
+import { searchRouter } from './search.routes';
 import { tagsRouter } from './tags.routes';
 import { usersRouter } from './users.routes';
 
@@ -34,6 +35,7 @@ v1Router.use('/profiles', profilesRouter);
 v1Router.use('/portfolios', portfoliosRouter);
 v1Router.use('/artworks', artworksRouter);
 v1Router.use('/marketplace', marketplaceRouter);
+v1Router.use('/search', searchRouter);
 v1Router.use('/media', mediaRouter);
 v1Router.use('/categories', categoriesRouter);
 v1Router.use('/tags', tagsRouter);

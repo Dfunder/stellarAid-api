@@ -36,10 +36,7 @@ function toSummary(order: Order): OrderSummary {
   return { order, total: order.amount.add(order.platformFee).toFixed(2) };
 }
 
-export async function createOrder(
-  buyerId: string,
-  input: CreateOrderInput,
-): Promise<OrderSummary> {
+export async function createOrder(buyerId: string, input: CreateOrderInput): Promise<OrderSummary> {
   const artwork = await prisma.artwork.findUnique({ where: { id: input.artworkId } });
   if (artwork === null) {
     throw new AppError('NOT_FOUND', 'Artwork not found');
@@ -59,6 +56,9 @@ export async function createOrder(
       where: { buyerId_idempotencyKey: { buyerId, idempotencyKey: input.idempotencyKey } },
     });
     if (existing !== null) {
+      if (existing.artworkId !== input.artworkId) {
+        throw new AppError('CONFLICT', 'Idempotency key was already used for another artwork');
+      }
       return toSummary(existing);
     }
   }

@@ -2,6 +2,7 @@ export * from './analytics.controller';
 export * from './artworks.controller';
 export * from './auth.controller';
 export * from './categories.controller';
+export * from './commissions.controller';
 export * from './health.controller';
 export * from './stats.controller';
 export * from './marketplace.controller';

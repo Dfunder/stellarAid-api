@@ -9,6 +9,7 @@
  *       Only published, unsold artworks are ever returned — this is a
  *       discovery surface, not an owner-management one. Results are cached
  *       in Redis for 30 seconds per unique filter/sort/cursor combination.
+ *       discovery surface, not an owner-management one.
  *     tags: [Marketplace]
  *     parameters:
  *       - in: query
@@ -23,6 +24,13 @@
  *       - in: query
  *         name: maxPrice
  *         schema: { type: number, minimum: 0 }
+ *         schema: { type: string }
+ *       - in: query
+ *         name: minPrice
+ *         schema: { type: number }
+ *       - in: query
+ *         name: maxPrice
+ *         schema: { type: number }
  *       - in: query
  *         name: asset
  *         schema: { type: string, enum: [USDC, XLM] }
@@ -43,6 +51,10 @@
  *       - in: query
  *         name: cursor
  *         description: Opaque cursor from a previous page's `nextCursor`.
+ *           `popular` and `rating` currently alias to `newest` — no
+ *           engagement/rating aggregate is wired in yet.
+ *       - in: query
+ *         name: cursor
  *         schema: { type: string }
  *       - in: query
  *         name: limit
@@ -62,6 +74,10 @@
  *     description: >
  *       Currently a "most recently published" proxy — there's no
  *       editorial-curation flag to rank by yet.
+ *     summary: Featured/trending artworks
+ *     description: >
+ *       Currently a "most recently published" proxy — there's no
+ *       editorial-curation flag or rating aggregate to rank by yet.
  *     tags: [Marketplace]
  *     responses:
  *       200:

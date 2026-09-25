@@ -1,5 +1,6 @@
 /**
  * Artwork search controller.
+ * Search controller.
  */
 
 import type { Response } from 'express';

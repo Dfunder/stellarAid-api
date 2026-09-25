@@ -6,6 +6,8 @@
  * cached in Redis for a short TTL (cache-aside: read through on a miss,
  * write on the way out) since this is the highest-traffic read path in the
  * API; caching degrades to a no-op when Redis isn't configured.
+ * discovery surface, not an owner-management one (see `artworks.service`
+ * for that).
  */
 
 import type { Artwork, ArtworkCategory, Asset, Prisma } from '@prisma/client';
@@ -70,6 +72,13 @@ async function buildWhere(filters: BrowseFilters): Promise<Prisma.ArtworkWhereIn
  * wired into this query) and aliases to `newest`. `popular` ranks by the
  * Redis trending score when available (see `trending.service`), and also
  * falls back to `newest` when it isn't.
+ * `popular` and `rating` don't have a backing metric yet (no view/save
+ * counter or artist-rating aggregate wired into this query) — both
+ * currently alias to `newest` rather than silently returning an
+ * unsorted/incorrect ranking.
+ * unsorted/incorrect ranking. A real implementation needs a stored
+ * engagement counter (or a Save-based count, once that model exists) and
+ * a Review-rating aggregate joined by artist id.
  */
 function orderBy(sort: MarketplaceSort): Prisma.ArtworkOrderByWithRelationInput[] {
   switch (sort) {

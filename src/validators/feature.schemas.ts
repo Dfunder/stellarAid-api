@@ -36,11 +36,23 @@ export const profileBodySchema = z.object({
   socialLinks: z.record(z.string(), z.string().url()).optional(),
 });
 
-export const portfolioItemSchema = z.object({
+export const portfolioItemIdParamsSchema = z.object({ id: uuidSchema });
+
+export const createPortfolioItemSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(5000).optional(),
   tags: z.array(z.string()).max(30).optional(),
-  published: z.boolean().default(false),
+});
+
+export const updatePortfolioItemSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  tags: z.array(z.string()).max(30).optional(),
+  published: z.boolean().optional(),
+});
+
+export const reorderPortfolioItemsSchema = z.object({
+  orderedIds: z.array(uuidSchema).min(1).max(500),
 });
 
 export const artworkSchema = z.object({
@@ -51,6 +63,12 @@ export const artworkSchema = z.object({
   price: z.coerce.number().min(0).optional(),
   asset: assetSchema.optional(),
 });
+
+export const updateArtworkSchema = artworkSchema.partial();
+
+export const artworkIdParamsSchema = z.object({ id: uuidSchema });
+
+export const setArtworkPublishedSchema = z.object({ published: z.boolean() });
 
 export const categorySchema = z.object({ slug: slugSchema });
 
@@ -74,6 +92,24 @@ export const searchQuerySchema = cursorPaginationSchema.extend({
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   asset: assetSchema.optional(),
+export const artworkParamsSchema = z.object({ id: uuidSchema });
+
+export const categorySchema = z.object({ slug: slugSchema });
+
+const tagName = z.string().trim().min(1).max(40);
+
+export const createTagSchema = z.object({ name: tagName });
+
+export const syncArtworkTagsSchema = z.object({
+  tags: z.array(tagName).max(30),
+});
+
+export const tagListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const marketplaceListSchema = z.object({
+  query: paginationSchema.extend({ category: z.string().optional() }),
 });
 
 export const orderParamsSchema = z.object({ orderId: uuidSchema });
@@ -107,6 +143,16 @@ export const adminParamsSchema = z.object({ userId: uuidSchema });
 export const reportParamsSchema = z.object({ reportId: uuidSchema });
 
 export type ArtworkSchema = z.infer<typeof artworkSchema>;
+export type UpdateArtworkSchema = z.infer<typeof updateArtworkSchema>;
+export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
+export type SetArtworkPublishedSchema = z.infer<typeof setArtworkPublishedSchema>;
 export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
+export type PortfolioItemIdParamsSchema = z.infer<typeof portfolioItemIdParamsSchema>;
+export type CreatePortfolioItemSchema = z.infer<typeof createPortfolioItemSchema>;
+export type UpdatePortfolioItemSchema = z.infer<typeof updatePortfolioItemSchema>;
+export type ReorderPortfolioItemsSchema = z.infer<typeof reorderPortfolioItemsSchema>;
 export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;
-export type OrderBodySchema = z.infer<typeof orderBodySchema>;
+export type ArtworkParamsSchema = z.infer<typeof artworkParamsSchema>;
+export type CreateTagSchema = z.infer<typeof createTagSchema>;
+export type SyncArtworkTagsSchema = z.infer<typeof syncArtworkTagsSchema>;
+export type TagListQuerySchema = z.infer<typeof tagListQuerySchema>;

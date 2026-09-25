@@ -26,6 +26,32 @@
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/artworks/{id}:
+ *   get:
+ *     summary: Get artwork detail
+ *     description: >
+ *       Public — no authentication required. Includes attached media ids,
+ *       up to 6 related artworks in the same category, and a review summary
+ *       aggregated from the owner's reviews (reviews target sellers, not
+ *       individual artworks). When called with a valid access token, also
+ *       records a debounced view for "recently viewed" tracking.
+ *     tags: [Artworks]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Artwork detail
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ArtworkDetailResponse'
+ *       404:
+ *         description: Artwork not found
+ *   patch:
+ *     summary: Update an artwork
+ *     description: Only the artwork's owner may update it.
  *   patch:
  *     summary: Update an artwork
  *     description: Only the artwork's owner may update it.
@@ -96,6 +122,8 @@
  *     description: >
  *       Publishing (false → true) requires the artwork to have at least
  *       one attached media record; unpublishing has no such requirement.
+ *       Publishing is a prerequisite for the artwork to appear in
+ *       marketplace browse results.
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/artworks/{id}/save:
@@ -138,6 +166,13 @@
  *         description: Artwork not found
  *       422:
  *         description: Cannot publish an artwork with no media attached
+ */
+
+import {
+  getArtwork,
+  patchArtwork,
+  patchArtworkPublished,
+  postArtwork,
  * /api/v1/artworks/{id}/view:
  *   post:
  *     summary: Record a view of this artwork (for recently-viewed tracking)
@@ -212,6 +247,7 @@ import { createFeatureRouter } from './router-factory';
 export const artworksRouter = createFeatureRouter('artworks');
 
 artworksRouter.post('/', authenticate, validate({ body: artworkSchema }), postArtwork);
+artworksRouter.get('/:id', validate({ params: artworkIdParamsSchema }), getArtwork);
 artworksRouter.patch(
   '/:id',
   authenticate,

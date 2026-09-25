@@ -5,6 +5,9 @@
  * /api/v1/marketplace:
  *   get:
  *     summary: Browse published artworks
+ *     description: >
+ *       Only published, unsold artworks are ever returned — this is a
+ *       discovery surface, not an owner-management one.
  *     tags: [Marketplace]
  *     parameters:
  *       - in: query
@@ -44,6 +47,8 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ArtworkPageResponse'
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/marketplace/featured:
  *   get:
  *     summary: Featured/trending artworks

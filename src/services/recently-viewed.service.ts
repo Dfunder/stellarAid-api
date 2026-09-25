@@ -18,6 +18,8 @@ function debounceKey(userId: string, artworkId: string): string {
   return `view:debounce:${userId}:${artworkId}`;
 }
 
+function viewCountKey(artworkId: string): string {
+  return `view:count:${artworkId}`;
 function listKey(userId: string): string {
   return `recently-viewed:${userId}`;
 }
@@ -26,6 +28,8 @@ export interface RecordViewResult {
   readonly recorded: boolean;
 }
 
+/** Increments the artwork's view counter unless the same user viewed it
+ * within the last hour, in which case it's a silent no-op. */
 /** Records a view unless the same user viewed the same artwork within the
  * last hour, in which case it's a silent no-op (not an error). */
 export async function recordArtworkView(
@@ -49,6 +53,14 @@ export async function recordArtworkView(
     return { recorded: false };
   }
 
+  await redis.incr(viewCountKey(artworkId));
+  return { recorded: true };
+}
+
+export async function getArtworkViewCount(artworkId: string): Promise<number> {
+  const redis = getRedisClient();
+  const raw = await redis.get(viewCountKey(artworkId));
+  return raw === null ? 0 : Number.parseInt(raw, 10);
   const key = listKey(userId);
   await redis.zadd(key, Date.now(), artworkId);
   // Keep only the MAX_RECENTLY_VIEWED highest-scored (most recent) members.

@@ -1,4 +1,8 @@
 /**
+ * Artwork CRUD, publishing-workflow, and detail service.
+ */
+
+import type { Asset, Artwork, ArtworkCategory } from '@prisma/client';
  * Artwork CRUD and publishing-workflow service.
  */
 
@@ -6,6 +10,8 @@ import type { Asset, ArtworkCategory } from '@prisma/client';
 
 import { AppError } from '@/middlewares';
 import { prisma } from '@/services';
+
+import { recordArtworkView } from './recently-viewed.service';
 
 export interface CreateArtworkInput {
   readonly title: string;
@@ -98,4 +104,66 @@ export async function setArtworkPublished(userId: string, artworkId: string, pub
 export async function deleteArtwork(userId: string, artworkId: string): Promise<void> {
   await findOwnedArtwork(userId, artworkId);
   await prisma.artwork.delete({ where: { id: artworkId } });
+}
+
+export interface ReviewSummary {
+  readonly averageRating: number | null;
+  readonly count: number;
+}
+
+export interface ArtworkDetail {
+  readonly artwork: Artwork;
+  readonly mediaIds: readonly string[];
+  readonly relatedArtworks: readonly Artwork[];
+  readonly reviewSummary: ReviewSummary;
+}
+
+const RELATED_ARTWORKS_LIMIT = 6;
+
+/**
+ * "License" isn't a modeled concept in this schema (no License field/table)
+ * — not included here rather than guessed at. Review summary aggregates
+ * `Review.rating` where `targetId` is the artwork's owner (the artist),
+ * since reviews target sellers, not individual artworks.
+ */
+export async function getArtworkDetail(
+  artworkId: string,
+  viewerId: string | undefined,
+): Promise<ArtworkDetail> {
+  const artwork = await getArtworkById(artworkId);
+
+  const [mediaLinks, relatedArtworks, reviewAggregate] = await Promise.all([
+    prisma.artworkMedia.findMany({ where: { artworkId }, orderBy: { sort: 'asc' } }),
+    prisma.artwork.findMany({
+      where: {
+        category: artwork.category,
+        published: true,
+        id: { not: artworkId },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: RELATED_ARTWORKS_LIMIT,
+    }),
+    prisma.review.aggregate({
+      where: { targetId: artwork.userId },
+      _avg: { rating: true },
+      _count: { rating: true },
+    }),
+  ]);
+
+  // View-count increment is fire-and-forget (async, debounced per viewer) —
+  // detail responses shouldn't wait on it or fail the request if Redis is
+  // briefly unavailable.
+  if (viewerId !== undefined) {
+    void recordArtworkView(viewerId, artworkId).catch(() => undefined);
+  }
+
+  return {
+    artwork,
+    mediaIds: mediaLinks.map((link) => link.mediaId),
+    relatedArtworks,
+    reviewSummary: {
+      averageRating: reviewAggregate._avg.rating,
+      count: reviewAggregate._count.rating,
+    },
+  };
 }

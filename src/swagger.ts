@@ -316,6 +316,13 @@ export const openApiSpec = swaggerJsdoc({
             data: {
               type: 'object',
               properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                nextCursor: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+        ArtworkDetailResponse: {
                 mediaId: { type: 'string', format: 'uuid' },
                 uploadUrl: { type: 'string', format: 'uri' },
                 key: { type: 'string' },
@@ -340,6 +347,86 @@ export const openApiSpec = swaggerJsdoc({
             data: {
               type: 'object',
               properties: {
+                artwork: { $ref: '#/components/schemas/Artwork' },
+                mediaIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
+                relatedArtworks: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Artwork' },
+                },
+                reviewSummary: {
+                  type: 'object',
+                  description: 'Aggregated from the owning artist\'s reviews.',
+                  properties: {
+                    averageRating: { type: 'number', nullable: true },
+                    count: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        CreateArtworkRequest: {
+          type: 'object',
+          required: ['title', 'category'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        UpdateArtworkRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        PortfolioItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            order: { type: 'integer' },
+            published: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PortfolioItemResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/PortfolioItem' },
+          },
+        },
+        PortfolioItemListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/PortfolioItem' } },
+          },
+        },
+        CreatePortfolioItemRequest: {
+          type: 'object',
+          required: ['title'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+          },
+        },
+        UpdatePortfolioItemRequest: {
                 id: { type: 'string', format: 'uuid' },
                 type: { type: 'string', enum: ['IMAGE', 'DIGITAL_FILE'] },
                 url: { type: 'string', format: 'uri' },
@@ -444,6 +531,19 @@ export const openApiSpec = swaggerJsdoc({
           properties: {
             title: { type: 'string', maxLength: 200 },
             description: { type: 'string', maxLength: 5000 },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            published: { type: 'boolean' },
+          },
+        },
+        ReorderPortfolioItemsRequest: {
+          type: 'object',
+          required: ['orderedIds'],
+          properties: {
+            orderedIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              minItems: 1,
+              description: 'Must contain exactly the caller\'s portfolio item ids.',
             category: { type: 'string', example: 'DIGITAL_PAINTING' },
             tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
             price: { type: 'number', minimum: 0 },

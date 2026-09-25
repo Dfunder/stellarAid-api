@@ -1,10 +1,19 @@
 /**
+ * Artworks controller — CRUD, publishing, and detail lookup.
  * Artworks controller — CRUD, publishing, and view tracking.
  */
 
 import type { Artwork } from '@prisma/client';
 import type { Response } from 'express';
 
+import { catchAsync, getAuthUser, getOptionalAuthUser, getValidated } from '@/middlewares';
+import {
+  createArtwork,
+  deleteArtwork,
+  getArtworkDetail,
+  setArtworkPublished,
+  updateArtwork,
+  type ArtworkDetail,
 import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
 import {
   createArtwork,
@@ -60,6 +69,17 @@ export const removeArtwork = catchAsync(async (req, res: Response<ApiResponse<nu
   res.status(204).send();
 });
 
+/**
+ * GET /api/v1/artworks/:id — public detail lookup. Records a debounced view
+ * for the caller when a valid access token is present; anonymous requests
+ * still get the full detail payload, just without view tracking.
+ */
+export const getArtwork = catchAsync(async (req, res: Response<ApiResponse<ArtworkDetail>>) => {
+  const { params } = getValidated<unknown, ArtworkIdParamsSchema, unknown>(req);
+  const viewer = getOptionalAuthUser(req);
+  const detail = await getArtworkDetail(params.id, viewer?.sub);
+  res.status(200).json({ success: true, data: detail });
+});
 /** POST /api/v1/artworks/:id/view */
 export const postArtworkView = catchAsync(
   async (req, res: Response<ApiResponse<RecordViewResult>>) => {

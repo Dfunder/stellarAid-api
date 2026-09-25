@@ -15,6 +15,9 @@ const DEFAULT_REFRESH_TOKEN_TTL_DAYS = 7;
 
 const PORT_ERROR = 'PORT must be an integer between 0 and 65535.';
 
+/** Circle's well-known USDC issuer on the Stellar public network. */
+const DEFAULT_USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+
 /** Treat empty strings as "not provided" so `.env` keys can be left blank. */
 function emptyToUndefined(value: unknown): unknown {
   return value === '' ? undefined : value;
@@ -67,6 +70,9 @@ const schema = z.object({
   S3_BUCKET: optionalString,
   S3_REGION: optionalString,
   STELLAR_NETWORK: z.enum(['testnet', 'public']).default('testnet'),
+  USDC_ASSET_ISSUER: optionalString,
+  EURC_ASSET_ISSUER: optionalString,
+  NGNT_ASSET_ISSUER: optionalString,
   SMTP_HOST: optionalString,
   SMTP_PORT: optionalPort,
   SMTP_USER: optionalString,
@@ -100,6 +106,14 @@ export interface AppEnv {
   readonly s3Bucket: string | undefined;
   readonly s3Region: string | undefined;
   readonly stellarNetwork: 'testnet' | 'public';
+  /** Known issuer accounts for DEX price lookups. USDC defaults to Circle's
+   * public-network issuer; EURC/NGNT have no safe default and are undefined
+   * unless explicitly configured. */
+  readonly priceAssetIssuers: {
+    readonly USDC: string;
+    readonly EURC: string | undefined;
+    readonly NGNT: string | undefined;
+  };
   /** Present only when SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS are all set. */
   readonly smtp: SmtpConfig | undefined;
   /** Comma-separated allowed CORS origins, or undefined to reflect the request origin. */
@@ -143,6 +157,11 @@ function loadEnv(): AppEnv {
     s3Bucket: raw.S3_BUCKET,
     s3Region: raw.S3_REGION,
     stellarNetwork: raw.STELLAR_NETWORK,
+    priceAssetIssuers: {
+      USDC: raw.USDC_ASSET_ISSUER ?? DEFAULT_USDC_ISSUER,
+      EURC: raw.EURC_ASSET_ISSUER,
+      NGNT: raw.NGNT_ASSET_ISSUER,
+    },
     smtp,
     corsOrigins: raw.CORS_ORIGIN
       ? raw.CORS_ORIGIN.split(',')

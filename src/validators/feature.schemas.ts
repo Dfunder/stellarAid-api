@@ -36,11 +36,23 @@ export const profileBodySchema = z.object({
   socialLinks: z.record(z.string(), z.string().url()).optional(),
 });
 
-export const portfolioItemSchema = z.object({
+export const portfolioItemIdParamsSchema = z.object({ id: uuidSchema });
+
+export const createPortfolioItemSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(5000).optional(),
   tags: z.array(z.string()).max(30).optional(),
-  published: z.boolean().default(false),
+});
+
+export const updatePortfolioItemSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  tags: z.array(z.string()).max(30).optional(),
+  published: z.boolean().optional(),
+});
+
+export const reorderPortfolioItemsSchema = z.object({
+  orderedIds: z.array(uuidSchema).min(1).max(500),
 });
 
 export const artworkSchema = z.object({
@@ -135,6 +147,10 @@ export type UpdateArtworkSchema = z.infer<typeof updateArtworkSchema>;
 export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
 export type SetArtworkPublishedSchema = z.infer<typeof setArtworkPublishedSchema>;
 export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
+export type PortfolioItemIdParamsSchema = z.infer<typeof portfolioItemIdParamsSchema>;
+export type CreatePortfolioItemSchema = z.infer<typeof createPortfolioItemSchema>;
+export type UpdatePortfolioItemSchema = z.infer<typeof updatePortfolioItemSchema>;
+export type ReorderPortfolioItemsSchema = z.infer<typeof reorderPortfolioItemsSchema>;
 export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;
 export type ArtworkParamsSchema = z.infer<typeof artworkParamsSchema>;
 export type CreateTagSchema = z.infer<typeof createTagSchema>;

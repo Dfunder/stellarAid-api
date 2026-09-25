@@ -1,5 +1,6 @@
 /**
  * Shared Redis client for features that need Redis directly (as opposed to
+ * the rate limiter's own dedicated client).
  * the rate limiter's own dedicated client, or BullMQ's own connections).
  */
 

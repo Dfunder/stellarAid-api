@@ -8,6 +8,7 @@
 
 import { Router } from 'express';
 import { adminRouter } from './admin.routes';
+import { analyticsRouter } from './analytics.routes';
 import { artworksRouter } from './artworks.routes';
 import { authRouter } from './auth.routes';
 import { commissionsRouter } from './commissions.routes';
@@ -20,6 +21,7 @@ import { paymentsRouter } from './payments.routes';
 import { portfoliosRouter } from './portfolios.routes';
 import { profilesRouter } from './profiles.routes';
 import { reviewsRouter } from './reviews.routes';
+import { statsRouter } from './stats.routes';
 import { usersRouter } from './users.routes';
 
 export const v1Router: Router = Router();
@@ -38,3 +40,5 @@ v1Router.use('/reviews', reviewsRouter);
 v1Router.use('/messages', messagesRouter);
 v1Router.use('/notifications', notificationsRouter);
 v1Router.use('/admin', adminRouter);
+v1Router.use('/stats', statsRouter);
+v1Router.use('/analytics', analyticsRouter);

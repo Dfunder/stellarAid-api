@@ -1,5 +1,6 @@
 /**
  * Artworks controller — CRUD, publishing, and detail lookup.
+ * Artworks controller — CRUD, publishing, and view tracking.
  */
 
 import type { Artwork } from '@prisma/client';
@@ -13,6 +14,14 @@ import {
   setArtworkPublished,
   updateArtwork,
   type ArtworkDetail,
+import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
+import {
+  createArtwork,
+  deleteArtwork,
+  recordArtworkView,
+  setArtworkPublished,
+  updateArtwork,
+  type RecordViewResult,
 } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
@@ -71,3 +80,12 @@ export const getArtwork = catchAsync(async (req, res: Response<ApiResponse<Artwo
   const detail = await getArtworkDetail(params.id, viewer?.sub);
   res.status(200).json({ success: true, data: detail });
 });
+/** POST /api/v1/artworks/:id/view */
+export const postArtworkView = catchAsync(
+  async (req, res: Response<ApiResponse<RecordViewResult>>) => {
+    const { sub } = getAuthUser(req);
+    const { params } = getValidated<unknown, ArtworkIdParamsSchema, unknown>(req);
+    const result = await recordArtworkView(sub, params.id);
+    res.status(200).json({ success: true, data: result });
+  },
+);

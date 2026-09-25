@@ -31,12 +31,12 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
-      { name: 'Artworks', description: 'Artwork CRUD, publishing, and detail lookup.' },
+      { name: 'Artworks', description: 'Artwork CRUD, publishing, and view tracking.' },
       { name: 'Marketplace', description: 'Browsing and discovering published artworks.' },
-      {
-        name: 'Portfolios',
-        description: 'Showcase (not-for-sale) portfolio items and ordering.',
-      },
+      { name: 'Search', description: 'Full-text search across artworks.' },
+      { name: 'Media', description: 'File uploads for artworks, portfolios and deliverables.' },
+      { name: 'Taxonomy', description: 'Browsable categories and the shared tag vocabulary.' },
+      { name: 'Artworks', description: 'Artwork listings, tags and saves.' },
     ],
     components: {
       securitySchemes: {
@@ -297,6 +297,19 @@ export const openApiSpec = swaggerJsdoc({
           },
         },
         ArtworkPageResponse: {
+        PresignUploadRequest: {
+          type: 'object',
+          required: ['type', 'mimeType', 'filename', 'size'],
+          properties: {
+            type: { type: 'string', enum: ['IMAGE', 'DIGITAL_FILE'] },
+            mimeType: { type: 'string', example: 'image/png' },
+            filename: { type: 'string', example: 'cover.png' },
+            size: { type: 'integer', description: 'File size in bytes.', example: 204800 },
+            parentType: { type: 'string', enum: ['ARTWORK', 'PORTFOLIO'] },
+            parentId: { type: 'string', format: 'uuid' },
+          },
+        },
+        PresignUploadResponse: {
           type: 'object',
           properties: {
             success: { type: 'boolean', enum: [true] },
@@ -310,6 +323,24 @@ export const openApiSpec = swaggerJsdoc({
           },
         },
         ArtworkDetailResponse: {
+                mediaId: { type: 'string', format: 'uuid' },
+                uploadUrl: { type: 'string', format: 'uri' },
+                key: { type: 'string' },
+                expiresInSeconds: { type: 'integer', example: 300 },
+              },
+            },
+          },
+        },
+        MediaVariant: {
+          type: 'object',
+          properties: {
+            label: { type: 'string', example: 'thumbnail' },
+            url: { type: 'string', format: 'uri' },
+            width: { type: 'integer', nullable: true },
+            height: { type: 'integer', nullable: true },
+          },
+        },
+        MediaResponse: {
           type: 'object',
           properties: {
             success: { type: 'boolean', enum: [true] },
@@ -396,6 +427,106 @@ export const openApiSpec = swaggerJsdoc({
           },
         },
         UpdatePortfolioItemRequest: {
+                id: { type: 'string', format: 'uuid' },
+                type: { type: 'string', enum: ['IMAGE', 'DIGITAL_FILE'] },
+                url: { type: 'string', format: 'uri' },
+                mimeType: { type: 'string' },
+                size: { type: 'string', description: 'Bytes, as a string (source is a BigInt).' },
+                width: { type: 'integer', nullable: true },
+                height: { type: 'integer', nullable: true },
+                variants: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/MediaVariant' },
+                },
+                createdAt: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
+        },
+        CategoryNode: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'Illustration' },
+            slug: { type: 'string', example: 'illustration' },
+            children: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/CategoryNode' },
+            },
+          },
+        },
+        CategoryListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/CategoryNode' } },
+          },
+        },
+        Tag: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'watercolor' },
+            slug: { type: 'string', example: 'watercolor' },
+          },
+        },
+        TagListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+          },
+        },
+        TagResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/Tag' },
+          },
+        },
+        CreateTagRequest: {
+          type: 'object',
+          required: ['name'],
+          properties: { name: { type: 'string', maxLength: 40, example: 'watercolor' } },
+        },
+        SyncArtworkTagsRequest: {
+          type: 'object',
+          required: ['tags'],
+          properties: {
+            tags: {
+              type: 'array',
+              items: { type: 'string', maxLength: 40 },
+              maxItems: 30,
+              example: ['watercolor', 'portrait'],
+            },
+          },
+        },
+        ArtworkTagsResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                nextCursor: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+        CreateArtworkRequest: {
+          type: 'object',
+          required: ['title', 'category'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        UpdateArtworkRequest: {
           type: 'object',
           properties: {
             title: { type: 'string', maxLength: 200 },
@@ -413,6 +544,65 @@ export const openApiSpec = swaggerJsdoc({
               items: { type: 'string', format: 'uuid' },
               minItems: 1,
               description: 'Must contain exactly the caller\'s portfolio item ids.',
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        RecentlyViewedResponse: {
+                tags: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          },
+        },
+        ToggleSaveResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                saved: { type: 'boolean' },
+                saveCount: { type: 'integer', example: 12 },
+              },
+            },
+          },
+        },
+        SavedArtworkSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            category: { type: 'string' },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            savedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        SavedArtworksResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                items: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string', format: 'uuid' },
+                      title: { type: 'string' },
+                      category: { type: 'string' },
+                      coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+                    },
+                  },
+                  items: { $ref: '#/components/schemas/SavedArtworkSummary' },
+                },
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: { type: 'integer' },
+              },
             },
           },
         },

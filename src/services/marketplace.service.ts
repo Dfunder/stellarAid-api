@@ -63,6 +63,9 @@ async function buildWhere(filters: BrowseFilters): Promise<Prisma.ArtworkWhereIn
  * counter or artist-rating aggregate wired into this query) — both
  * currently alias to `newest` rather than silently returning an
  * unsorted/incorrect ranking.
+ * unsorted/incorrect ranking. A real implementation needs a stored
+ * engagement counter (or a Save-based count, once that model exists) and
+ * a Review-rating aggregate joined by artist id.
  */
 function orderBy(sort: MarketplaceSort): Prisma.ArtworkOrderByWithRelationInput[] {
   switch (sort) {

@@ -3,6 +3,10 @@
  */
 
 import type { Asset, Artwork, ArtworkCategory } from '@prisma/client';
+ * Artwork CRUD and publishing-workflow service.
+ */
+
+import type { Asset, ArtworkCategory } from '@prisma/client';
 
 import { AppError } from '@/middlewares';
 import { prisma } from '@/services';
@@ -27,7 +31,7 @@ export interface UpdateArtworkInput {
   readonly asset?: Asset;
 }
 
-async function findOwnedArtwork(userId: string, artworkId: string): Promise<Artwork> {
+async function findOwnedArtwork(userId: string, artworkId: string) {
   const artwork = await prisma.artwork.findUnique({ where: { id: artworkId } });
   if (artwork === null) {
     throw new AppError('NOT_FOUND', 'Artwork not found');
@@ -39,7 +43,7 @@ async function findOwnedArtwork(userId: string, artworkId: string): Promise<Artw
 }
 
 /** Duplicate titles are allowed — there's no uniqueness constraint on title. */
-export async function createArtwork(userId: string, input: CreateArtworkInput): Promise<Artwork> {
+export async function createArtwork(userId: string, input: CreateArtworkInput) {
   return prisma.artwork.create({
     data: {
       userId,
@@ -53,11 +57,7 @@ export async function createArtwork(userId: string, input: CreateArtworkInput): 
   });
 }
 
-export async function updateArtwork(
-  userId: string,
-  artworkId: string,
-  input: UpdateArtworkInput,
-): Promise<Artwork> {
+export async function updateArtwork(userId: string, artworkId: string, input: UpdateArtworkInput) {
   await findOwnedArtwork(userId, artworkId);
   return prisma.artwork.update({
     where: { id: artworkId },
@@ -72,7 +72,7 @@ export async function updateArtwork(
   });
 }
 
-export async function getArtworkById(artworkId: string): Promise<Artwork> {
+export async function getArtworkById(artworkId: string) {
   const artwork = await prisma.artwork.findUnique({ where: { id: artworkId } });
   if (artwork === null) {
     throw new AppError('NOT_FOUND', 'Artwork not found');
@@ -85,11 +85,7 @@ export async function getArtworkById(artworkId: string): Promise<Artwork> {
  * attached media record — an artwork with no images shouldn't go live.
  * Unpublishing has no such requirement.
  */
-export async function setArtworkPublished(
-  userId: string,
-  artworkId: string,
-  published: boolean,
-): Promise<Artwork> {
+export async function setArtworkPublished(userId: string, artworkId: string, published: boolean) {
   const artwork = await findOwnedArtwork(userId, artworkId);
 
   if (published && !artwork.published) {

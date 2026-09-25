@@ -15,6 +15,9 @@ const DEFAULT_REFRESH_TOKEN_TTL_DAYS = 7;
 
 const PORT_ERROR = 'PORT must be an integer between 0 and 65535.';
 
+/** 5% platform fee, expressed in basis points (1/100 of a percent). */
+const DEFAULT_PLATFORM_FEE_BPS = 500;
+
 /** Circle's well-known USDC issuer on the Stellar public network. */
 const DEFAULT_USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
 
@@ -70,6 +73,12 @@ const schema = z.object({
   S3_BUCKET: optionalString,
   S3_REGION: optionalString,
   STELLAR_NETWORK: z.enum(['testnet', 'public']).default('testnet'),
+  PLATFORM_FEE_BPS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(10000)
+    .default(DEFAULT_PLATFORM_FEE_BPS),
   USDC_ASSET_ISSUER: optionalString,
   EURC_ASSET_ISSUER: optionalString,
   NGNT_ASSET_ISSUER: optionalString,
@@ -106,6 +115,8 @@ export interface AppEnv {
   readonly s3Bucket: string | undefined;
   readonly s3Region: string | undefined;
   readonly stellarNetwork: 'testnet' | 'public';
+  /** Platform fee in basis points (500 = 5%), applied to order amounts. */
+  readonly platformFeeBps: number;
   /** Known issuer accounts for DEX price lookups. USDC defaults to Circle's
    * public-network issuer; EURC/NGNT have no safe default and are undefined
    * unless explicitly configured. */
@@ -157,6 +168,7 @@ function loadEnv(): AppEnv {
     s3Bucket: raw.S3_BUCKET,
     s3Region: raw.S3_REGION,
     stellarNetwork: raw.STELLAR_NETWORK,
+    platformFeeBps: raw.PLATFORM_FEE_BPS,
     priceAssetIssuers: {
       USDC: raw.USDC_ASSET_ISSUER ?? DEFAULT_USDC_ISSUER,
       EURC: raw.EURC_ASSET_ISSUER,

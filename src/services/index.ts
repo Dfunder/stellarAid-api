@@ -13,4 +13,5 @@ export * from './saves.service';
 export * from './stellar-auth.service';
 export * from './taxonomy.service';
 export * from './token.service';
+export * from './trending.service';
 export * from './users.service';

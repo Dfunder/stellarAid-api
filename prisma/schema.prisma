@@ -198,20 +198,22 @@ enum ReviewReportStatus {
 /// Purchase of an artwork. `artworkId` references the Artwork table
 /// delivered elsewhere.
 model Order {
-  id           String        @id @default(uuid())
-  buyerId      String
-  sellerId     String
-  artworkId    String
-  amount       Decimal       @db.Decimal(12, 2)
-  asset        Asset
-  platformFee  Decimal       @db.Decimal(12, 2)
-  status       OrderStatus   @default(PENDING)
-  txHash       String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
-  reviews      Review[]
+  id             String        @id @default(uuid())
+  buyerId        String
+  sellerId       String
+  artworkId      String
+  amount         Decimal       @db.Decimal(12, 2)
+  asset          Asset
+  platformFee    Decimal       @db.Decimal(12, 2)
+  status         OrderStatus   @default(PENDING)
+  idempotencyKey String?
+  txHash         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  transactions   Transaction[]
+  reviews        Review[]
 
+  @@unique([buyerId, idempotencyKey])
   @@index([buyerId])
   @@index([sellerId])
   @@index([artworkId])

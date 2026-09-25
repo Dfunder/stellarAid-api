@@ -115,7 +115,7 @@ export const marketplaceListSchema = z.object({
 export const orderParamsSchema = z.object({ orderId: uuidSchema });
 export const orderBodySchema = z.object({
   artworkId: uuidSchema,
-  message: z.string().max(1000).optional(),
+  idempotencyKey: z.string().trim().min(1).max(200).optional(),
 });
 
 export const paymentParamsSchema = z.object({ orderId: uuidSchema });

@@ -17,6 +17,7 @@
 import { env } from '@/config';
 import { AppError } from '@/middlewares';
 
+import { tryGetRedisClient } from './redis.service';
 import { getRedisClient } from './redis.service';
 
 export type PriceAsset = 'XLM' | 'USDC' | 'NGNT' | 'EURC';
@@ -104,6 +105,10 @@ export async function getRate(base: PriceAsset, counter: PriceAsset): Promise<nu
     return 1;
   }
 
+  const redis = tryGetRedisClient();
+
+  if (redis !== undefined) {
+    const cached = await redis.get(cacheKey(base, counter));
   const hasRedis = env.redisUrl !== undefined;
 
   if (hasRedis) {
@@ -115,6 +120,8 @@ export async function getRate(base: PriceAsset, counter: PriceAsset): Promise<nu
 
   const rate = await fetchOrderBookMidPrice(base, counter);
 
+  if (rate !== null && redis !== undefined) {
+    await redis.set(cacheKey(base, counter), rate.toString(), 'EX', CACHE_TTL_SECONDS);
   if (rate !== null && hasRedis) {
     await getRedisClient().set(cacheKey(base, counter), rate.toString(), 'EX', CACHE_TTL_SECONDS);
   }

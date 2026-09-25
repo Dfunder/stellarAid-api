@@ -403,6 +403,7 @@ export const openApiSpec = swaggerJsdoc({
             updatedAt: { type: 'string', format: 'date-time' },
           },
         },
+        OrderResponse: {
         PortfolioItemResponse: {
           type: 'object',
           properties: {

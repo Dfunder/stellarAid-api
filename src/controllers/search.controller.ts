@@ -1,4 +1,5 @@
 /**
+ * Artwork search controller.
  * Search controller.
  */
 

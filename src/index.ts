@@ -15,6 +15,7 @@ import { createApp } from './app';
 import { env } from '@/config';
 import { connectDatabase, disconnectDatabase } from '@/services';
 import { logger } from '@/utils';
+import { startMediaWorker } from '@/workers';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -38,6 +39,8 @@ async function bootstrap(): Promise<void> {
     });
   });
 
+  const mediaWorker = startMediaWorker();
+
   function shutdown(signal: NodeJS.Signals): void {
     if (shuttingDown) {
       return;
@@ -45,7 +48,9 @@ async function bootstrap(): Promise<void> {
     shuttingDown = true;
     logger.info('Shutdown requested', { signal });
     server.close(() => {
-      void disconnectDatabase()
+      void Promise.resolve(mediaWorker?.close())
+        .catch(() => undefined)
+        .then(() => disconnectDatabase())
         .catch((error) => {
           logger.error('Error closing database pool', {
             message: error instanceof Error ? error.message : String(error),

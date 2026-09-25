@@ -89,6 +89,9 @@
  *     description: >
  *       Backed by Redis, not the database. Capped at the 50 most recent
  *       views (see POST /api/v1/artworks/{id}/view).
+ * /api/v1/users/me/saves:
+ *   get:
+ *     summary: List the current user's saved artworks
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
@@ -106,11 +109,17 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/RecentlyViewedResponse'
+ *         description: Paginated saved artworks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SavedArtworksResponse'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
 
 import { getMyRecentlyViewed, updateMe, updateUserById } from '@/controllers';
+import { getMySaves, updateMe, updateUserById } from '@/controllers';
 import { authenticate, validate } from '@/middlewares';
 import { paginationSchema, updateProfileSchema, userIdParamsSchema } from '@/validators';
 
@@ -125,6 +134,7 @@ usersRouter.get(
   validate({ query: paginationSchema }),
   getMyRecentlyViewed,
 );
+usersRouter.get('/me/saves', authenticate, validate({ query: paginationSchema }), getMySaves);
 usersRouter.patch(
   '/:id',
   authenticate,

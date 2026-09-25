@@ -7,9 +7,14 @@
 import type { Response } from 'express';
 
 import { AppError, catchAsync, getAuthUser, getValidated } from '@/middlewares';
-import { updateUserProfile, type PublicUser } from '@/services';
+import {
+  listRecentlyViewed,
+  updateUserProfile,
+  type PublicUser,
+  type RecentlyViewedPage,
+} from '@/services';
 import type { ApiResponse } from '@/types';
-import type { UpdateProfileSchema, UserIdParamsSchema } from '@/validators';
+import type { PaginationSchema, UpdateProfileSchema, UserIdParamsSchema } from '@/validators';
 
 /** PATCH /api/v1/users/me */
 export const updateMe = catchAsync(async (req, res: Response<ApiResponse<PublicUser>>) => {
@@ -18,6 +23,16 @@ export const updateMe = catchAsync(async (req, res: Response<ApiResponse<PublicU
   const user = await updateUserProfile(sub, body);
   res.status(200).json({ success: true, data: user });
 });
+
+/** GET /api/v1/users/me/recently-viewed */
+export const getMyRecentlyViewed = catchAsync(
+  async (req, res: Response<ApiResponse<RecentlyViewedPage>>) => {
+    const { sub } = getAuthUser(req);
+    const { query } = getValidated<unknown, unknown, PaginationSchema>(req);
+    const result = await listRecentlyViewed(sub, query.page, query.limit);
+    res.status(200).json({ success: true, data: result });
+  },
+);
 
 /** PATCH /api/v1/users/:id — allowed only when `:id` is the caller. */
 export const updateUserById = catchAsync(async (req, res: Response<ApiResponse<PublicUser>>) => {
@@ -29,3 +44,13 @@ export const updateUserById = catchAsync(async (req, res: Response<ApiResponse<P
   const user = await updateUserProfile(sub, body);
   res.status(200).json({ success: true, data: user });
 });
+
+/** GET /api/v1/users/me/recently-viewed */
+export const getMyRecentlyViewed = catchAsync(
+  async (req, res: Response<ApiResponse<RecentlyViewedPage>>) => {
+    const { sub } = getAuthUser(req);
+    const { query } = getValidated<unknown, unknown, PaginationSchema>(req);
+    const result = await listRecentlyViewed(sub, query.page, query.limit);
+    res.status(200).json({ success: true, data: result });
+  },
+);

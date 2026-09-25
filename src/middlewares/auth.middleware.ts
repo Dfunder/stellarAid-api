@@ -39,3 +39,22 @@ export function getAuthUser(req: Request): AccessTokenPayload {
   }
   return user;
 }
+
+/**
+ * Best-effort identity read for public routes: returns the decoded identity
+ * for a valid Bearer token, or `undefined` for a missing, malformed or
+ * invalid one — never throws. Use on routes that behave the same for
+ * anonymous and authenticated callers but want to know who's asking.
+ */
+export function getOptionalAuthUser(req: Request): AccessTokenPayload | undefined {
+  const header = req.headers.authorization;
+  const match = header === undefined ? null : /^Bearer\s+(\S+)$/i.exec(header);
+  if (match === null || match[1] === undefined) {
+    return undefined;
+  }
+  try {
+    return verifyAccessToken(match[1]);
+  } catch {
+    return undefined;
+  }
+}

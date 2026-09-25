@@ -9,4 +9,5 @@ export * from './analytics.schemas';
 export * from './auth.schemas';
 export * from './common.schemas';
 export * from './feature.schemas';
+export * from './media.schemas';
 export * from './users.schemas';

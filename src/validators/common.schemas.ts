@@ -29,6 +29,8 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export type PaginationSchema = z.infer<typeof paginationSchema>;
+
 /** Named identifier from a URL parameter. */
 export const slugSchema = z
   .string()
@@ -36,3 +38,5 @@ export const slugSchema = z
   .min(1)
   .max(120)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Must be a URL-safe slug.');
+
+export type PaginationSchema = z.infer<typeof paginationSchema>;

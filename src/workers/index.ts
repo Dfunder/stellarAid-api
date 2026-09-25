@@ -6,3 +6,4 @@
  */
 
 export * from './media-cleanup.worker';
+export * from './media.worker';

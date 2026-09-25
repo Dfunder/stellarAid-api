@@ -6,3 +6,4 @@
  */
 
 export * from './media-cleanup.queue';
+export * from './media.queue';

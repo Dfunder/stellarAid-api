@@ -17,6 +17,7 @@ import { scheduleDailyMediaCleanup } from '@/queues';
 import { connectDatabase, disconnectDatabase } from '@/services';
 import { logger } from '@/utils';
 import { startMediaCleanupWorker } from '@/workers';
+import { startMediaWorker } from '@/workers';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -43,6 +44,8 @@ async function bootstrap(): Promise<void> {
     });
   });
 
+  const mediaWorker = startMediaWorker();
+
   function shutdown(signal: NodeJS.Signals): void {
     if (shuttingDown) {
       return;
@@ -51,6 +54,7 @@ async function bootstrap(): Promise<void> {
     logger.info('Shutdown requested', { signal });
     server.close(() => {
       void (mediaCleanupWorker?.close() ?? Promise.resolve())
+      void Promise.resolve(mediaWorker?.close())
         .catch(() => undefined)
         .then(() => disconnectDatabase())
         .catch((error) => {

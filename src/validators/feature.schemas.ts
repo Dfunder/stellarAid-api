@@ -130,10 +130,14 @@ export const orderBodySchema = z.object({
 export const paymentParamsSchema = z.object({ orderId: uuidSchema });
 
 export const commissionBodySchema = z.object({
+  artistId: uuidSchema,
   title: z.string().trim().min(1).max(200),
-  description: z.string().max(5000).optional(),
-  budget: z.coerce.number().min(0),
-  deadline: z.coerce.date(),
+  description: z.string().trim().min(1).max(5000),
+  budget: z.coerce.number().finite().positive(),
+  asset: assetSchema,
+  deadline: z.coerce.date().refine((value) => value.getTime() > Date.now(), {
+    message: 'Deadline must be in the future.',
+  }),
 });
 
 export const commissionStatusParamsSchema = z.object({ id: uuidSchema });

@@ -1,67 +1,106 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { prismaMock, transactionMock } = vi.hoisted(() => {
+const { prismaMock } = vi.hoisted(() => {
   const transaction = {
-    commission: { create: vi.fn() },
-    notification: { create: vi.fn() },
+    commission: { findUnique: vi.fn(), update: vi.fn() },
+    review: { create: vi.fn() },
   };
-  const prisma = {
-    user: { findUnique: vi.fn() },
-    $transaction: vi.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+  return {
+    prismaMock: {
+      $transaction: vi.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+      transaction,
+    },
   };
-  return { prismaMock: prisma, transactionMock: transaction };
 });
 
 vi.mock('@/services', () => ({ prisma: prismaMock }));
 
-import { createCommission } from './commissions.service';
+import { updateCommissionStatus } from './commissions.service';
 
-const CLIENT_ID = 'client-id';
-const ARTIST_ID = 'artist-id';
-const input = {
-  artistId: ARTIST_ID,
-  title: 'Album cover',
-  description: 'A painted cover for an upcoming album.',
-  budget: 250,
-  asset: 'USDC' as const,
-  deadline: new Date('2027-01-01'),
-};
+const COMMISSION_ID = 'commission-1';
+const CLIENT_ID = 'client-1';
+const ARTIST_ID = 'artist-1';
+
+function makeCommission(status = 'PENDING') {
+  return {
+    id: COMMISSION_ID,
+    clientId: CLIENT_ID,
+    artistId: ARTIST_ID,
+    status,
+  } as never;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
+  prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission());
+  prismaMock.transaction.commission.update.mockResolvedValue(makeCommission('ACCEPTED'));
+  prismaMock.transaction.review.create.mockResolvedValue({ id: 'review-1' });
 });
 
-describe('createCommission', () => {
-  it('rejects self-commissions with 400', async () => {
-    await expect(
-      createCommission(CLIENT_ID, { ...input, artistId: CLIENT_ID }),
-    ).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
+describe('updateCommissionStatus', () => {
+  it('allows the artist to progress an accepted commission', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('ACCEPTED'));
+
+    await updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', { status: 'IN_PROGRESS' });
+
+    expect(prismaMock.transaction.commission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { status: 'IN_PROGRESS' },
     });
-    expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
   });
 
-  it('creates a pending commission and notifies the artist atomically', async () => {
-    const commission = { id: 'commission-id', ...input, clientId: CLIENT_ID, status: 'PENDING' };
-    prismaMock.user.findUnique.mockResolvedValue({ id: ARTIST_ID, role: 'ARTIST' });
-    transactionMock.commission.create.mockResolvedValue(commission);
+  it('allows the artist to accept a pending commission', async () => {
+    await updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', { status: 'ACCEPTED' });
 
-    await expect(createCommission(CLIENT_ID, input)).resolves.toEqual(commission);
-
-    expect(transactionMock.commission.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        clientId: CLIENT_ID,
-        artistId: ARTIST_ID,
-        status: 'PENDING',
-        asset: 'USDC',
-      }),
+    expect(prismaMock.transaction.commission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { status: 'ACCEPTED' },
     });
-    expect(transactionMock.notification.create).toHaveBeenCalledWith({
+  });
+
+  it('allows the client to dispute a delivered commission', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('DELIVERED'));
+
+    await updateCommissionStatus(COMMISSION_ID, CLIENT_ID, 'USER', { status: 'DISPUTED' });
+
+    expect(prismaMock.transaction.commission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { status: 'DISPUTED' },
+    });
+  });
+
+  it('creates the client review when completing a delivered commission', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('DELIVERED'));
+
+    await updateCommissionStatus(COMMISSION_ID, CLIENT_ID, 'USER', {
+      status: 'COMPLETED',
+      review: { rating: 5, body: 'Excellent work' },
+    });
+
+    expect(prismaMock.transaction.review.create).toHaveBeenCalledWith({
       data: {
-        userId: ARTIST_ID,
-        type: 'COMMISSION_REQUEST',
-        data: { commissionId: 'commission-id', clientId: CLIENT_ID, title: input.title },
+        commissionId: COMMISSION_ID,
+        authorId: CLIENT_ID,
+        targetId: ARTIST_ID,
+        rating: 5,
+        title: undefined,
+        body: 'Excellent work',
       },
     });
+  });
+
+  it('rejects cancellation after delivery', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('DELIVERED'));
+
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, CLIENT_ID, 'USER', { status: 'CANCELLED' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(prismaMock.transaction.commission.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects users who are not commission participants', async () => {
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, 'other-user', 'USER', { status: 'CANCELLED' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 });

@@ -140,6 +140,29 @@ export const commissionBodySchema = z.object({
   }),
 });
 
+export const commissionStatusParamsSchema = z.object({ id: uuidSchema });
+
+const commissionReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  title: z.string().trim().max(120).optional(),
+  body: z.string().trim().min(1).max(2000),
+});
+
+export const commissionStatusBodySchema = z
+  .object({
+    status: z.enum(['ACCEPTED', 'IN_PROGRESS', 'DELIVERED', 'COMPLETED', 'DISPUTED', 'CANCELLED']),
+    review: commissionReviewSchema.optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === 'COMPLETED' && value.review === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['review'],
+        message: 'A review is required when completing a commission.',
+      });
+    }
+  });
+
 export const reviewBodySchema = z.object({
   rating: z.number().int().min(1).max(5),
   title: z.string().max(120).optional(),
@@ -172,4 +195,5 @@ export type ArtworkParamsSchema = z.infer<typeof artworkParamsSchema>;
 export type CreateTagSchema = z.infer<typeof createTagSchema>;
 export type SyncArtworkTagsSchema = z.infer<typeof syncArtworkTagsSchema>;
 export type TagListQuerySchema = z.infer<typeof tagListQuerySchema>;
-export type CommissionBodySchema = z.infer<typeof commissionBodySchema>;
+export type CommissionStatusParamsSchema = z.infer<typeof commissionStatusParamsSchema>;
+export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;

@@ -1,15 +1,23 @@
-/** Commission request controllers. */
-
+import type { Commission } from '@prisma/client';
 import type { Response } from 'express';
 
 import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
-import { createCommission, type CreateCommissionInput } from '@/services';
+import { updateCommissionStatus } from '@/services';
 import type { ApiResponse } from '@/types';
-import type { CommissionBodySchema } from '@/validators';
+import type {
+  CommissionStatusBodySchema,
+  CommissionStatusParamsSchema,
+} from '@/validators';
 
-export const postCommission = catchAsync(async (req, res: Response<ApiResponse>) => {
-  const { sub } = getAuthUser(req);
-  const { body } = getValidated<CommissionBodySchema, unknown, unknown>(req);
-  const commission = await createCommission(sub, body as CreateCommissionInput);
-  res.status(201).json({ success: true, data: commission });
-});
+export const patchCommissionStatus = catchAsync(
+  async (req, res: Response<ApiResponse<Commission>>) => {
+    const { sub, role } = getAuthUser(req);
+    const { params, body } = getValidated<
+      CommissionStatusBodySchema,
+      CommissionStatusParamsSchema,
+      unknown
+    >(req);
+    const commission = await updateCommissionStatus(params.id, sub, role, body);
+    res.status(200).json({ success: true, data: commission });
+  },
+);

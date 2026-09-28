@@ -48,7 +48,6 @@ v1Router.use('/payments', paymentsRouter);
 v1Router.use('/commissions', commissionsRouter);
 v1Router.use('/reviews', reviewsRouter);
 v1Router.use('/messages', messagesRouter);
-v1Router.use('/threads', threadsRouter);
 v1Router.use('/notifications', notificationsRouter);
 v1Router.use('/admin', adminRouter);
 v1Router.use('/stats', statsRouter);

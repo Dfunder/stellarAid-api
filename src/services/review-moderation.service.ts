@@ -44,6 +44,7 @@ export async function listReportedReviews(options?: {
         reviewId: r.reviewId,
         reporterId: r.reporterId,
         reason: r.reason,
+        note: r.note,
         status: r.status,
         outcome: r.outcome,
         moderatorId: r.moderatorId,

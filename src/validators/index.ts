@@ -11,3 +11,5 @@ export * from './common.schemas';
 export * from './feature.schemas';
 export * from './media.schemas';
 export * from './users.schemas';
+export * from './reviews.schemas';
+export * from './threads.schemas';

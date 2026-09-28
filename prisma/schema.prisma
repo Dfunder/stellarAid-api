@@ -367,12 +367,14 @@ model ReviewReport {
   reviewId   String
   reporterId String
   reason     String
+  note       String?
   status     ReviewReportStatus @default(OPEN)
   createdAt  DateTime           @default(now())
   review     Review             @relation(fields: [reviewId], references: [id], onDelete: Restrict)
 
   @@index([reviewId])
   @@index([status])
+  @@index([reporterId, createdAt])
 }
 
 /// Stellar public key linked to a user account (one wallet per user).

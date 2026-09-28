@@ -127,11 +127,14 @@
  *         $ref: '#/components/responses/Unauthorized'
  */
 
-import { getMyRecentlyViewed, updateMe, updateUserById } from '@/controllers';
-import { getMySaves, updateMe, updateUserById } from '@/controllers';
+import { getMyRecentlyViewed, getMySaves, updateMe, updateUserById } from '@/controllers';
+import { getUserReviews } from '@/controllers/reviews.controller';
 import { authenticate, validate } from '@/middlewares';
 import { paginationSchema, updateProfileSchema, userIdParamsSchema } from '@/validators';
-
+import {
+  listReviewsParamsSchema,
+  listReviewsQuerySchema,
+} from '@/validators/reviews.schemas';
 import { createFeatureRouter } from './router-factory';
 
 export const usersRouter = createFeatureRouter('users');
@@ -149,4 +152,11 @@ usersRouter.patch(
   authenticate,
   validate({ params: userIdParamsSchema, body: updateProfileSchema }),
   updateUserById,
+);
+
+
+usersRouter.get(
+  '/:username/reviews',
+  validate({ params: listReviewsParamsSchema, query: listReviewsQuerySchema }),
+  getUserReviews,
 );

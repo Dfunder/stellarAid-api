@@ -26,3 +26,6 @@ export * from './taxonomy.service';
 export * from './token.service';
 export * from './trending.service';
 export * from './users.service';
+export * from './reviews.service';
+export * from './review-moderation.service';
+export * from './threads.service';

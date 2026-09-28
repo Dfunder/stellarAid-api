@@ -15,3 +15,6 @@ export * from './media.controller';
 export * from './saves.controller';
 export * from './taxonomy.controller';
 export * from './users.controller';
+export * from './reviews.controller';
+export * from './review-moderation.controller';
+export * from './threads.controller';

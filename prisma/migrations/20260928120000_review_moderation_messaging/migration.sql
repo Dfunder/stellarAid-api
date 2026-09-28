@@ -1,0 +1,18 @@
+-- Review moderation + artist rating cache (#833, #834)
+CREATE TYPE "ReviewVisibility" AS ENUM ('VISIBLE', 'REMOVED');
+
+ALTER TABLE "Review"
+  ADD COLUMN IF NOT EXISTS "editedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "visibility" "ReviewVisibility" NOT NULL DEFAULT 'VISIBLE',
+  ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS "Review_visibility_idx" ON "Review"("visibility");
+
+ALTER TABLE "ReviewReport"
+  ADD COLUMN IF NOT EXISTS "outcome" TEXT,
+  ADD COLUMN IF NOT EXISTS "moderatorId" TEXT,
+  ADD COLUMN IF NOT EXISTS "resolvedAt" TIMESTAMP(3);
+
+ALTER TABLE "ArtistProfile"
+  ADD COLUMN IF NOT EXISTS "averageRating" DECIMAL(3,2),
+  ADD COLUMN IF NOT EXISTS "reviewCount" INTEGER NOT NULL DEFAULT 0;

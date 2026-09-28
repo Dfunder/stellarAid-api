@@ -195,6 +195,12 @@ enum ReviewReportStatus {
   DISMISSED
 }
 
+/// Public visibility of a review after moderation (#834).
+enum ReviewVisibility {
+  VISIBLE
+  REMOVED
+}
+
 /// Purchase of an artwork. `artworkId` references the Artwork table
 /// delivered elsewhere.
 model Order {
@@ -286,18 +292,21 @@ model Deliverable {
 /// (Postgres treats NULLs as distinct, so each constraint independently
 /// scopes its own nullable column). Rating constrained to 1–5 in SQL.
 model Review {
-  id           String         @id @default(uuid())
+  id           String           @id @default(uuid())
   orderId      String?
   commissionId String?
   authorId     String
   targetId     String
-  rating       Int            @db.SmallInt
+  rating       Int              @db.SmallInt
   title        String?
   body         String
-  edited       Boolean        @default(false)
-  createdAt    DateTime       @default(now())
-  order        Order?         @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  commission   Commission?    @relation(fields: [commissionId], references: [id], onDelete: Restrict)
+  edited       Boolean          @default(false)
+  editedAt     DateTime?
+  visibility   ReviewVisibility @default(VISIBLE)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  order        Order?           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  commission   Commission?      @relation(fields: [commissionId], references: [id], onDelete: Restrict)
   replies      ReviewReply[]
   reports      ReviewReport[]
 
@@ -305,6 +314,7 @@ model Review {
   @@unique([commissionId])
   @@index([targetId])
   @@index([authorId])
+  @@index([visibility])
 }
 
 model ReviewReply {
@@ -363,13 +373,17 @@ model Notification {
 /// Moderation report against a review. Status moves OPEN → REVIEWING →
 /// RESOLVED | DISMISSED.
 model ReviewReport {
-  id         String             @id @default(uuid())
-  reviewId   String
-  reporterId String
-  reason     String
-  status     ReviewReportStatus @default(OPEN)
-  createdAt  DateTime           @default(now())
-  review     Review             @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+  id              String             @id @default(uuid())
+  reviewId        String
+  reporterId      String
+  reason          String
+  status          ReviewReportStatus @default(OPEN)
+  /// APPROVED keeps the review visible; REMOVED hides it from public listings.
+  outcome         String?
+  moderatorId     String?
+  resolvedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  review          Review             @relation(fields: [reviewId], references: [id], onDelete: Restrict)
 
   @@index([reviewId])
   @@index([status])
@@ -414,6 +428,9 @@ model ArtistProfile {
   avatarUrl          String?
   verified           Boolean            @default(false)
   verificationStatus VerificationStatus @default(PENDING)
+  /// Cached mean of VISIBLE review ratings for this artist (targetId = userId).
+  averageRating      Decimal?           @db.Decimal(3, 2)
+  reviewCount        Int                @default(0)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 }

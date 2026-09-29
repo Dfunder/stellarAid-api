@@ -9,22 +9,26 @@ import {
   listCommissionsForUser,
   raiseCommissionDispute,
   resolveCommissionDispute,
+  reviewDeliverable,
   submitDeliverable,
   updateCommissionStatus,
   type CommissionDetail,
   type PaginatedCommissions,
   type ResolvedDispute,
+  type ReviewDeliverableResult,
   type SubmitDeliverableResult,
 } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
   CommissionBodySchema,
+  CommissionDeliverableParamsSchema,
   CommissionDisputeBodySchema,
   CommissionDisputeListQuerySchema,
   CommissionDisputeResolveBodySchema,
   CommissionListQuerySchema,
   CommissionStatusBodySchema,
   CommissionStatusParamsSchema,
+  ReviewDeliverableBodySchema,
   SubmitDeliverableBodySchema,
 } from '@/validators';
 
@@ -82,6 +86,20 @@ export const postCommissionDeliverable = catchAsync(
     >(req);
     const result = await submitDeliverable(params.id, sub, body);
     res.status(201).json({ success: true, data: result });
+  },
+);
+
+/** PATCH /api/v1/commissions/:id/deliverables/:did — the client reviews it (#823). */
+export const patchCommissionDeliverable = catchAsync(
+  async (req, res: Response<ApiResponse<ReviewDeliverableResult>>) => {
+    const { sub } = getAuthUser(req);
+    const { params, body } = getValidated<
+      ReviewDeliverableBodySchema,
+      CommissionDeliverableParamsSchema,
+      unknown
+    >(req);
+    const result = await reviewDeliverable(params.id, params.did, sub, body);
+    res.status(200).json({ success: true, data: result });
   },
 );
 

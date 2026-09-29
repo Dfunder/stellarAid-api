@@ -18,6 +18,10 @@ const PORT_ERROR = 'PORT must be an integer between 0 and 65535.';
 /** 5% platform fee, expressed in basis points (1/100 of a percent). */
 const DEFAULT_PLATFORM_FEE_BPS = 500;
 
+/** How many times a client may send a commission back for changes before the
+ * artist's submissions can no longer be rejected (#823). */
+const DEFAULT_MAX_COMMISSION_REVISIONS = 3;
+
 /** Circle's well-known USDC issuer on the Stellar public network. */
 const DEFAULT_USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
 
@@ -73,12 +77,13 @@ const schema = z.object({
   S3_BUCKET: optionalString,
   S3_REGION: optionalString,
   STELLAR_NETWORK: z.enum(['testnet', 'public']).default('testnet'),
-  PLATFORM_FEE_BPS: z.coerce
+  PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(DEFAULT_PLATFORM_FEE_BPS),
+  MAX_COMMISSION_REVISIONS: z.coerce
     .number()
     .int()
-    .min(0)
-    .max(10000)
-    .default(DEFAULT_PLATFORM_FEE_BPS),
+    .min(0, 'MAX_COMMISSION_REVISIONS cannot be negative.')
+    .max(50, 'MAX_COMMISSION_REVISIONS must be 50 or fewer.')
+    .default(DEFAULT_MAX_COMMISSION_REVISIONS),
   USDC_ASSET_ISSUER: optionalString,
   EURC_ASSET_ISSUER: optionalString,
   NGNT_ASSET_ISSUER: optionalString,
@@ -117,6 +122,9 @@ export interface AppEnv {
   readonly stellarNetwork: 'testnet' | 'public';
   /** Platform fee in basis points (500 = 5%), applied to order amounts. */
   readonly platformFeeBps: number;
+  /** Cap on commission revision requests before a submission can no longer be
+   * sent back for changes. */
+  readonly maxCommissionRevisions: number;
   /** Known issuer accounts for DEX price lookups. USDC defaults to Circle's
    * public-network issuer; EURC/NGNT have no safe default and are undefined
    * unless explicitly configured. */
@@ -169,6 +177,7 @@ function loadEnv(): AppEnv {
     s3Region: raw.S3_REGION,
     stellarNetwork: raw.STELLAR_NETWORK,
     platformFeeBps: raw.PLATFORM_FEE_BPS,
+    maxCommissionRevisions: raw.MAX_COMMISSION_REVISIONS,
     priceAssetIssuers: {
       USDC: raw.USDC_ASSET_ISSUER ?? DEFAULT_USDC_ISSUER,
       EURC: raw.EURC_ASSET_ISSUER,

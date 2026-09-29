@@ -157,6 +157,46 @@ describe('updateCommissionStatus', () => {
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
+  it('rejects an artist skipping a state (PENDING → DELIVERED)', async () => {
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', { status: 'DELIVERED' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(prismaMock.transaction.commission.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects the artist accepting work as the client', async () => {
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, CLIENT_ID, 'USER', { status: 'ACCEPTED' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('rejects completing a delivered commission without a review', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('DELIVERED'));
+
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, CLIENT_ID, 'USER', { status: 'COMPLETED' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(prismaMock.transaction.review.create).not.toHaveBeenCalled();
+    expect(prismaMock.transaction.commission.update).not.toHaveBeenCalled();
+  });
+
+  it('lets either party cancel a commission that was never delivered', async () => {
+    await updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', { status: 'CANCELLED' });
+
+    expect(prismaMock.transaction.commission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { status: 'CANCELLED' },
+    });
+  });
+
+  it('reports an unknown commission', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(null);
+
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', { status: 'ACCEPTED' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
   it('records a status-change event in the same transaction', async () => {
     await updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', { status: 'ACCEPTED' });
 
@@ -257,6 +297,23 @@ describe('getCommissionDetail', () => {
     await expect(getCommissionDetail(COMMISSION_ID, CLIENT_ID, 'USER')).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
+  });
+
+  it('includes the dispute raised against the commission', async () => {
+    prismaMock.commissionDispute.findUnique.mockResolvedValue({ id: 'dispute-1', status: 'OPEN' });
+
+    const detail = await getCommissionDetail(COMMISSION_ID, CLIENT_ID, 'USER');
+
+    expect(detail.dispute).toMatchObject({ id: 'dispute-1', status: 'OPEN' });
+  });
+
+  it('reports null parties when a participant row is gone', async () => {
+    prismaMock.user.findMany.mockResolvedValue([]);
+
+    const detail = await getCommissionDetail(COMMISSION_ID, CLIENT_ID, 'USER');
+
+    expect(detail.parties.client).toBeNull();
+    expect(detail.parties.artist).toBeNull();
   });
 });
 
@@ -384,6 +441,18 @@ describe('listCommissionsForUser', () => {
       expect.objectContaining({ orderBy: { createdAt: 'asc' }, skip: 2, take: 2 }),
     );
     expect(result.hasNext).toBe(true);
+  });
+
+  it('returns an empty page without reporting more results', async () => {
+    prismaMock.commission.count.mockResolvedValue(0);
+    prismaMock.commission.findMany.mockResolvedValue([]);
+
+    const result = await listCommissionsForUser(CLIENT_ID, 'USER', baseQuery);
+
+    expect(result.data).toEqual([]);
+    expect(result.total).toBe(0);
+    expect(result.hasNext).toBe(false);
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled();
   });
 });
 

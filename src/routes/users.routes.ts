@@ -125,16 +125,72 @@
  *               $ref: '#/components/schemas/SavedArtworksResponse'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ * /api/v1/users/me/commissions:
+ *   get:
+ *     summary: List the current user's commissions
+ *     description: >
+ *       `view=client` lists commissions the caller requested, `view=artist`
+ *       the ones they received. Omitting `view` defaults to the caller's
+ *       role, so each side only ever sees its own commissions. Results are
+ *       filtered by status and creation-date range, then paginated.
+ *     tags: [Commissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: view
+ *         schema: { type: string, enum: [client, artist] }
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, ACCEPTED, IN_PROGRESS, DELIVERED, COMPLETED, CANCELLED, DISPUTED]
+ *       - in: query
+ *         name: from
+ *         description: Only commissions created on or after this date.
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: to
+ *         description: Only commissions created on or before this date.
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, enum: [newest, oldest], default: newest }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *     responses:
+ *       200:
+ *         description: Paginated commissions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CommissionListResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
  */
 
-import { getMyRecentlyViewed, getMySaves, updateMe, updateUserById } from '@/controllers';
+import {
+  getMyCommissions,
+  getMyRecentlyViewed,
+  getMySaves,
+  updateMe,
+  updateUserById,
+} from '@/controllers';
 import { getUserReviews } from '@/controllers/reviews.controller';
 import { authenticate, validate } from '@/middlewares';
-import { paginationSchema, updateProfileSchema, userIdParamsSchema } from '@/validators';
 import {
-  listReviewsParamsSchema,
-  listReviewsQuerySchema,
-} from '@/validators/reviews.schemas';
+  commissionListQuerySchema,
+  paginationSchema,
+  updateProfileSchema,
+  userIdParamsSchema,
+} from '@/validators';
+import { listReviewsParamsSchema, listReviewsQuerySchema } from '@/validators/reviews.schemas';
 import { createFeatureRouter } from './router-factory';
 
 export const usersRouter = createFeatureRouter('users');
@@ -147,13 +203,18 @@ usersRouter.get(
   getMyRecentlyViewed,
 );
 usersRouter.get('/me/saves', authenticate, validate({ query: paginationSchema }), getMySaves);
+usersRouter.get(
+  '/me/commissions',
+  authenticate,
+  validate({ query: commissionListQuerySchema }),
+  getMyCommissions,
+);
 usersRouter.patch(
   '/:id',
   authenticate,
   validate({ params: userIdParamsSchema, body: updateProfileSchema }),
   updateUserById,
 );
-
 
 usersRouter.get(
   '/:username/reviews',

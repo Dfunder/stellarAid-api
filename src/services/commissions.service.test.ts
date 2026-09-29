@@ -11,7 +11,7 @@ const { prismaMock } = vi.hoisted(() => {
     prismaMock: {
       $transaction: vi.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
       transaction,
-      commission: { findUnique: vi.fn() },
+      commission: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
       commissionEvent: { findMany: vi.fn() },
       deliverable: { findMany: vi.fn() },
       review: { findMany: vi.fn() },
@@ -25,6 +25,7 @@ vi.mock('@/services', () => ({ prisma: prismaMock }));
 import {
   createCommission,
   getCommissionDetail,
+  listCommissionsForUser,
   updateCommissionStatus,
 } from './commissions.service';
 
@@ -288,5 +289,82 @@ describe('createCommission', () => {
     await expect(createCommission(CLIENT_ID, CREATE_INPUT)).rejects.toMatchObject({
       code: 'UNPROCESSABLE_ENTITY',
     });
+  });
+});
+
+describe('listCommissionsForUser', () => {
+  const baseQuery = { sort: 'newest', page: 1, limit: 20 } as const;
+
+  beforeEach(() => {
+    prismaMock.commission.count.mockResolvedValue(2);
+    prismaMock.commission.findMany.mockResolvedValue([
+      { id: 'commission-1', clientId: CLIENT_ID, artistId: ARTIST_ID },
+      { id: 'commission-2', clientId: CLIENT_ID, artistId: ARTIST_ID },
+    ]);
+  });
+
+  it('scopes a client to the commissions they requested', async () => {
+    const result = await listCommissionsForUser(CLIENT_ID, 'USER', baseQuery);
+
+    expect(prismaMock.commission.findMany).toHaveBeenCalledWith({
+      where: { clientId: CLIENT_ID },
+      orderBy: { createdAt: 'desc' },
+      skip: 0,
+      take: 20,
+    });
+    expect(result.total).toBe(2);
+    expect(result.hasNext).toBe(false);
+    expect(result.data[0]?.client?.id).toBe(CLIENT_ID);
+  });
+
+  it('scopes an artist to the commissions they received', async () => {
+    await listCommissionsForUser(ARTIST_ID, 'ARTIST', baseQuery);
+
+    expect(prismaMock.commission.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { artistId: ARTIST_ID } }),
+    );
+  });
+
+  it('honours an explicit view over the caller role', async () => {
+    await listCommissionsForUser(ARTIST_ID, 'ARTIST', { ...baseQuery, view: 'client' });
+
+    expect(prismaMock.commission.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { clientId: ARTIST_ID } }),
+    );
+  });
+
+  it('applies status and date-range filters', async () => {
+    const from = new Date('2026-09-01T00:00:00Z');
+    const to = new Date('2026-09-30T00:00:00Z');
+
+    await listCommissionsForUser(CLIENT_ID, 'USER', {
+      ...baseQuery,
+      status: 'DELIVERED',
+      from,
+      to,
+    });
+
+    expect(prismaMock.commission.findMany).toHaveBeenCalledWith({
+      where: { clientId: CLIENT_ID, status: 'DELIVERED', createdAt: { gte: from, lte: to } },
+      orderBy: { createdAt: 'desc' },
+      skip: 0,
+      take: 20,
+    });
+  });
+
+  it('paginates and reports whether another page exists', async () => {
+    prismaMock.commission.count.mockResolvedValue(5);
+
+    const result = await listCommissionsForUser(CLIENT_ID, 'USER', {
+      ...baseQuery,
+      page: 2,
+      limit: 2,
+      sort: 'oldest',
+    });
+
+    expect(prismaMock.commission.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { createdAt: 'asc' }, skip: 2, take: 2 }),
+    );
+    expect(result.hasNext).toBe(true);
   });
 });

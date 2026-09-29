@@ -419,6 +419,43 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
+        CommissionListItem: {
+          allOf: [
+            { $ref: '#/components/schemas/Commission' },
+            {
+              type: 'object',
+              properties: {
+                client: {
+                  allOf: [{ $ref: '#/components/schemas/CommissionParty' }],
+                  nullable: true,
+                },
+                artist: {
+                  allOf: [{ $ref: '#/components/schemas/CommissionParty' }],
+                  nullable: true,
+                },
+              },
+            },
+          ],
+        },
+        CommissionListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                data: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/CommissionListItem' },
+                },
+                page: { type: 'integer', example: 1 },
+                limit: { type: 'integer', example: 20 },
+                total: { type: 'integer', example: 3 },
+                hasNext: { type: 'boolean' },
+              },
+            },
+          },
+        },
         CommissionDetailResponse: {
           type: 'object',
           properties: {

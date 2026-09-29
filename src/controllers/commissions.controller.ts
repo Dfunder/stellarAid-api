@@ -5,12 +5,15 @@ import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
 import {
   createCommission,
   getCommissionDetail,
+  listCommissionsForUser,
   updateCommissionStatus,
   type CommissionDetail,
+  type PaginatedCommissions,
 } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
   CommissionBodySchema,
+  CommissionListQuerySchema,
   CommissionStatusBodySchema,
   CommissionStatusParamsSchema,
 } from '@/validators';
@@ -33,6 +36,16 @@ export const patchCommissionStatus = catchAsync(
     >(req);
     const commission = await updateCommissionStatus(params.id, sub, role, body);
     res.status(200).json({ success: true, data: commission });
+  },
+);
+
+/** GET /api/v1/users/me/commissions — the caller's requested or received commissions. */
+export const getMyCommissions = catchAsync(
+  async (req, res: Response<ApiResponse<PaginatedCommissions>>) => {
+    const { sub, role } = getAuthUser(req);
+    const { query } = getValidated<unknown, unknown, CommissionListQuerySchema>(req);
+    const result = await listCommissionsForUser(sub, role, query);
+    res.status(200).json({ success: true, data: result });
   },
 );
 

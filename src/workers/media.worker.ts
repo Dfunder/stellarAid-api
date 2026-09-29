@@ -8,11 +8,11 @@
  */
 
 import { Worker, type Job } from 'bullmq';
-import { Redis } from 'ioredis';
 import sharp from 'sharp';
 
 import { env } from '@/config';
 import { prisma } from '@/services';
+import { createBullConnection } from '@/services/redis.service';
 import { buildObjectKey, downloadObjectBuffer, uploadObjectBuffer } from '@/services/s3.service';
 import { logger } from '@/utils';
 
@@ -30,7 +30,11 @@ async function createVariant(
   width: number | null,
   height: number | null,
 ): Promise<void> {
-  const key = buildObjectKey(original.userId, `images/variants/${label}`, `${original.id}.${extension}`);
+  const key = buildObjectKey(
+    original.userId,
+    `images/variants/${label}`,
+    `${original.id}.${extension}`,
+  );
   await uploadObjectBuffer(key, buffer, mimeType);
   await prisma.media.create({
     data: {
@@ -72,8 +76,18 @@ async function processImage(job: Job<ImageProcessingJobData>): Promise<void> {
     thumbnail.info.height,
   );
 
-  const webp = await sharp(original).webp({ quality: WEBP_QUALITY }).toBuffer({ resolveWithObject: true });
-  await createVariant(media, 'webp', webp.data, 'image/webp', 'webp', webp.info.width, webp.info.height);
+  const webp = await sharp(original)
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer({ resolveWithObject: true });
+  await createVariant(
+    media,
+    'webp',
+    webp.data,
+    'image/webp',
+    'webp',
+    webp.info.width,
+    webp.info.height,
+  );
 
   logger.info('Image processing complete', { mediaId });
 }
@@ -85,13 +99,15 @@ export function startMediaWorker(): Worker<ImageProcessingJobData> | undefined {
     return undefined;
   }
 
-  const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
   const worker = new Worker<ImageProcessingJobData>(IMAGE_PROCESSING_QUEUE_NAME, processImage, {
-    connection,
+    connection: createBullConnection(),
   });
 
   worker.on('failed', (job, err) => {
-    logger.error('Image processing job failed', { mediaId: job?.data.mediaId, message: err.message });
+    logger.error('Image processing job failed', {
+      mediaId: job?.data.mediaId,
+      message: err.message,
+    });
   });
 
   return worker;

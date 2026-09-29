@@ -6,7 +6,7 @@
  * any `properties` key that looks like PII before this is ever called.
  */
 
-import type { AnalyticsEventType } from '@prisma/client';
+import type { AnalyticsEventType, Prisma } from '@prisma/client';
 
 import { prisma } from '@/services';
 
@@ -28,7 +28,9 @@ export async function recordAnalyticsEvents(
     data: events.map((event) => ({
       type: event.type,
       userId: event.userId,
-      properties: event.properties,
+      // `Record<string, unknown>` is what callers hand us; the validator that
+      // guards this path has already proven the payload is JSON-serializable.
+      properties: event.properties as Prisma.InputJsonValue | undefined,
       createdAt: event.timestamp ?? new Date(),
     })),
   });

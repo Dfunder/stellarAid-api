@@ -22,7 +22,12 @@ export const createReviewBodySchema = z
   .object({
     orderId: uuidSchema.optional(),
     commissionId: uuidSchema.optional(),
-    targetId: uuidSchema,
+    /**
+     * Ignored: the reviewed artist is derived from the order/commission so
+     * only verified purchasers can review (#831). Accepted so older clients
+     * that still send it keep working.
+     */
+    targetId: uuidSchema.optional(),
     rating: z.coerce.number().int().min(1).max(5),
     title: z.string().trim().max(200).optional(),
     body: z.string().trim().min(1).max(5000),

@@ -11,9 +11,9 @@
  */
 
 import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 
 import { env } from '@/config';
+import { createBullConnection } from '@/services/redis.service';
 import { logger } from '@/utils';
 
 export const IMAGE_PROCESSING_QUEUE_NAME = 'image-processing';
@@ -29,8 +29,9 @@ function getQueue(): Queue<ImageProcessingJobData> | undefined {
     return undefined;
   }
   if (queue === undefined) {
-    const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
-    queue = new Queue<ImageProcessingJobData>(IMAGE_PROCESSING_QUEUE_NAME, { connection });
+    queue = new Queue<ImageProcessingJobData>(IMAGE_PROCESSING_QUEUE_NAME, {
+      connection: createBullConnection(),
+    });
   }
   return queue;
 }
@@ -42,5 +43,9 @@ export async function enqueueImageProcessing(mediaId: string): Promise<void> {
     logger.warn('Image processing queue unavailable (no REDIS_URL); skipping', { mediaId });
     return;
   }
-  await q.add('process-image', { mediaId }, { attempts: 3, backoff: { type: 'exponential', delay: 2000 } });
+  await q.add(
+    'process-image',
+    { mediaId },
+    { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
+  );
 }

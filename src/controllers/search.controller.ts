@@ -1,6 +1,5 @@
 /**
  * Artwork search controller.
- * Search controller.
  */
 
 import type { Response } from 'express';
@@ -13,7 +12,6 @@ import type { SearchQuerySchema } from '@/validators';
 /** GET /api/v1/search */
 export const getSearch = catchAsync(async (req, res: Response<ApiResponse<SearchPage>>) => {
   const { query } = getValidated<unknown, unknown, SearchQuerySchema>(req);
-  const result = await searchArtworks(query.q, { category: query.category }, query.page, query.limit);
   const result = await searchArtworks(
     query.q,
     {
@@ -22,7 +20,7 @@ export const getSearch = catchAsync(async (req, res: Response<ApiResponse<Search
       maxPrice: query.maxPrice,
       asset: query.asset,
     },
-    query.cursor,
+    query.page,
     query.limit,
   );
   res.status(200).json({ success: true, data: result });

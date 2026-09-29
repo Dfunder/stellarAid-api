@@ -41,7 +41,6 @@ v1Router.use('/marketplace', marketplaceRouter);
 v1Router.use('/search', searchRouter);
 v1Router.use('/categories', categoriesRouter);
 v1Router.use('/media', mediaRouter);
-v1Router.use('/categories', categoriesRouter);
 v1Router.use('/tags', tagsRouter);
 v1Router.use('/orders', ordersRouter);
 v1Router.use('/payments', paymentsRouter);

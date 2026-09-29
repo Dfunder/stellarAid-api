@@ -22,6 +22,21 @@ export default tseslint.config(
     },
   },
   {
+    // k6 load-test scripts run inside the k6 runtime, not Node or a browser,
+    // so its globals have to be declared explicitly.
+    files: ['loadtest/**/*.js'],
+    languageOptions: {
+      globals: {
+        __ENV: 'readonly',
+        __VU: 'readonly',
+        __ITER: 'readonly',
+        // Provided by the k6 runtime, not Node.
+        URLSearchParams: 'readonly',
+        console: 'readonly',
+      },
+    },
+  },
+  {
     files: ['src/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unused-vars': [

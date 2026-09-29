@@ -5,14 +5,7 @@
 import type { Response } from 'express';
 
 import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
-import {
-  createTag,
-  listCategories,
-  listPopularTags,
-  syncArtworkTags,
-  type CategoryNode,
-  type TagRecord,
-} from '@/services';
+import { createTag, listPopularTags, syncArtworkTags, type TagRecord } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
   ArtworkParamsSchema,
@@ -20,14 +13,6 @@ import type {
   SyncArtworkTagsSchema,
   TagListQuerySchema,
 } from '@/validators';
-
-/** GET /api/v1/categories */
-export const getCategories = catchAsync(
-  async (_req, res: Response<ApiResponse<CategoryNode[]>>) => {
-    const categories = await listCategories();
-    res.status(200).json({ success: true, data: categories });
-  },
-);
 
 /** GET /api/v1/tags */
 export const getTags = catchAsync(async (req, res: Response<ApiResponse<TagRecord[]>>) => {
@@ -48,9 +33,7 @@ export const postTag = catchAsync(async (req, res: Response<ApiResponse<TagRecor
 export const putArtworkTags = catchAsync(
   async (req, res: Response<ApiResponse<{ tags: readonly string[] }>>) => {
     const { sub } = getAuthUser(req);
-    const { params, body } = getValidated<SyncArtworkTagsSchema, ArtworkParamsSchema, unknown>(
-      req,
-    );
+    const { params, body } = getValidated<SyncArtworkTagsSchema, ArtworkParamsSchema, unknown>(req);
     const tags = await syncArtworkTags(sub, params.id, body.tags);
     res.status(200).json({ success: true, data: { tags } });
   },

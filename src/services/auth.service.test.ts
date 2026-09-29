@@ -39,6 +39,10 @@ const storedUser = {
   username: 'ada_abc123',
   role: 'USER' as const,
   emailVerified: false,
+  bio: null,
+  location: null,
+  website: null,
+  socialLinks: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
 };

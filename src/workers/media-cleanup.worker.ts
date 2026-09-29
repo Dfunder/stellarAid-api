@@ -6,12 +6,12 @@
  */
 
 import { Worker } from 'bullmq';
-import { Redis } from 'ioredis';
 
 import { env } from '@/config';
 import { logger } from '@/utils';
 
 import { cleanupOrphanedMedia } from '@/services';
+import { createBullConnection } from '@/services/redis.service';
 import { MEDIA_CLEANUP_QUEUE_NAME } from '@/queues';
 
 let worker: Worker | undefined;
@@ -22,13 +22,12 @@ export function startMediaCleanupWorker(): Worker | undefined {
     return undefined;
   }
 
-  const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
   worker = new Worker(
     MEDIA_CLEANUP_QUEUE_NAME,
     async () => {
       await cleanupOrphanedMedia();
     },
-    { connection },
+    { connection: createBullConnection() },
   );
 
   worker.on('failed', (job, error) => {

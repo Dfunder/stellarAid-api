@@ -89,6 +89,30 @@ describe('updateCommissionStatus', () => {
     });
   });
 
+  it('lets the client request a revision on a delivered commission', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('DELIVERED'));
+
+    await updateCommissionStatus(COMMISSION_ID, CLIENT_ID, 'USER', { status: 'IN_PROGRESS' });
+
+    expect(prismaMock.transaction.commission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { status: 'IN_PROGRESS' },
+    });
+  });
+
+  it('rejects a review sent with a status other than COMPLETED', async () => {
+    prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('IN_PROGRESS'));
+
+    await expect(
+      updateCommissionStatus(COMMISSION_ID, ARTIST_ID, 'ARTIST', {
+        status: 'DELIVERED',
+        review: { rating: 5, body: 'premature' },
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(prismaMock.transaction.review.create).not.toHaveBeenCalled();
+    expect(prismaMock.transaction.commission.update).not.toHaveBeenCalled();
+  });
+
   it('rejects cancellation after delivery', async () => {
     prismaMock.transaction.commission.findUnique.mockResolvedValue(makeCommission('DELIVERED'));
 

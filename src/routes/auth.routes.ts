@@ -198,14 +198,24 @@
  *         description: Validation failed
  */
 
-import { forgotPassword, login, refresh, register, reset } from '@/controllers';
-import { passwordResetLimiter, validate } from '@/middlewares';
 import {
-	forgotPasswordSchema,
-	loginSchema,
-	refreshSchema,
-	registerSchema,
-	resetPasswordSchema,
+  forgotPassword,
+  login,
+  logout,
+  logoutAll,
+  me,
+  refresh,
+  register,
+  reset,
+} from '@/controllers';
+import { authenticate, passwordResetLimiter, validate } from '@/middlewares';
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  logoutSchema,
+  refreshSchema,
+  registerSchema,
+  resetPasswordSchema,
 } from '@/validators';
 
 import { createFeatureRouter } from './router-factory';

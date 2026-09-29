@@ -1,55 +1,29 @@
 /**
- * Trending and recommended artwork surfaces.
- *
- * Both rank by the same weighted trending score (see `trending.service`)
- * and are cached for 5 minutes — "trending results update within 5 minutes
- * of activity" is satisfied by that TTL rather than by pushing updates on
- * every signal. `recommended` is popularity-based at MVP (identical
- * ranking to trending, just a separate cached slot) per the issue's own
- * "personalized (or popularity-based at MVP)" scoping — there's no user
- * interaction history modeled yet to personalize against.
- */
-
-import type { Artwork } from '@prisma/client';
-
-import { prisma } from '@/services';
-
-import { cached } from './cache.service';
-import { getTopTrendingArtworkIds } from './trending.service';
-
-const TRENDING_LIMIT = 20;
-const RECOMMENDED_LIMIT = 20;
-const RANKING_CACHE_TTL_SECONDS = 5 * 60;
-
-async function listFeaturedArtworks(limit: number): Promise<readonly Artwork[]> {
-  return prisma.artwork.findMany({
-    where: { published: true, sold: false },
-    orderBy: [{ createdAt: 'desc' }],
-    take: limit,
-  });
-}
-
-async function rankedByTrendingScore(limit: number): Promise<readonly Artwork[]> {
-  const ids = await getTopTrendingArtworkIds(limit);
-  if (ids.length === 0) {
-    return listFeaturedArtworks(limit);
- * Marketplace browse service.
+ * Marketplace browse, trending, and recommended surfaces.
  *
  * Only published, unsold artworks are ever surfaced here — this is a
- * discovery surface, not an owner-management one. Browse results are
- * cached in Redis for a short TTL (cache-aside: read through on a miss,
- * write on the way out) since this is the highest-traffic read path in the
- * API; caching degrades to a no-op when Redis isn't configured.
  * discovery surface, not an owner-management one (see `artworks.service`
- * for that).
+ * for that). Browse results are cached in Redis for a short TTL
+ * (cache-aside: read through on a miss, write on the way out) since this is
+ * the highest-traffic read path in the API; caching degrades to a no-op
+ * when Redis isn't configured.
+ *
+ * Trending and recommended rank by the same weighted trending score (see
+ * `trending.service`) and are cached for 5 minutes — "trending results
+ * update within 5 minutes of activity" is satisfied by that TTL rather than
+ * by pushing updates on every signal. `recommended` is popularity-based at
+ * MVP (identical ranking to trending, just a separate cached slot) per the
+ * issue's own "personalized (or popularity-based at MVP)" scoping — there's
+ * no user interaction history modeled yet to personalize against.
  */
 
 import type { Artwork, ArtworkCategory, Asset, Prisma } from '@prisma/client';
 
 import { prisma } from '@/services';
 
+import { cached } from './cache.service';
 import { tryGetRedisClient } from './redis.service';
-import { getTrendingArtworkIds } from './trending.service';
+import { getTopTrendingArtworkIds } from './trending.service';
 
 export type MarketplaceSort = 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'rating';
 
@@ -67,8 +41,10 @@ export interface BrowsePage {
 }
 
 const FEATURED_LIMIT = 10;
-const TRENDING_LIMIT = 10;
+const TRENDING_LIMIT = 20;
+const RECOMMENDED_LIMIT = 20;
 const BROWSE_CACHE_TTL_SECONDS = 30;
+const RANKING_CACHE_TTL_SECONDS = 5 * 60;
 
 async function verifiedArtistUserIds(): Promise<string[]> {
   const profiles = await prisma.artistProfile.findMany({
@@ -105,14 +81,10 @@ async function buildWhere(filters: BrowseFilters): Promise<Prisma.ArtworkWhereIn
  * `rating` doesn't have a backing metric yet (no artist-rating aggregate
  * wired into this query) and aliases to `newest`. `popular` ranks by the
  * Redis trending score when available (see `trending.service`), and also
- * falls back to `newest` when it isn't.
- * `popular` and `rating` don't have a backing metric yet (no view/save
- * counter or artist-rating aggregate wired into this query) — both
- * currently alias to `newest` rather than silently returning an
- * unsorted/incorrect ranking.
+ * falls back to `newest` when it isn't — rather than silently returning an
  * unsorted/incorrect ranking. A real implementation needs a stored
- * engagement counter (or a Save-based count, once that model exists) and
- * a Review-rating aggregate joined by artist id.
+ * engagement counter (or a Save-based count) and a Review-rating aggregate
+ * joined by artist id.
  */
 function orderBy(sort: MarketplaceSort): Prisma.ArtworkOrderByWithRelationInput[] {
   switch (sort) {
@@ -147,9 +119,9 @@ export async function browseArtworks(
   const cacheKey = browseCacheKey(filters, sort, cursor, limit);
 
   if (redis !== undefined) {
-    const cached = await redis.get(cacheKey);
-    if (cached !== null) {
-      return JSON.parse(cached) as BrowsePage;
+    const cachedPage = await redis.get(cacheKey);
+    if (cachedPage !== null) {
+      return JSON.parse(cachedPage) as BrowsePage;
     }
   }
 
@@ -178,23 +150,20 @@ export async function browseArtworks(
  * Curated proxy for "featured": most recently published, unsold artworks.
  * There's no editorial-curation flag or rating aggregate to rank by yet.
  */
-export async function listFeaturedArtworks(): Promise<readonly Artwork[]> {
+export async function listFeaturedArtworks(
+  limit: number = FEATURED_LIMIT,
+): Promise<readonly Artwork[]> {
   return prisma.artwork.findMany({
     where: { published: true, sold: false },
     orderBy: [{ createdAt: 'desc' }],
-    take: FEATURED_LIMIT,
+    take: limit,
   });
 }
 
-/**
- * Most-viewed published artworks, ranked by the Redis trending score.
- * Falls back to `listFeaturedArtworks` when Redis isn't configured or
- * nothing has been viewed yet, rather than returning an empty list.
- */
-export async function listTrendingArtworks(): Promise<readonly Artwork[]> {
-  const ids = await getTrendingArtworkIds(TRENDING_LIMIT);
+async function rankedByTrendingScore(limit: number): Promise<readonly Artwork[]> {
+  const ids = await getTopTrendingArtworkIds(limit);
   if (ids.length === 0) {
-    return listFeaturedArtworks();
+    return listFeaturedArtworks(limit);
   }
 
   const artworks = await prisma.artwork.findMany({
@@ -202,7 +171,9 @@ export async function listTrendingArtworks(): Promise<readonly Artwork[]> {
   });
   const byId = new Map(artworks.map((artwork) => [artwork.id, artwork]));
 
-  return ids.map((id) => byId.get(id)).filter((artwork): artwork is Artwork => artwork !== undefined);
+  return ids
+    .map((id) => byId.get(id))
+    .filter((artwork): artwork is Artwork => artwork !== undefined);
 }
 
 /** Top 20 trending artworks, weighted by recent views/saves/purchases. */
@@ -217,4 +188,13 @@ export async function getRecommendedArtworks(): Promise<readonly Artwork[]> {
   return cached('marketplace:recommended', RANKING_CACHE_TTL_SECONDS, () =>
     rankedByTrendingScore(RECOMMENDED_LIMIT),
   );
+}
+
+/**
+ * Trending artworks ranked by the Redis trending score. Falls back to
+ * `listFeaturedArtworks` when Redis isn't configured or nothing has been
+ * viewed yet, rather than returning an empty list.
+ */
+export async function listTrendingArtworks(): Promise<readonly Artwork[]> {
+  return rankedByTrendingScore(TRENDING_LIMIT);
 }

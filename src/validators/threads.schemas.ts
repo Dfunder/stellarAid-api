@@ -7,4 +7,9 @@ export const createThreadBodySchema = z.object({
   participantIds: z.array(uuidSchema).length(2).optional(),
 });
 
+export const threadIdParamsSchema = z.object({
+  id: uuidSchema,
+});
+
 export type CreateThreadBodySchema = z.infer<typeof createThreadBodySchema>;
+export type ThreadIdParamsSchema = z.infer<typeof threadIdParamsSchema>;

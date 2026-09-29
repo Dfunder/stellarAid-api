@@ -5,9 +5,6 @@
 import { z } from 'zod';
 import { emailSchema } from './common.schemas';
 
-
-
-
 export const registerSchema = z.object({
   name: z.string().trim().min(1, 'Name is required.').max(120),
   email: emailSchema,
@@ -29,6 +26,10 @@ export const refreshSchema = z.object({
   refreshToken: z.string().trim().min(1, 'refreshToken is required.'),
 });
 
+export const logoutSchema = z.object({
+  refreshToken: z.string().trim().min(1, 'refreshToken is required.'),
+});
+
 export const forgotPasswordSchema = z.object({
   email: emailSchema,
 });
@@ -36,8 +37,6 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   token: z.string().trim().min(1, 'token is required.'),
   password: registerSchema.shape.password,
-export const logoutSchema = z.object({
-  refreshToken: z.string().trim().min(1, 'refreshToken is required.'),
 });
 
 export const verifyEmailSchema = z.object({
@@ -47,7 +46,7 @@ export const verifyEmailSchema = z.object({
 export type RegisterSchema = z.infer<typeof registerSchema>;
 export type LoginSchema = z.infer<typeof loginSchema>;
 export type RefreshSchema = z.infer<typeof refreshSchema>;
+export type LogoutSchema = z.infer<typeof logoutSchema>;
 export type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;
-export type LogoutSchema = z.infer<typeof logoutSchema>;
 export type VerifyEmailSchema = z.infer<typeof verifyEmailSchema>;

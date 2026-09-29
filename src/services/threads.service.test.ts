@@ -8,13 +8,14 @@ const { prismaMock } = vi.hoisted(() => {
       findUnique: vi.fn(),
       create: vi.fn(),
     },
+    message: { updateMany: vi.fn(), count: vi.fn() },
   };
   return { prismaMock: prisma };
 });
 
 vi.mock('@/services/prisma.service', () => ({ prisma: prismaMock }));
 
-import { createOrGetThread } from './threads.service';
+import { createOrGetThread, markThreadRead } from './threads.service';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -22,9 +23,9 @@ beforeEach(() => {
 
 describe('createOrGetThread (#837)', () => {
   it('rejects self-threads', async () => {
-    await expect(
-      createOrGetThread('u1', { participantId: 'u1' }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(createOrGetThread('u1', { participantId: 'u1' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
   });
 
   it('returns existing thread for the same pair', async () => {
@@ -69,5 +70,72 @@ describe('createOrGetThread (#837)', () => {
     const result = await createOrGetThread('u1', { participantId: 'u2' });
     expect(result.created).toBe(true);
     expect(result.thread.id).toBe('t-new');
+  });
+});
+
+describe('markThreadRead (#840)', () => {
+  function threadWith(userIds: readonly string[]) {
+    return {
+      id: 't1',
+      participants: userIds.map((userId) => ({ userId })),
+    };
+  }
+
+  it('stamps readAt on every unread message and returns the unread count', async () => {
+    prismaMock.messageThread.findUnique.mockResolvedValue(threadWith(['u1', 'u2']));
+    prismaMock.message.updateMany.mockResolvedValue({ count: 3 });
+    prismaMock.message.count.mockResolvedValue(0);
+
+    const receipts = await markThreadRead('t1', 'u1');
+
+    expect(prismaMock.message.updateMany).toHaveBeenCalledWith({
+      where: { threadId: 't1', readAt: null },
+      data: { readAt: expect.any(Date) },
+    });
+    expect(prismaMock.message.count).toHaveBeenCalledWith({
+      where: { threadId: 't1', readAt: null },
+    });
+    expect(receipts.threadId).toBe('t1');
+    expect(receipts.markedRead).toBe(3);
+    expect(receipts.unreadCount).toBe(0);
+    expect(receipts.readAt).toBeInstanceOf(Date);
+  });
+
+  it('reports a zero count when nothing is unread', async () => {
+    prismaMock.messageThread.findUnique.mockResolvedValue(threadWith(['u1', 'u2']));
+    prismaMock.message.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.message.count.mockResolvedValue(0);
+
+    const receipts = await markThreadRead('t1', 'u2');
+
+    expect(receipts.markedRead).toBe(0);
+    expect(receipts.unreadCount).toBe(0);
+  });
+
+  it('leaves messages sent after the call unread', async () => {
+    // A message that arrives between the update and the count is still unread,
+    // which is exactly what the returned badge should show.
+    prismaMock.messageThread.findUnique.mockResolvedValue(threadWith(['u1', 'u2']));
+    prismaMock.message.updateMany.mockResolvedValue({ count: 2 });
+    prismaMock.message.count.mockResolvedValue(1);
+
+    const receipts = await markThreadRead('t1', 'u1');
+
+    expect(receipts.markedRead).toBe(2);
+    expect(receipts.unreadCount).toBe(1);
+  });
+
+  it('rejects a caller who is not a participant', async () => {
+    prismaMock.messageThread.findUnique.mockResolvedValue(threadWith(['u1', 'u2']));
+
+    await expect(markThreadRead('t1', 'intruder')).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(prismaMock.message.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('404s for an unknown thread', async () => {
+    prismaMock.messageThread.findUnique.mockResolvedValue(null);
+
+    await expect(markThreadRead('missing', 'u1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(prismaMock.message.updateMany).not.toHaveBeenCalled();
   });
 });

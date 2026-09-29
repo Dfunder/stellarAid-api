@@ -59,7 +59,11 @@ export interface CreateReviewInput {
   rating: number;
   title?: string;
   body: string;
-  targetId: string;
+  /**
+   * Accepted for backwards compatibility but never trusted: the counterparty
+   * recorded on the order/commission is what the review is filed against.
+   */
+  targetId?: string;
 }
 
 export interface ReportReviewInput {
@@ -152,9 +156,7 @@ export async function computeRatingSummary(targetId: string): Promise<RatingSumm
 
 /** Cached average + distribution for an artist (#832). */
 export async function getCachedRatingSummary(targetId: string): Promise<RatingSummary> {
-  return cached(`reviews:avg:${targetId}`, AVG_CACHE_TTL_SEC, () =>
-    computeRatingSummary(targetId),
-  );
+  return cached(`reviews:avg:${targetId}`, AVG_CACHE_TTL_SEC, () => computeRatingSummary(targetId));
 }
 
 export async function listReviewsForUsername(
@@ -184,9 +186,7 @@ export async function listReviewsForUsername(
   });
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
-  const data = rows.map((r) =>
-    toPublicReview({ ...r, author: authorMap.get(r.authorId) ?? null }),
-  );
+  const data = rows.map((r) => toPublicReview({ ...r, author: authorMap.get(r.authorId) ?? null }));
 
   return {
     data,
@@ -205,13 +205,51 @@ function assertRating(rating: number): void {
 }
 
 /**
- * Create a review for a completed order or commission.
- * Enforces one-review-per-order / per-commission (#836).
+ * Resolve who a review is about from the purchase/contract it belongs to
+ * (#831). Only the buyer of a COMPLETED order (reviewing the seller) or the
+ * client of a COMPLETED commission (reviewing the artist) qualifies, so an
+ * arbitrary `targetId` can never be reviewed into existence.
  */
-export async function createReview(
-  authorId: string,
-  input: CreateReviewInput,
-): Promise<Review> {
+async function resolveReviewTarget(authorId: string, input: CreateReviewInput): Promise<string> {
+  if (input.orderId !== undefined) {
+    const order = await prisma.order.findUnique({ where: { id: input.orderId } });
+    if (order === null) {
+      throw new AppError('NOT_FOUND', 'Order not found');
+    }
+    if (order.buyerId !== authorId) {
+      throw new AppError('FORBIDDEN', 'You can only review your own orders');
+    }
+    if (order.status !== 'COMPLETED') {
+      throw new AppError('BAD_REQUEST', 'You can only review a completed order');
+    }
+    return order.sellerId;
+  }
+
+  const commissionId = input.commissionId as string;
+  const commission = await prisma.commission.findUnique({ where: { id: commissionId } });
+  if (commission === null) {
+    throw new AppError('NOT_FOUND', 'Commission not found');
+  }
+  if (commission.clientId !== authorId) {
+    throw new AppError('FORBIDDEN', 'You can only review your own commissions');
+  }
+  if (commission.status !== 'COMPLETED') {
+    throw new AppError('BAD_REQUEST', 'You can only review a completed commission');
+  }
+  return commission.artistId;
+}
+
+/**
+ * Create a review for a completed order or commission (#831, #836).
+ *
+ * The reviewed artist is derived from the order/commission rather than taken
+ * from the request, so only verified purchasers/commissioners can review.
+ * One review per order and one per commission is enforced by a pre-check plus
+ * the DB uniques (which still win against concurrent duplicates). Creating a
+ * review invalidates the `reviews` cache namespace, so the target's average
+ * rating is recalculated on the very next read.
+ */
+export async function createReview(authorId: string, input: CreateReviewInput): Promise<Review> {
   assertRating(input.rating);
   if (!input.body?.trim()) {
     throw new AppError('BAD_REQUEST', 'Review body is required');
@@ -223,11 +261,21 @@ export async function createReview(
     throw new AppError('BAD_REQUEST', 'Provide either orderId or commissionId, not both');
   }
 
+  const targetId = await resolveReviewTarget(authorId, input);
+
+  const existing =
+    input.orderId !== undefined
+      ? await prisma.review.findUnique({ where: { orderId: input.orderId } })
+      : await prisma.review.findUnique({ where: { commissionId: input.commissionId as string } });
+  if (existing !== null) {
+    throw new AppError('CONFLICT', 'A review already exists for this order or commission');
+  }
+
   try {
     const review = await prisma.review.create({
       data: {
         authorId,
-        targetId: input.targetId,
+        targetId,
         orderId: input.orderId,
         commissionId: input.commissionId,
         rating: input.rating,
@@ -289,7 +337,14 @@ export async function reportReview(
   reviewId: string,
   reporterId: string,
   input: ReportReviewInput,
-): Promise<{ id: string; reviewId: string; reason: string; note: string | null; createdAt: Date; message: string }> {
+): Promise<{
+  id: string;
+  reviewId: string;
+  reason: string;
+  note: string | null;
+  createdAt: Date;
+  message: string;
+}> {
   if (!input.reason?.trim()) {
     throw new AppError('BAD_REQUEST', 'Reason is required');
   }

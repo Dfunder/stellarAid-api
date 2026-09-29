@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppError } from '@/middlewares';
-
 const { prismaMock } = vi.hoisted(() => {
   const prisma = {
     user: { findUnique: vi.fn(), findMany: vi.fn() },
@@ -19,6 +17,8 @@ const { prismaMock } = vi.hoisted(() => {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    order: { findUnique: vi.fn() },
+    commission: { findUnique: vi.fn() },
   };
   return { prismaMock: prisma };
 });
@@ -29,10 +29,13 @@ vi.mock('@/services/cache.service', () => ({
   invalidateNamespace: vi.fn(),
 }));
 
+import { invalidateNamespace } from '@/services/cache.service';
+
 import {
   computeRatingSummary,
   createReview,
   editReview,
+  getCachedRatingSummary,
   listReviewsForUsername,
   moderateReport,
   reportReview,
@@ -44,12 +47,37 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('createReview (#836)', () => {
-  it('creates a review with valid rating', async () => {
+const BUYER_ID = 'buyer-1';
+const ARTIST_ID = 'artist-1';
+
+function completedOrder(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'o1',
+    buyerId: BUYER_ID,
+    sellerId: ARTIST_ID,
+    status: 'COMPLETED',
+    ...overrides,
+  };
+}
+
+function completedCommission(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'c1',
+    clientId: BUYER_ID,
+    artistId: ARTIST_ID,
+    status: 'COMPLETED',
+    ...overrides,
+  };
+}
+
+describe('createReview (#831, #836)', () => {
+  it('derives the reviewed artist from a completed order', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(completedOrder());
+    prismaMock.review.findUnique.mockResolvedValue(null);
     prismaMock.review.create.mockResolvedValue({
       id: 'r1',
-      authorId: 'a1',
-      targetId: 't1',
+      authorId: BUYER_ID,
+      targetId: ARTIST_ID,
       orderId: 'o1',
       rating: 5,
       body: 'Great',
@@ -57,27 +85,120 @@ describe('createReview (#836)', () => {
       edited: false,
       createdAt: new Date(),
     });
-    const review = await createReview('a1', {
+
+    const review = await createReview(BUYER_ID, {
       orderId: 'o1',
-      targetId: 't1',
+      // A hostile/incorrect targetId is ignored in favour of the seller.
+      targetId: 'someone-else',
       rating: 5,
       body: 'Great',
     });
+
     expect(review.rating).toBe(5);
-    expect(prismaMock.review.create).toHaveBeenCalled();
+    expect(prismaMock.review.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ targetId: ARTIST_ID }) }),
+    );
+  });
+
+  it('derives the reviewed artist from a completed commission', async () => {
+    prismaMock.commission.findUnique.mockResolvedValue(completedCommission());
+    prismaMock.review.findUnique.mockResolvedValue(null);
+    prismaMock.review.create.mockResolvedValue({
+      id: 'r2',
+      authorId: BUYER_ID,
+      targetId: ARTIST_ID,
+      commissionId: 'c1',
+      rating: 4,
+      body: 'Solid',
+    });
+
+    await createReview(BUYER_ID, { commissionId: 'c1', rating: 4, body: 'Solid' });
+
+    expect(prismaMock.review.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ targetId: ARTIST_ID }) }),
+    );
+  });
+
+  it('rejects a review from a user who is not the buyer', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(completedOrder());
+
+    await expect(
+      createReview('someone-else', { orderId: 'o1', rating: 5, body: 'not mine' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a review of an order that is not completed', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(completedOrder({ status: 'PENDING' }));
+
+    await expect(
+      createReview(BUYER_ID, { orderId: 'o1', rating: 5, body: 'too early' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
+  it('rejects a review for an unknown order', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(null);
+
+    await expect(
+      createReview(BUYER_ID, { orderId: 'nope', rating: 5, body: 'x' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('rejects a commission review from a user who is not the client', async () => {
+    prismaMock.commission.findUnique.mockResolvedValue(completedCommission());
+
+    await expect(
+      createReview(ARTIST_ID, { commissionId: 'c1', rating: 5, body: 'self review' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('rejects rating outside 1–5', async () => {
     await expect(
-      createReview('a1', { orderId: 'o1', targetId: 't1', rating: 6, body: 'x' }),
+      createReview(BUYER_ID, { orderId: 'o1', rating: 6, body: 'x' }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
-  it('enforces one-review-per-order on unique violation', async () => {
-    prismaMock.review.create.mockRejectedValue({ code: 'P2002' });
+  it('enforces one-review-per-order', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(completedOrder());
+    prismaMock.review.findUnique.mockResolvedValue({ id: 'existing' } as never);
+
     await expect(
-      createReview('a1', { orderId: 'o1', targetId: 't1', rating: 4, body: 'dup' }),
+      createReview(BUYER_ID, { orderId: 'o1', rating: 4, body: 'dup' }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(prismaMock.review.create).not.toHaveBeenCalled();
+  });
+
+  it('enforces one-review-per-order against concurrent duplicates (P2002)', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(completedOrder());
+    prismaMock.review.findUnique.mockResolvedValue(null);
+    prismaMock.review.create.mockRejectedValue({ code: 'P2002' });
+
+    await expect(
+      createReview(BUYER_ID, { orderId: 'o1', rating: 4, body: 'dup' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('refreshes the artist average rating as part of creation', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(completedOrder());
+    prismaMock.review.findUnique.mockResolvedValue(null);
+    prismaMock.review.create.mockResolvedValue({
+      id: 'r3',
+      authorId: BUYER_ID,
+      targetId: ARTIST_ID,
+      orderId: 'o1',
+      rating: 5,
+      body: 'Great',
+    });
+    // The cache mock calls the fetcher directly, so this is the post-create
+    // read: the new review is already part of the distribution.
+    prismaMock.review.groupBy.mockResolvedValue([{ rating: 5, _count: { rating: 1 } }]);
+
+    await createReview(BUYER_ID, { orderId: 'o1', rating: 5, body: 'Great' });
+    const summary = await getCachedRatingSummary(ARTIST_ID);
+
+    expect(invalidateNamespace).toHaveBeenCalledWith('reviews');
+    expect(summary.average).toBe(5);
+    expect(summary.count).toBe(1);
   });
 });
 
@@ -130,9 +251,9 @@ describe('reportReview (#835)', () => {
   it('rate-limits reports per user per day', async () => {
     prismaMock.review.findUnique.mockResolvedValue({ id: 'r1', authorId: 'author' });
     prismaMock.reviewReport.count.mockResolvedValue(REVIEW_REPORTS_PER_DAY);
-    await expect(
-      reportReview('r1', 'reporter', { reason: 'spam' }),
-    ).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+    await expect(reportReview('r1', 'reporter', { reason: 'spam' })).rejects.toMatchObject({
+      code: 'RATE_LIMITED',
+    });
   });
 });
 

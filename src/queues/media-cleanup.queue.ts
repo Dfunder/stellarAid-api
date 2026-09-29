@@ -7,9 +7,9 @@
  */
 
 import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 
 import { env } from '@/config';
+import { createBullConnection } from '@/services/redis.service';
 import { logger } from '@/utils';
 
 export const MEDIA_CLEANUP_QUEUE_NAME = 'media-cleanup';
@@ -19,16 +19,12 @@ const DAILY_CRON = '0 3 * * *';
 
 let queue: Queue | undefined;
 
-/** BullMQ requires its own connection with `maxRetriesPerRequest: null` —
- * distinct from the shared client in `redis.service.ts`, which doesn't set
- * that. */
 function getQueue(): Queue | undefined {
   if (env.redisUrl === undefined) {
     return undefined;
   }
   if (queue === undefined) {
-    const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
-    queue = new Queue(MEDIA_CLEANUP_QUEUE_NAME, { connection });
+    queue = new Queue(MEDIA_CLEANUP_QUEUE_NAME, { connection: createBullConnection() });
   }
   return queue;
 }

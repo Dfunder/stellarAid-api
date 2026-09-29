@@ -85,14 +85,31 @@
  *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/users/me/recently-viewed:
  *   get:
- *     summary: The caller's recently viewed artworks
- *     description: >
- *       Most-recently-viewed first. Stored in Redis, not the database;
- *       empty when Redis isn't configured.
  *     summary: List the current user's recently viewed artworks
  *     description: >
- *       Backed by Redis, not the database. Capped at the 50 most recent
- *       views (see POST /api/v1/artworks/{id}/view).
+ *       Most-recently-viewed first. Backed by Redis, not the database, and
+ *       capped at the 50 most recent views (see
+ *       `POST /api/v1/artworks/{id}/view`); the list is empty when Redis isn't
+ *       configured.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *     responses:
+ *       200:
+ *         description: Paginated recently viewed artworks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RecentlyViewedResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  * /api/v1/users/me/saves:
  *   get:
  *     summary: List the current user's saved artworks
@@ -108,16 +125,6 @@
  *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
  *     responses:
  *       200:
- *         description: Recently viewed artworks
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ArtworkOffsetPageResponse'
- *         description: Paginated recently viewed artworks
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/RecentlyViewedResponse'
  *         description: Paginated saved artworks
  *         content:
  *           application/json:
@@ -125,16 +132,48 @@
  *               $ref: '#/components/schemas/SavedArtworksResponse'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ * /api/v1/users/{username}/reviews:
+ *   get:
+ *     summary: List the public reviews written about a user
+ *     description: >
+ *       Newest first by default. Reviews with an open moderation report are
+ *       hidden, and the response carries the target's rating summary.
+ *     tags: [Users, Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         schema: { type: string, maxLength: 64 }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, enum: [recent, highest, lowest], default: recent }
+ *     responses:
+ *       200:
+ *         description: Paginated reviews with the rating summary
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: { code: NOT_FOUND, message: User not found }
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
  */
 
 import { getMyRecentlyViewed, getMySaves, updateMe, updateUserById } from '@/controllers';
 import { getUserReviews } from '@/controllers/reviews.controller';
 import { authenticate, validate } from '@/middlewares';
 import { paginationSchema, updateProfileSchema, userIdParamsSchema } from '@/validators';
-import {
-  listReviewsParamsSchema,
-  listReviewsQuerySchema,
-} from '@/validators/reviews.schemas';
+import { listReviewsParamsSchema, listReviewsQuerySchema } from '@/validators/reviews.schemas';
 import { createFeatureRouter } from './router-factory';
 
 export const usersRouter = createFeatureRouter('users');
@@ -153,7 +192,6 @@ usersRouter.patch(
   validate({ params: userIdParamsSchema, body: updateProfileSchema }),
   updateUserById,
 );
-
 
 usersRouter.get(
   '/:username/reviews',

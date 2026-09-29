@@ -1,5 +1,5 @@
 /**
- * Message thread creation (#837).
+ * Message thread creation (#837) and read receipts (#840).
  * One thread per unordered pair of users; returns existing if present.
  */
 
@@ -27,10 +27,7 @@ export interface ThreadView {
 /**
  * Find an existing 1:1 thread between two users, if any.
  */
-export async function findThreadBetween(
-  userA: string,
-  userB: string,
-): Promise<ThreadView | null> {
+export async function findThreadBetween(userA: string, userB: string): Promise<ThreadView | null> {
   const rows = await prisma.threadParticipant.findMany({
     where: { userId: { in: [userA, userB] } },
     select: { threadId: true, userId: true },
@@ -81,6 +78,47 @@ async function loadThreadView(threadId: string): Promise<ThreadView> {
       };
     }),
   };
+}
+
+export interface ReadReceipts {
+  readonly threadId: string;
+  /** Messages this call flipped from unread to read. */
+  readonly markedRead: number;
+  /** Unread messages left in the thread once marking has run. */
+  readonly unreadCount: number;
+  /** Timestamp stamped on every message this call marked. */
+  readonly readAt: Date;
+}
+
+/**
+ * Mark a thread's unread messages as read (#840).
+ *
+ * Only a participant may mark a thread, so one user cannot clear someone
+ * else's conversation. `Message.readAt` is a single column shared by the
+ * whole thread — the schema keeps no per-user receipt row — so every unread
+ * message in the thread is stamped with the same timestamp and the remaining
+ * unread count is returned for the caller's badge.
+ */
+export async function markThreadRead(threadId: string, userId: string): Promise<ReadReceipts> {
+  const thread = await prisma.messageThread.findUnique({
+    where: { id: threadId },
+    select: { id: true, participants: { select: { userId: true } } },
+  });
+  if (thread === null) {
+    throw new AppError('NOT_FOUND', 'Thread not found');
+  }
+  if (!thread.participants.some((participant) => participant.userId === userId)) {
+    throw new AppError('FORBIDDEN', 'You are not a participant in this thread');
+  }
+
+  const readAt = new Date();
+  const marked = await prisma.message.updateMany({
+    where: { threadId, readAt: null },
+    data: { readAt },
+  });
+  const unreadCount = await prisma.message.count({ where: { threadId, readAt: null } });
+
+  return { threadId: thread.id, markedRead: marked.count, unreadCount, readAt };
 }
 
 /**

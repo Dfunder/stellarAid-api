@@ -20,15 +20,16 @@ const ARTIST_TRANSITIONS: Partial<Record<CommissionStatus, CommissionStatus>> = 
   IN_PROGRESS: 'DELIVERED',
 };
 
+/**
+ * Client-side moves: accepting a delivery (COMPLETED, review required),
+ * rejecting it (DISPUTED, escrow frozen) or asking for a revision back in
+ * progress (IN_PROGRESS — the deliverable is re-submitted when ready).
+ */
 const CLIENT_TRANSITIONS: Partial<Record<CommissionStatus, readonly CommissionStatus[]>> = {
-  DELIVERED: ['COMPLETED', 'DISPUTED'],
+  DELIVERED: ['COMPLETED', 'DISPUTED', 'IN_PROGRESS'],
 };
 
-const CANCELLABLE_STATUSES: readonly CommissionStatus[] = [
-  'PENDING',
-  'ACCEPTED',
-  'IN_PROGRESS',
-];
+const CANCELLABLE_STATUSES: readonly CommissionStatus[] = ['PENDING', 'ACCEPTED', 'IN_PROGRESS'];
 
 function assertTransition(
   commission: Commission,
@@ -58,7 +59,10 @@ function assertTransition(
     return 'client';
   }
 
-  throw new AppError('CONFLICT', `Cannot change commission from ${commission.status} to ${input.status}`);
+  throw new AppError(
+    'CONFLICT',
+    `Cannot change commission from ${commission.status} to ${input.status}`,
+  );
 }
 
 export async function updateCommissionStatus(
@@ -74,6 +78,12 @@ export async function updateCommissionStatus(
     }
 
     const actor = assertTransition(commission, userId, role, input);
+    if (input.review !== undefined && input.status !== 'COMPLETED') {
+      throw new AppError(
+        'BAD_REQUEST',
+        'A review can only be submitted when completing a commission',
+      );
+    }
     if (input.status === 'COMPLETED') {
       if (actor !== 'client' || input.review === undefined) {
         throw new AppError('BAD_REQUEST', 'A client review is required to complete a commission');

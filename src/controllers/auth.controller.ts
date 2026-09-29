@@ -17,6 +17,8 @@ import {
   logoutSession,
   refreshSession,
   registerUser,
+  requestPasswordReset,
+  resetPassword,
   type CurrentUserProfile,
   type PublicUser,
 } from '@/services';
@@ -25,10 +27,10 @@ import type { ApiResponse } from '@/types';
 import type {
   ForgotPasswordSchema,
   LoginSchema,
+  LogoutSchema,
   RefreshSchema,
   RegisterSchema,
   ResetPasswordSchema,
-    LogoutSchema
 } from '@/validators';
 
 type RegisterInput = RegisterSchema;
@@ -69,20 +71,6 @@ export const refresh = catchAsync(async (req, res: Response<ApiResponse<SessionR
   res.status(200).json({ success: true, data: result });
 });
 
-/** POST /api/v1/auth/forgot-password */
-export const forgotPassword = catchAsync(
-  async (req, res: Response<ApiResponse<{ message: string }>>) => {
-    const { body } = getValidated<ForgotPasswordInput, unknown, unknown>(req);
-    const result = await requestPasswordReset(body.email);
-    res.status(200).json({ success: true, data: result });
-  },
-);
-
-/** POST /api/v1/auth/reset-password */
-export const reset = catchAsync(async (req, res: Response<ApiResponse<{ message: string }>>) => {
-  const { body } = getValidated<ResetPasswordInput, unknown, unknown>(req);
-  const result = await resetPassword(body.token, body.password);
-  res.status(200).json({ success: true, data: result });
 /** GET /api/v1/auth/me */
 export const me = catchAsync(async (req, res: Response<ApiResponse<CurrentUserProfile>>) => {
   const { sub } = getAuthUser(req);
@@ -103,4 +91,20 @@ export const logoutAll = catchAsync(async (req, res: Response) => {
   const { sub } = getAuthUser(req);
   await logoutAllSessions(sub);
   res.status(204).end();
+});
+
+/** POST /api/v1/auth/forgot-password */
+export const forgotPassword = catchAsync(
+  async (req, res: Response<ApiResponse<{ message: string }>>) => {
+    const { body } = getValidated<ForgotPasswordInput, unknown, unknown>(req);
+    const result = await requestPasswordReset(body.email);
+    res.status(200).json({ success: true, data: result });
+  },
+);
+
+/** POST /api/v1/auth/reset-password */
+export const reset = catchAsync(async (req, res: Response<ApiResponse<{ message: string }>>) => {
+  const { body } = getValidated<ResetPasswordInput, unknown, unknown>(req);
+  const result = await resetPassword(body.token, body.password);
+  res.status(200).json({ success: true, data: result });
 });

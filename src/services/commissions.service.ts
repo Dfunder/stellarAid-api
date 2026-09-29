@@ -1,6 +1,8 @@
 import type {
   Asset,
   Commission,
+  CommissionDispute,
+  CommissionDisputeStatus,
   CommissionStatus,
   Deliverable,
   Prisma,
@@ -137,8 +139,29 @@ export interface CommissionDetail {
   };
   readonly deliverables: readonly Deliverable[];
   readonly reviews: readonly Review[];
+  readonly dispute: CommissionDispute | null;
   readonly timeline: readonly CommissionTimelineEntry[];
 }
+
+export interface RaiseDisputeInput {
+  readonly reason: string;
+  readonly evidence?: unknown;
+}
+
+export type DisputeDecision = 'RELEASE_TO_ARTIST' | 'REFUND_CLIENT' | 'REJECT';
+
+export interface ResolveDisputeInput {
+  readonly decision: DisputeDecision;
+  readonly resolution?: string;
+}
+
+export interface ResolvedDispute {
+  readonly dispute: CommissionDispute;
+  readonly commission: Commission;
+}
+
+/** Dispute states in which escrow stays held. */
+export const OPEN_DISPUTE_STATUSES: readonly CommissionDisputeStatus[] = ['OPEN', 'REVIEWING'];
 
 const ARTIST_TRANSITIONS: Partial<Record<CommissionStatus, CommissionStatus>> = {
   PENDING: 'ACCEPTED',
@@ -199,6 +222,22 @@ export async function updateCommissionStatus(
     }
 
     const actor = assertTransition(commission, userId, role, input);
+
+    // Escrow hold: while a dispute is open, the commission can't be moved to
+    // COMPLETED (funds released to the artist) or CANCELLED (client
+    // refunded) — only an admin dispute resolution may decide the outcome.
+    if (input.status === 'COMPLETED' || input.status === 'CANCELLED') {
+      const openDispute = await tx.commissionDispute.findFirst({
+        where: { commissionId, status: { in: [...OPEN_DISPUTE_STATUSES] } },
+      });
+      if (openDispute !== null) {
+        throw new AppError(
+          'CONFLICT',
+          'This commission has an open dispute; an admin must resolve it first',
+        );
+      }
+    }
+
     if (input.status === 'COMPLETED') {
       if (actor !== 'client' || input.review === undefined) {
         throw new AppError('BAD_REQUEST', 'A client review is required to complete a commission');
@@ -321,13 +360,14 @@ export async function getCommissionDetail(
     );
   }
 
-  const [events, deliverables, reviews, parties] = await Promise.all([
+  const [events, deliverables, reviews, dispute, parties] = await Promise.all([
     prisma.commissionEvent.findMany({
       where: { commissionId },
       orderBy: { createdAt: 'asc' },
     }),
     prisma.deliverable.findMany({ where: { commissionId }, orderBy: { createdAt: 'asc' } }),
     prisma.review.findMany({ where: { commissionId }, orderBy: { createdAt: 'asc' } }),
+    prisma.commissionDispute.findUnique({ where: { commissionId } }),
     loadParties([commission.clientId, commission.artistId]),
   ]);
 
@@ -361,6 +401,167 @@ export async function getCommissionDetail(
     },
     deliverables,
     reviews,
+    dispute,
     timeline,
   };
+}
+
+/**
+ * The client disputes a commission on final delivery. Records the reason and
+ * evidence, moves the commission to DISPUTED (which holds escrow), drops a
+ * timeline entry, and notifies every admin so the dispute surfaces without
+ * anyone polling for it.
+ */
+export async function raiseCommissionDispute(
+  commissionId: string,
+  userId: string,
+  input: RaiseDisputeInput,
+): Promise<CommissionDispute> {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const commission = await tx.commission.findUnique({ where: { id: commissionId } });
+    if (commission === null) {
+      throw new AppError('NOT_FOUND', 'Commission not found');
+    }
+    if (commission.clientId !== userId) {
+      throw new AppError('FORBIDDEN', 'Only the client can dispute a commission');
+    }
+    if (commission.status !== 'DELIVERED') {
+      throw new AppError('CONFLICT', 'A commission can only be disputed on final delivery');
+    }
+
+    const existing = await tx.commissionDispute.findUnique({ where: { commissionId } });
+    if (existing !== null) {
+      throw new AppError('CONFLICT', 'This commission already has a dispute');
+    }
+
+    const dispute = await tx.commissionDispute.create({
+      data: {
+        commissionId,
+        raisedById: userId,
+        reason: input.reason,
+        // Free-form JSONB: callers attach links/ids without a schema change.
+        evidence: input.evidence as Prisma.InputJsonValue | undefined,
+      },
+    });
+
+    await tx.commission.update({ where: { id: commissionId }, data: { status: 'DISPUTED' } });
+
+    await tx.commissionEvent.create({
+      data: {
+        commissionId,
+        fromStatus: commission.status,
+        toStatus: 'DISPUTED',
+        actorId: userId,
+        note: `Dispute raised: ${input.reason}`,
+      },
+    });
+
+    const admins = await tx.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    if (admins.length > 0) {
+      await tx.notification.createMany({
+        data: admins.map((admin) => ({
+          userId: admin.id,
+          type: 'COMMISSION_DISPUTED',
+          data: { commissionId, disputeId: dispute.id, reason: input.reason },
+        })),
+      });
+    }
+
+    return dispute;
+  });
+}
+
+const DISPUTE_OUTCOMES: Record<
+  DisputeDecision,
+  { readonly disputeStatus: CommissionDisputeStatus; readonly commissionStatus: CommissionStatus }
+> = {
+  RELEASE_TO_ARTIST: { disputeStatus: 'RESOLVED', commissionStatus: 'COMPLETED' },
+  REFUND_CLIENT: { disputeStatus: 'RESOLVED', commissionStatus: 'CANCELLED' },
+  REJECT: { disputeStatus: 'REJECTED', commissionStatus: 'DELIVERED' },
+};
+
+/**
+ * Admin resolution of an open dispute. Releasing pays the artist, refunding
+ * cancels the commission, and rejecting returns it to DELIVERED so the
+ * client can review it normally. Both parties are notified either way.
+ */
+export async function resolveCommissionDispute(
+  commissionId: string,
+  adminId: string,
+  role: Role,
+  input: ResolveDisputeInput,
+): Promise<ResolvedDispute> {
+  if (role !== 'ADMIN') {
+    throw new AppError('FORBIDDEN', 'Only an admin can resolve a dispute');
+  }
+
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const commission = await tx.commission.findUnique({ where: { id: commissionId } });
+    if (commission === null) {
+      throw new AppError('NOT_FOUND', 'Commission not found');
+    }
+
+    const dispute = await tx.commissionDispute.findUnique({ where: { commissionId } });
+    if (dispute === null) {
+      throw new AppError('NOT_FOUND', 'This commission has no dispute to resolve');
+    }
+    if (!OPEN_DISPUTE_STATUSES.includes(dispute.status)) {
+      throw new AppError('CONFLICT', 'This dispute has already been resolved');
+    }
+
+    const outcome = DISPUTE_OUTCOMES[input.decision];
+    const updatedDispute = await tx.commissionDispute.update({
+      where: { commissionId },
+      data: {
+        status: outcome.disputeStatus,
+        resolution: input.resolution,
+        resolvedById: adminId,
+        resolvedAt: new Date(),
+      },
+    });
+
+    const updatedCommission = await tx.commission.update({
+      where: { id: commissionId },
+      data: { status: outcome.commissionStatus },
+    });
+
+    await tx.commissionEvent.create({
+      data: {
+        commissionId,
+        fromStatus: commission.status,
+        toStatus: outcome.commissionStatus,
+        actorId: adminId,
+        note: `Dispute ${outcome.disputeStatus.toLowerCase()}: ${input.decision}`,
+      },
+    });
+
+    await tx.notification.createMany({
+      data: [commission.clientId, commission.artistId].map((userId) => ({
+        userId,
+        type: 'COMMISSION_DISPUTE_RESOLVED',
+        data: { commissionId, decision: input.decision, resolution: input.resolution ?? null },
+      })),
+    });
+
+    return { dispute: updatedDispute, commission: updatedCommission };
+  });
+}
+
+/**
+ * Admin queue of disputes awaiting a decision (OPEN/REVIEWING by default),
+ * each with the commission it belongs to so the decision can be made from
+ * one response.
+ */
+export async function listCommissionDisputes(
+  role: Role,
+  status?: CommissionDisputeStatus,
+): Promise<readonly (CommissionDispute & { readonly commission: Commission })[]> {
+  if (role !== 'ADMIN') {
+    throw new AppError('FORBIDDEN', 'Only an admin can list disputes');
+  }
+  return prisma.commissionDispute.findMany({
+    where: { status: status ?? { in: [...OPEN_DISPUTE_STATUSES] } },
+    orderBy: { createdAt: 'asc' },
+    include: { commission: true },
+  });
 }

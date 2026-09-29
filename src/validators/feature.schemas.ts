@@ -126,6 +126,32 @@ export const commissionBodySchema = z.object({
 
 export const commissionStatusParamsSchema = z.object({ id: uuidSchema });
 
+const COMMISSION_STATUSES = [
+  'PENDING',
+  'ACCEPTED',
+  'IN_PROGRESS',
+  'DELIVERED',
+  'COMPLETED',
+  'CANCELLED',
+  'DISPUTED',
+] as const;
+
+/** Filters for `GET /api/v1/users/me/commissions`. `view` defaults to the
+ * caller's role, so artists see commissions they received and everyone else
+ * sees the ones they requested. */
+export const commissionListQuerySchema = paginationSchema
+  .extend({
+    view: z.enum(['client', 'artist']).optional(),
+    status: z.enum(COMMISSION_STATUSES).optional(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+    sort: z.enum(['newest', 'oldest']).default('newest'),
+  })
+  .refine((value) => value.from === undefined || value.to === undefined || value.from <= value.to, {
+    message: '`from` must not be after `to`.',
+    path: ['from'],
+  });
+
 const commissionReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   title: z.string().trim().max(120).optional(),
@@ -186,6 +212,7 @@ export type OrderBodySchema = z.infer<typeof orderBodySchema>;
 export type PaymentParamsSchema = z.infer<typeof paymentParamsSchema>;
 export type CommissionBodySchema = z.infer<typeof commissionBodySchema>;
 export type CommissionStatusParamsSchema = z.infer<typeof commissionStatusParamsSchema>;
+export type CommissionListQuerySchema = z.infer<typeof commissionListQuerySchema>;
 export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;
 export type ReviewBodySchema = z.infer<typeof reviewBodySchema>;
 export type MessageBodySchema = z.infer<typeof messageBodySchema>;

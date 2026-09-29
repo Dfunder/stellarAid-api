@@ -102,6 +102,33 @@ export interface CommissionTimelineEntry {
   readonly at: Date;
 }
 
+export type CommissionView = 'client' | 'artist';
+export type CommissionSort = 'newest' | 'oldest';
+
+export interface ListCommissionsQuery {
+  readonly view?: CommissionView;
+  readonly status?: CommissionStatus;
+  readonly from?: Date;
+  readonly to?: Date;
+  readonly sort: CommissionSort;
+  readonly page: number;
+  readonly limit: number;
+}
+
+/** A commission plus the public identity of both parties. */
+export interface CommissionListItem extends Commission {
+  readonly client: CommissionParty | null;
+  readonly artist: CommissionParty | null;
+}
+
+export interface PaginatedCommissions {
+  readonly data: readonly CommissionListItem[];
+  readonly page: number;
+  readonly limit: number;
+  readonly total: number;
+  readonly hasNext: boolean;
+}
+
 export interface CommissionDetail {
   readonly commission: Commission;
   readonly parties: {
@@ -222,6 +249,56 @@ async function loadParties(userIds: readonly string[]): Promise<Map<string, Comm
 
 function canView(commission: Commission, userId: string, role: Role): boolean {
   return commission.clientId === userId || commission.artistId === userId || role === 'ADMIN';
+}
+
+/**
+ * Commissions the caller requested (`view=client`) or received
+ * (`view=artist`), newest first by default. `view` defaults to the caller's
+ * role so each side sees only its own side of the marketplace.
+ */
+export async function listCommissionsForUser(
+  userId: string,
+  role: Role,
+  query: ListCommissionsQuery,
+): Promise<PaginatedCommissions> {
+  const view: CommissionView = query.view ?? (role === 'ARTIST' ? 'artist' : 'client');
+  const where: Prisma.CommissionWhereInput = {
+    ...(view === 'client' ? { clientId: userId } : { artistId: userId }),
+    ...(query.status !== undefined ? { status: query.status } : {}),
+    ...(query.from !== undefined || query.to !== undefined
+      ? {
+          createdAt: {
+            ...(query.from !== undefined ? { gte: query.from } : {}),
+            ...(query.to !== undefined ? { lte: query.to } : {}),
+          },
+        }
+      : {}),
+  };
+  const skip = (query.page - 1) * query.limit;
+
+  const [total, rows] = await Promise.all([
+    prisma.commission.count({ where }),
+    prisma.commission.findMany({
+      where,
+      orderBy: { createdAt: query.sort === 'oldest' ? 'asc' : 'desc' },
+      skip,
+      take: query.limit,
+    }),
+  ]);
+
+  const parties = await loadParties(rows.flatMap((row) => [row.clientId, row.artistId]));
+
+  return {
+    data: rows.map((row) => ({
+      ...row,
+      client: parties.get(row.clientId) ?? null,
+      artist: parties.get(row.artistId) ?? null,
+    })),
+    page: query.page,
+    limit: query.limit,
+    total,
+    hasNext: skip + rows.length < total,
+  };
 }
 
 /**

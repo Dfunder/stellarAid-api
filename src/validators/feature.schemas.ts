@@ -111,7 +111,8 @@ export const orderBodySchema = z.object({
   idempotencyKey: z.string().trim().min(1).max(200).optional(),
 });
 
-export const paymentParamsSchema = z.object({ orderId: uuidSchema });
+/** `POST /api/v1/orders/:id/payment-intent` (#764). */
+export const paymentParamsSchema = z.object({ id: uuidSchema });
 
 export const commissionBodySchema = z.object({
   artistId: uuidSchema,

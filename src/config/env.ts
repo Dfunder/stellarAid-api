@@ -25,6 +25,12 @@ const DEFAULT_MAX_COMMISSION_REVISIONS = 3;
 /** Circle's well-known USDC issuer on the Stellar public network. */
 const DEFAULT_USDC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
 
+/** How long a signed payment-intent transaction stays valid, in seconds. */
+const DEFAULT_PAYMENT_INTENT_TTL_SECONDS = 300;
+
+/** Ed25519 public keys (account addresses) are always `G` + 55 base32 chars. */
+const STELLAR_ACCOUNT_RE = /^G[A-Z2-7]{55}$/;
+
 /** Treat empty strings as "not provided" so `.env` keys can be left blank. */
 function emptyToUndefined(value: unknown): unknown {
   return value === '' ? undefined : value;
@@ -42,6 +48,12 @@ const optionalPort = z
       .int()
       .min(1, 'must be a port between 1 and 65535.')
       .max(65535, 'must be a port between 1 and 65535.'),
+  )
+  .optional();
+const optionalStellarAccount = z
+  .preprocess(
+    emptyToUndefined,
+    z.string().regex(STELLAR_ACCOUNT_RE, 'must be a Stellar account address'),
   )
   .optional();
 
@@ -87,6 +99,15 @@ const schema = z.object({
   USDC_ASSET_ISSUER: optionalString,
   EURC_ASSET_ISSUER: optionalString,
   NGNT_ASSET_ISSUER: optionalString,
+  STELLAR_HORIZON_URL: optionalUrl,
+  STELLAR_ESCROW_ADDRESS: optionalStellarAccount,
+  STELLAR_PLATFORM_FEE_ADDRESS: optionalStellarAccount,
+  PAYMENT_INTENT_TTL_SECONDS: z.coerce
+    .number()
+    .int('PAYMENT_INTENT_TTL_SECONDS must be a whole number of seconds.')
+    .min(30, 'PAYMENT_INTENT_TTL_SECONDS must be at least 30 seconds.')
+    .max(3600, 'PAYMENT_INTENT_TTL_SECONDS must be at most 3600 seconds.')
+    .default(DEFAULT_PAYMENT_INTENT_TTL_SECONDS),
   SMTP_HOST: optionalString,
   SMTP_PORT: optionalPort,
   SMTP_USER: optionalString,
@@ -133,6 +154,16 @@ export interface AppEnv {
     readonly EURC: string | undefined;
     readonly NGNT: string | undefined;
   };
+  /** Horizon base URL override; the payment service picks the network default
+   * (`horizon-testnet.stellar.org` / `horizon.stellar.org`) when unset. */
+  readonly stellarHorizonUrl: string | undefined;
+  /** Custodial escrow account that order payments are sent to. When unset,
+   * payments go straight to the seller's linked wallet. */
+  readonly stellarEscrowAddress: string | undefined;
+  /** Account that receives the platform fee when no escrow account is used. */
+  readonly stellarPlatformFeeAddress: string | undefined;
+  /** Lifetime of a signed payment-intent transaction, in seconds. */
+  readonly paymentIntentTtlSeconds: number;
   /** Present only when SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS are all set. */
   readonly smtp: SmtpConfig | undefined;
   /** Comma-separated allowed CORS origins, or undefined to reflect the request origin. */
@@ -183,6 +214,10 @@ function loadEnv(): AppEnv {
       EURC: raw.EURC_ASSET_ISSUER,
       NGNT: raw.NGNT_ASSET_ISSUER,
     },
+    stellarHorizonUrl: raw.STELLAR_HORIZON_URL,
+    stellarEscrowAddress: raw.STELLAR_ESCROW_ADDRESS,
+    stellarPlatformFeeAddress: raw.STELLAR_PLATFORM_FEE_ADDRESS,
+    paymentIntentTtlSeconds: raw.PAYMENT_INTENT_TTL_SECONDS,
     smtp,
     corsOrigins: raw.CORS_ORIGIN
       ? raw.CORS_ORIGIN.split(',')

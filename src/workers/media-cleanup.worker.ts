@@ -6,7 +6,6 @@
  */
 
 import { Worker } from 'bullmq';
-import { Redis } from 'ioredis';
 
 import { env } from '@/config';
 import { logger } from '@/utils';
@@ -22,7 +21,7 @@ export function startMediaCleanupWorker(): Worker | undefined {
     return undefined;
   }
 
-  const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
+  const connection = { url: env.redisUrl, maxRetriesPerRequest: null };
   worker = new Worker(
     MEDIA_CLEANUP_QUEUE_NAME,
     async () => {

@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppError } from '@/middlewares';
-
 const { prismaMock } = vi.hoisted(() => {
   const prisma = {
     user: { findUnique: vi.fn(), findMany: vi.fn() },
@@ -130,9 +128,9 @@ describe('reportReview (#835)', () => {
   it('rate-limits reports per user per day', async () => {
     prismaMock.review.findUnique.mockResolvedValue({ id: 'r1', authorId: 'author' });
     prismaMock.reviewReport.count.mockResolvedValue(REVIEW_REPORTS_PER_DAY);
-    await expect(
-      reportReview('r1', 'reporter', { reason: 'spam' }),
-    ).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+    await expect(reportReview('r1', 'reporter', { reason: 'spam' })).rejects.toMatchObject({
+      code: 'RATE_LIMITED',
+    });
   });
 });
 

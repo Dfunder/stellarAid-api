@@ -52,6 +52,6 @@ export async function cleanupOrphanedMedia(): Promise<MediaCleanupStats> {
   }
 
   const stats: MediaCleanupStats = { scanned: orphaned.length, deleted, failed };
-  logger.info('media-cleanup: run complete', stats);
+  logger.info('media-cleanup: run complete', { ...stats });
   return stats;
 }

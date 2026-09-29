@@ -3,6 +3,7 @@
  */
 
 import { createFeatureRouter } from './router-factory';
+import { postReview, postReviewReport } from '@/controllers/reviews.controller';
 import {
   getUserReviews,
   patchReview,
@@ -13,8 +14,6 @@ import {
 import { authenticate, validate } from '@/middlewares';
 import {
   createReviewBodySchema,
-  listReviewsParamsSchema,
-  listReviewsQuerySchema,
   reportReviewBodySchema,
   reviewIdParamsSchema,
   updateReviewBodySchema,
@@ -22,12 +21,7 @@ import {
 
 export const reviewsRouter = createFeatureRouter('reviews');
 
-reviewsRouter.post(
-  '/',
-  authenticate,
-  validate({ body: createReviewBodySchema }),
-  postReview,
-);
+reviewsRouter.post('/', authenticate, validate({ body: createReviewBodySchema }), postReview);
 
 reviewsRouter.patch(
   '/:id',

@@ -17,6 +17,7 @@ export * from './s3.service';
 export * from './saves.service';
 export * from './search.service';
 export * from './stellar-auth.service';
+export * from './stellar-payment.service';
 export * from './stats.service';
 export * from './taxonomy.service';
 export * from './threads.service';

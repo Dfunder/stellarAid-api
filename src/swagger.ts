@@ -651,6 +651,83 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
+        PaymentIntentLeg: {
+          type: 'object',
+          required: ['kind', 'destination', 'amount', 'asset'],
+          properties: {
+            kind: {
+              type: 'string',
+              enum: ['ESCROW', 'SELLER', 'PLATFORM_FEE'],
+              description: 'What the payment leg represents.',
+            },
+            destination: { type: 'string', description: 'Stellar account the leg pays.' },
+            amount: { type: 'string', example: '450.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        PaymentIntentResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              required: [
+                'orderId',
+                'xdr',
+                'networkPassphrase',
+                'expiresAt',
+                'total',
+                'asset',
+                'destination',
+                'memo',
+                'legs',
+                'estimatedFee',
+              ],
+              properties: {
+                orderId: { type: 'string', format: 'uuid' },
+                xdr: {
+                  type: 'string',
+                  description: 'Unsigned base64 transaction envelope for the buyer to sign.',
+                },
+                networkPassphrase: {
+                  type: 'string',
+                  description: 'Passphrase the transaction was built for.',
+                },
+                expiresAt: {
+                  type: 'string',
+                  format: 'date-time',
+                  description:
+                    'Instant after which the transaction time bound expires and the network rejects it.',
+                },
+                total: { type: 'string', example: '450.00', description: 'amount + platformFee.' },
+                asset: { type: 'string', enum: ['USDC', 'XLM'] },
+                destination: {
+                  type: 'string',
+                  description: 'Primary recipient — the escrow account or the seller wallet.',
+                },
+                memo: {
+                  type: 'string',
+                  maxLength: 28,
+                  description: 'Order id prefix, so the payment can be reconciled.',
+                },
+                legs: {
+                  type: 'array',
+                  description: 'One payment operation per recipient, in transaction order.',
+                  items: { $ref: '#/components/schemas/PaymentIntentLeg' },
+                },
+                estimatedFee: {
+                  type: 'object',
+                  required: ['stroops', 'xlm'],
+                  description: 'Network fee for the whole transaction.',
+                  properties: {
+                    stroops: { type: 'string', example: '100' },
+                    xlm: { type: 'string', example: '0.0000100' },
+                  },
+                },
+              },
+            },
+          },
+        },
         ErrorResponse: {
           type: 'object',
           required: ['success', 'error'],

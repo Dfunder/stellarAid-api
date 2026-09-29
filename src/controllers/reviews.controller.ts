@@ -18,11 +18,9 @@ import type {
 } from '@/validators/reviews.schemas';
 
 export const getUserReviews = catchAsync(async (req, res: Response) => {
-  const { params, query } = getValidated<
-    unknown,
-    { username: string },
-    ListReviewsQuerySchema
-  >(req);
+  const { params, query } = getValidated<unknown, { username: string }, ListReviewsQuerySchema>(
+    req,
+  );
   const result = await listReviewsForUsername(params.username, {
     page: query.page,
     limit: query.limit,
@@ -33,11 +31,7 @@ export const getUserReviews = catchAsync(async (req, res: Response) => {
 
 export const postReviewReport = catchAsync(async (req, res: Response) => {
   const { sub } = getAuthUser(req);
-  const { params, body } = getValidated<
-    ReportReviewBodySchema,
-    { id: string },
-    unknown
-  >(req);
+  const { params, body } = getValidated<ReportReviewBodySchema, { id: string }, unknown>(req);
   const report = await reportReview(params.id, sub, body);
   res.status(201).json({ success: true, data: report } satisfies ApiResponse<typeof report>);
 });
@@ -45,18 +39,14 @@ export const postReviewReport = catchAsync(async (req, res: Response) => {
 export const postReview = catchAsync(async (req, res: Response) => {
   const { sub } = getAuthUser(req);
   const { body } = getValidated<CreateReviewBodySchema, unknown, unknown>(req);
-  const review = await createReview(sub, body);
-  res.status(201).json({ success: true, data: review } satisfies ApiResponse<typeof review>);
+  const result = await createReview(sub, body);
+  res.status(201).json({ success: true, data: result } satisfies ApiResponse<typeof result>);
 });
 
 /** PATCH /api/v1/reviews/:id (#833) */
 export const patchReview = catchAsync(async (req, res: Response) => {
   const { sub } = getAuthUser(req);
-  const { params, body } = getValidated<
-    UpdateReviewBodySchema,
-    { id: string },
-    unknown
-  >(req);
+  const { params, body } = getValidated<UpdateReviewBodySchema, { id: string }, unknown>(req);
   const review = await editReview(params.id, sub, body);
   res.status(200).json({
     success: true,

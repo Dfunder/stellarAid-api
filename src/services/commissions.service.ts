@@ -12,6 +12,7 @@ import type {
 
 import { AppError } from '@/middlewares';
 import { prisma } from '@/services';
+import { invalidateNamespace } from '@/services/cache.service';
 
 export interface CreateCommissionInput {
   readonly artistId: string;
@@ -215,7 +216,9 @@ export async function updateCommissionStatus(
   role: Role,
   input: UpdateCommissionStatusInput,
 ): Promise<Commission> {
-  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  const completedWithReview = input.status === 'COMPLETED';
+
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const commission = await tx.commission.findUnique({ where: { id: commissionId } });
     if (commission === null) {
       throw new AppError('NOT_FOUND', 'Commission not found');
@@ -272,6 +275,14 @@ export async function updateCommissionStatus(
 
     return updated;
   });
+
+  // Completing a commission writes a Review row, so the artist's cached
+  // average is stale until it expires — drop it now (#831).
+  if (completedWithReview) {
+    await invalidateNamespace('reviews');
+  }
+
+  return result;
 }
 
 async function loadParties(userIds: readonly string[]): Promise<Map<string, CommissionParty>> {

@@ -3,6 +3,7 @@ import type { Response } from 'express';
 
 import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
 import {
+  cancelCommission,
   createCommission,
   getCommissionDetail,
   listCommissionDisputes,
@@ -10,6 +11,7 @@ import {
   raiseCommissionDispute,
   resolveCommissionDispute,
   updateCommissionStatus,
+  type CommissionCancellation,
   type CommissionDetail,
   type PaginatedCommissions,
   type ResolvedDispute,
@@ -17,6 +19,7 @@ import {
 import type { ApiResponse } from '@/types';
 import type {
   CommissionBodySchema,
+  CommissionCancelBodySchema,
   CommissionDisputeBodySchema,
   CommissionDisputeListQuerySchema,
   CommissionDisputeResolveBodySchema,
@@ -65,6 +68,20 @@ export const getCommissionById = catchAsync(
     const { params } = getValidated<unknown, CommissionStatusParamsSchema, unknown>(req);
     const detail = await getCommissionDetail(params.id, sub, role);
     res.status(200).json({ success: true, data: detail });
+  },
+);
+
+/** POST /api/v1/commissions/:id/cancel — either party cancels with a reason (#826). */
+export const postCommissionCancellation = catchAsync(
+  async (req, res: Response<ApiResponse<CommissionCancellation>>) => {
+    const { sub } = getAuthUser(req);
+    const { params, body } = getValidated<
+      CommissionCancelBodySchema,
+      CommissionStatusParamsSchema,
+      unknown
+    >(req);
+    const result = await cancelCommission(params.id, sub, body);
+    res.status(200).json({ success: true, data: result });
   },
 );
 

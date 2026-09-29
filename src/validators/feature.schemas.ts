@@ -175,6 +175,11 @@ export const commissionStatusBodySchema = z
 
 const COMMISSION_DISPUTE_STATUSES = ['OPEN', 'REVIEWING', 'RESOLVED', 'REJECTED'] as const;
 
+/** Either party cancelling a commission, with a reason for the other side (#826). */
+export const commissionCancelBodySchema = z.object({
+  reason: z.string().trim().min(1).max(2000),
+});
+
 /** Client-raised dispute on a delivered commission (#827). */
 export const commissionDisputeBodySchema = z.object({
   reason: z.string().trim().min(1).max(2000),
@@ -235,6 +240,7 @@ export type CommissionDisputeBodySchema = z.infer<typeof commissionDisputeBodySc
 export type CommissionDisputeResolveBodySchema = z.infer<typeof commissionDisputeResolveBodySchema>;
 export type CommissionDisputeListQuerySchema = z.infer<typeof commissionDisputeListQuerySchema>;
 export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;
+export type CommissionCancelBodySchema = z.infer<typeof commissionCancelBodySchema>;
 export type ReviewBodySchema = z.infer<typeof reviewBodySchema>;
 export type MessageBodySchema = z.infer<typeof messageBodySchema>;
 export type NotificationParamsSchema = z.infer<typeof notificationParamsSchema>;

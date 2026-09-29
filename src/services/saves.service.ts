@@ -1,6 +1,8 @@
 /**
- * Artwork save/unsave (bookmarking).
  * Saved/favorites service.
+ *
+ * A save doubles as a trending signal, so toggling one on also feeds the
+ * Redis trending score (see `trending.service`).
  */
 
 import { AppError } from '@/middlewares';
@@ -8,23 +10,6 @@ import { prisma } from '@/services';
 
 import { recordTrendingSignal } from './trending.service';
 
-export interface ToggleSaveResult {
-  readonly saved: boolean;
-}
-
-async function assertArtworkExists(artworkId: string): Promise<void> {
-  const artwork = await prisma.artwork.findUnique({
-    where: { id: artworkId },
-    select: { id: true },
-  });
-  if (artwork === null) {
-    throw new AppError('NOT_FOUND', 'Artwork not found');
-  }
-}
-
-/** Creates the save if it doesn't exist, deletes it if it does. */
-export async function toggleArtworkSave(userId: string, artworkId: string): Promise<ToggleSaveResult> {
-  await assertArtworkExists(artworkId);
 export interface ToggleSaveResult {
   readonly saved: boolean;
   readonly saveCount: number;
@@ -60,14 +45,15 @@ export async function toggleArtworkSave(
     where: { userId_artworkId: { userId, artworkId } },
   });
 
-  if (existing !== null) {
+  if (existing === null) {
+    await prisma.save.create({ data: { userId, artworkId } });
+    await recordTrendingSignal(artworkId, 'save');
+  } else {
     await prisma.save.delete({ where: { id: existing.id } });
-    return { saved: false };
   }
 
-  await prisma.save.create({ data: { userId, artworkId } });
-  await recordTrendingSignal(artworkId, 'save');
-  return { saved: true };
+  const saveCount = await getSaveCount(artworkId);
+  return { saved: existing === null, saveCount };
 }
 
 export async function isArtworkSaved(userId: string, artworkId: string): Promise<boolean> {
@@ -75,14 +61,6 @@ export async function isArtworkSaved(userId: string, artworkId: string): Promise
     where: { userId_artworkId: { userId, artworkId } },
   });
   return existing !== null;
-  if (existing === null) {
-    await prisma.save.create({ data: { userId, artworkId } });
-  } else {
-    await prisma.save.delete({ where: { id: existing.id } });
-  }
-
-  const saveCount = await getSaveCount(artworkId);
-  return { saved: existing === null, saveCount };
 }
 
 export interface SavedArtworkSummary {

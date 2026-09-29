@@ -1,35 +1,22 @@
 /**
- * S3 client, scoped to what this feature area needs: deleting objects for
- * orphaned media (see `media-cleanup.service.ts`). Upload/presign belong to
- * whichever feature area owns media creation, not cleanup.
- */
-
-import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
-
-import { env } from '@/config';
-
-let client: S3Client | undefined;
-
-function getClient(): S3Client {
-  if (client === undefined) {
-    client = new S3Client({ region: env.s3Region });
-  }
-  return client;
-}
-
-export async function deleteObject(bucket: string, key: string): Promise<void> {
-  await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
  * S3 client and presigned URL helpers.
  *
  * A single S3Client is shared across the process, matching the Prisma
- * client singleton pattern in `prisma.service.ts`.
+ * client singleton pattern in `prisma.service.ts`. Besides upload/presign
+ * helpers, this exposes `deleteObject` for the orphaned-media cleanup sweep
+ * (see `media-cleanup.service.ts`).
  */
 
 import { randomUUID } from 'node:crypto';
-
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Readable } from 'node:stream';
+
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { env } from '@/config';
 
@@ -45,10 +32,7 @@ export function buildObjectKey(userId: string, folder: string, filename: string)
 }
 
 /** Presigned PUT URL the client uploads the file to directly. */
-export async function createPresignedUploadUrl(
-  key: string,
-  contentType: string,
-): Promise<string> {
+export async function createPresignedUploadUrl(key: string, contentType: string): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: env.s3Bucket,
     Key: key,
@@ -88,4 +72,9 @@ export async function downloadObjectBuffer(key: string): Promise<Buffer> {
     chunks.push(chunk as Buffer);
   }
   return Buffer.concat(chunks);
+}
+
+/** Delete an object (used by the orphaned-media cleanup sweep). */
+export async function deleteObject(bucket: string, key: string): Promise<void> {
+  await s3Client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }

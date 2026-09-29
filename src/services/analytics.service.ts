@@ -6,7 +6,7 @@
  * any `properties` key that looks like PII before this is ever called.
  */
 
-import type { AnalyticsEventType } from '@prisma/client';
+import { Prisma, type AnalyticsEventType } from '@prisma/client';
 
 import { prisma } from '@/services';
 
@@ -28,7 +28,7 @@ export async function recordAnalyticsEvents(
     data: events.map((event) => ({
       type: event.type,
       userId: event.userId,
-      properties: event.properties,
+      properties: event.properties as Prisma.InputJsonValue | undefined,
       createdAt: event.timestamp ?? new Date(),
     })),
   });

@@ -11,7 +11,6 @@
  */
 
 import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 
 import { env } from '@/config';
 import { logger } from '@/utils';
@@ -29,7 +28,10 @@ function getQueue(): Queue<ImageProcessingJobData> | undefined {
     return undefined;
   }
   if (queue === undefined) {
-    const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
+    // BullMQ builds its own client from these options; its bundled ioredis
+    // types are a different major from the app's, so passing a shared client
+    // instance doesn't type-check.
+    const connection = { url: env.redisUrl, maxRetriesPerRequest: null };
     queue = new Queue<ImageProcessingJobData>(IMAGE_PROCESSING_QUEUE_NAME, { connection });
   }
   return queue;
@@ -42,5 +44,9 @@ export async function enqueueImageProcessing(mediaId: string): Promise<void> {
     logger.warn('Image processing queue unavailable (no REDIS_URL); skipping', { mediaId });
     return;
   }
-  await q.add('process-image', { mediaId }, { attempts: 3, backoff: { type: 'exponential', delay: 2000 } });
+  await q.add(
+    'process-image',
+    { mediaId },
+    { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
+  );
 }

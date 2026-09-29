@@ -14,7 +14,7 @@ import { AppError } from '@/middlewares';
 const { prismaMock, redisMock, tryGetRedisClientMock } = vi.hoisted(() => {
   const prisma = {
     artwork: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn() },
-    save: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
+    save: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn(), count: vi.fn() },
     $queryRaw: vi.fn(),
   };
   const redis = {
@@ -86,10 +86,7 @@ describe('browse -> search -> filter -> artwork detail', () => {
 describe('trending', () => {
   it('ranks by trending score and falls back to recent artworks when nothing has a score', async () => {
     redisMock.zrevrange.mockResolvedValueOnce(['artwork-2', 'artwork-1']);
-    prismaMock.artwork.findMany.mockResolvedValueOnce([
-      { id: 'artwork-1' },
-      { id: 'artwork-2' },
-    ]);
+    prismaMock.artwork.findMany.mockResolvedValueOnce([{ id: 'artwork-1' }, { id: 'artwork-2' }]);
     redisMock.get.mockResolvedValue(null);
 
     const trending = await getTrendingArtworks();
@@ -142,15 +139,16 @@ describe('save/unsave from marketplace', () => {
 
   it('persists the toggled save state across calls', async () => {
     prismaMock.artwork.findUnique.mockResolvedValue({ id: artworkId });
+    prismaMock.save.count.mockResolvedValue(1);
 
     prismaMock.save.findUnique.mockResolvedValueOnce(null);
     const saved = await toggleArtworkSave(userId, artworkId);
-    expect(saved).toEqual({ saved: true });
+    expect(saved).toEqual({ saved: true, saveCount: 1 });
     expect(prismaMock.save.create).toHaveBeenCalledWith({ data: { userId, artworkId } });
 
     prismaMock.save.findUnique.mockResolvedValueOnce({ id: 'save-1', userId, artworkId });
     const unsaved = await toggleArtworkSave(userId, artworkId);
-    expect(unsaved).toEqual({ saved: false });
+    expect(unsaved).toEqual({ saved: false, saveCount: 1 });
     expect(prismaMock.save.delete).toHaveBeenCalledWith({ where: { id: 'save-1' } });
   });
 

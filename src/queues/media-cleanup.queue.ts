@@ -7,7 +7,6 @@
  */
 
 import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 
 import { env } from '@/config';
 import { logger } from '@/utils';
@@ -27,7 +26,7 @@ function getQueue(): Queue | undefined {
     return undefined;
   }
   if (queue === undefined) {
-    const connection = new Redis(env.redisUrl, { maxRetriesPerRequest: null });
+    const connection = { url: env.redisUrl, maxRetriesPerRequest: null };
     queue = new Queue(MEDIA_CLEANUP_QUEUE_NAME, { connection });
   }
   return queue;

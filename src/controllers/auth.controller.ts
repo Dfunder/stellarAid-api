@@ -17,6 +17,8 @@ import {
   logoutSession,
   refreshSession,
   registerUser,
+  requestPasswordReset,
+  resetPassword,
   type CurrentUserProfile,
   type PublicUser,
 } from '@/services';
@@ -25,10 +27,10 @@ import type { ApiResponse } from '@/types';
 import type {
   ForgotPasswordSchema,
   LoginSchema,
+  LogoutSchema,
   RefreshSchema,
   RegisterSchema,
   ResetPasswordSchema,
-    LogoutSchema
 } from '@/validators';
 
 type RegisterInput = RegisterSchema;
@@ -83,6 +85,8 @@ export const reset = catchAsync(async (req, res: Response<ApiResponse<{ message:
   const { body } = getValidated<ResetPasswordInput, unknown, unknown>(req);
   const result = await resetPassword(body.token, body.password);
   res.status(200).json({ success: true, data: result });
+});
+
 /** GET /api/v1/auth/me */
 export const me = catchAsync(async (req, res: Response<ApiResponse<CurrentUserProfile>>) => {
   const { sub } = getAuthUser(req);

@@ -173,6 +173,15 @@ export const commissionStatusBodySchema = z
     }
   });
 
+const deliverableTypeSchema = z.enum(['WIP', 'FINAL']);
+
+/** Artist submission of a commission deliverable (#784). */
+export const submitDeliverableBodySchema = z.object({
+  type: deliverableTypeSchema,
+  note: z.string().trim().max(2000).optional(),
+  mediaIds: z.array(uuidSchema).max(20).optional(),
+});
+
 const COMMISSION_DISPUTE_STATUSES = ['OPEN', 'REVIEWING', 'RESOLVED', 'REJECTED'] as const;
 
 /** Client-raised dispute on a delivered commission (#827). */
@@ -235,6 +244,7 @@ export type CommissionDisputeBodySchema = z.infer<typeof commissionDisputeBodySc
 export type CommissionDisputeResolveBodySchema = z.infer<typeof commissionDisputeResolveBodySchema>;
 export type CommissionDisputeListQuerySchema = z.infer<typeof commissionDisputeListQuerySchema>;
 export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;
+export type SubmitDeliverableBodySchema = z.infer<typeof submitDeliverableBodySchema>;
 export type ReviewBodySchema = z.infer<typeof reviewBodySchema>;
 export type MessageBodySchema = z.infer<typeof messageBodySchema>;
 export type NotificationParamsSchema = z.infer<typeof notificationParamsSchema>;

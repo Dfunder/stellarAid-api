@@ -495,8 +495,25 @@ export const openApiSpec = swaggerJsdoc({
               type: 'string',
               enum: ['UPLOADED', 'SUBMITTED', 'ACCEPTED', 'REJECTED'],
             },
+            media: {
+              type: 'array',
+              description: 'Media attached to this submission, in the artist order.',
+              items: { $ref: '#/components/schemas/DeliverableMedia' },
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        DeliverableMedia: {
+          type: 'object',
+          description: 'A media row attached to one submission.',
+          properties: {
+            deliverableId: { type: 'string', format: 'uuid' },
+            mediaId: { type: 'string', format: 'uuid' },
+            sort: {
+              type: 'integer',
+              description: 'Artist-defined ordering within the submission.',
+            },
           },
         },
         CommissionReview: {
@@ -552,6 +569,48 @@ export const openApiSpec = swaggerJsdoc({
           properties: {
             success: { type: 'boolean', enum: [true] },
             data: { $ref: '#/components/schemas/Commission' },
+          },
+        },
+        SubmitDeliverableRequest: {
+          type: 'object',
+          required: ['type'],
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['WIP', 'FINAL'],
+              description: '`FINAL` hands the work to the client; `WIP` is a draft for feedback.',
+            },
+            note: { type: 'string', maxLength: 2000, nullable: true },
+            mediaIds: {
+              type: 'array',
+              maxItems: 20,
+              description: 'Ids of media the artist has already uploaded. Order is preserved.',
+              items: { type: 'string', format: 'uuid' },
+            },
+          },
+        },
+        SubmitDeliverableResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                deliverable: { $ref: '#/components/schemas/Deliverable' },
+                commissionStatus: {
+                  type: 'string',
+                  enum: [
+                    'PENDING',
+                    'ACCEPTED',
+                    'IN_PROGRESS',
+                    'DELIVERED',
+                    'COMPLETED',
+                    'DISPUTED',
+                    'CANCELLED',
+                  ],
+                },
+              },
+            },
           },
         },
         CommissionListItem: {

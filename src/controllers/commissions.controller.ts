@@ -9,10 +9,12 @@ import {
   listCommissionsForUser,
   raiseCommissionDispute,
   resolveCommissionDispute,
+  submitDeliverable,
   updateCommissionStatus,
   type CommissionDetail,
   type PaginatedCommissions,
   type ResolvedDispute,
+  type SubmitDeliverableResult,
 } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
@@ -23,6 +25,7 @@ import type {
   CommissionListQuerySchema,
   CommissionStatusBodySchema,
   CommissionStatusParamsSchema,
+  SubmitDeliverableBodySchema,
 } from '@/validators';
 
 type DisputeWithCommission = CommissionDispute & { readonly commission: Commission };
@@ -65,6 +68,20 @@ export const getCommissionById = catchAsync(
     const { params } = getValidated<unknown, CommissionStatusParamsSchema, unknown>(req);
     const detail = await getCommissionDetail(params.id, sub, role);
     res.status(200).json({ success: true, data: detail });
+  },
+);
+
+/** POST /api/v1/commissions/:id/deliverables — the artist submits work (#784). */
+export const postCommissionDeliverable = catchAsync(
+  async (req, res: Response<ApiResponse<SubmitDeliverableResult>>) => {
+    const { sub } = getAuthUser(req);
+    const { params, body } = getValidated<
+      SubmitDeliverableBodySchema,
+      CommissionStatusParamsSchema,
+      unknown
+    >(req);
+    const result = await submitDeliverable(params.id, sub, body);
+    res.status(201).json({ success: true, data: result });
   },
 );
 

@@ -10,22 +10,29 @@ import {
   listCommissionsForUser,
   raiseCommissionDispute,
   resolveCommissionDispute,
+  reviewDeliverable,
+  submitDeliverable,
   updateCommissionStatus,
   type CommissionCancellation,
   type CommissionDetail,
   type PaginatedCommissions,
   type ResolvedDispute,
+  type ReviewDeliverableResult,
+  type SubmitDeliverableResult,
 } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
   CommissionBodySchema,
   CommissionCancelBodySchema,
+  CommissionDeliverableParamsSchema,
   CommissionDisputeBodySchema,
   CommissionDisputeListQuerySchema,
   CommissionDisputeResolveBodySchema,
   CommissionListQuerySchema,
   CommissionStatusBodySchema,
   CommissionStatusParamsSchema,
+  ReviewDeliverableBodySchema,
+  SubmitDeliverableBodySchema,
 } from '@/validators';
 
 type DisputeWithCommission = CommissionDispute & { readonly commission: Commission };
@@ -81,6 +88,30 @@ export const postCommissionCancellation = catchAsync(
       unknown
     >(req);
     const result = await cancelCommission(params.id, sub, body);
+/** POST /api/v1/commissions/:id/deliverables — the artist submits work (#784). */
+export const postCommissionDeliverable = catchAsync(
+  async (req, res: Response<ApiResponse<SubmitDeliverableResult>>) => {
+    const { sub } = getAuthUser(req);
+    const { params, body } = getValidated<
+      SubmitDeliverableBodySchema,
+      CommissionStatusParamsSchema,
+      unknown
+    >(req);
+    const result = await submitDeliverable(params.id, sub, body);
+    res.status(201).json({ success: true, data: result });
+  },
+);
+
+/** PATCH /api/v1/commissions/:id/deliverables/:did — the client reviews it (#823). */
+export const patchCommissionDeliverable = catchAsync(
+  async (req, res: Response<ApiResponse<ReviewDeliverableResult>>) => {
+    const { sub } = getAuthUser(req);
+    const { params, body } = getValidated<
+      ReviewDeliverableBodySchema,
+      CommissionDeliverableParamsSchema,
+      unknown
+    >(req);
+    const result = await reviewDeliverable(params.id, params.did, sub, body);
     res.status(200).json({ success: true, data: result });
   },
 );

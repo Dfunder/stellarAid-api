@@ -376,7 +376,13 @@ export async function getCommissionDetail(
       where: { commissionId },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.deliverable.findMany({ where: { commissionId }, orderBy: { createdAt: 'asc' } }),
+    // Submissions carry their attached media, so the client can review the
+    // files on the version it is being asked to accept (#784).
+    prisma.deliverable.findMany({
+      where: { commissionId },
+      orderBy: { createdAt: 'asc' },
+      include: { media: { orderBy: { sort: 'asc' } } },
+    }),
     prisma.review.findMany({ where: { commissionId }, orderBy: { createdAt: 'asc' } }),
     prisma.commissionDispute.findUnique({ where: { commissionId } }),
     loadParties([commission.clientId, commission.artistId]),

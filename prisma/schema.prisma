@@ -318,6 +318,10 @@ model CommissionDispute {
 }
 
 /// A version of a commission deliverable — WIP drafts or the FINAL artefact.
+/// Submissions start at `SUBMITTED`; the client's review moves them to
+/// `ACCEPTED` (which completes the commission and releases escrow) or
+/// `REJECTED` (a revision request). Rejected rows are the revision history, so
+/// the revision count is derived rather than stored — see #823.
 model Deliverable {
   id           String            @id @default(uuid())
   commissionId String
@@ -327,6 +331,7 @@ model Deliverable {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   commission   Commission        @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  media        DeliverableMedia[]
 
   @@index([commissionId, type])
   @@index([status])
@@ -598,6 +603,7 @@ model Media {
   artworks     ArtworkMedia[]
   portfolio    PortfolioMedia[]
   deliverables OrderDeliverable[]
+  submissions  DeliverableMedia[]
 
   @@index([userId])
   @@index([variantOfId])
@@ -624,6 +630,20 @@ model PortfolioMedia {
   media           Media         @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@id([portfolioItemId, mediaId])
+  @@index([mediaId])
+}
+
+/// Commission deliverable ↔ media join (#784). Mirrors `ArtworkMedia` /
+/// `PortfolioMedia`: the join carries a `sort` so the artist's ordering of the
+/// files in a WIP/FINAL submission is preserved.
+model DeliverableMedia {
+  deliverableId String
+  mediaId       String
+  sort          Int         @default(0)
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  media         Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([deliverableId, mediaId])
   @@index([mediaId])
 }
 

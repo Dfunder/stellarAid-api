@@ -151,6 +151,18 @@
  *       When it is, the response reports the refund the client is owed and
  *       carries it in both notifications. The API holds no signing keys, so
  *       the on-chain `refund_client` call is the backend's to make.
+ * /api/v1/commissions/{id}/deliverables:
+ *   post:
+ *     summary: Submit a deliverable
+ *     description: >-
+ *       Artist only. Records a version of the work — a `WIP` draft or the
+ *       `FINAL` artefact — with an optional note and the ids of media the
+ *       artist has already uploaded. A `FINAL` submission moves the commission
+ *       to `DELIVERED` for the client to review; a `WIP` submission starts or
+ *       continues the work (`IN_PROGRESS`). Submissions are only accepted
+ *       while the commission is `ACCEPTED` or `IN_PROGRESS`, so a version
+ *       awaiting review can never be replaced underneath the client. The
+ *       client is notified with the submission details.
  *     tags: [Commissions]
  *     security:
  *       - BearerAuth: []
@@ -204,6 +216,39 @@
  *                       asset: USDC
  *       400:
  *         description: The reason is missing or too long
+ *             $ref: '#/components/schemas/SubmitDeliverableRequest'
+ *           examples:
+ *             final:
+ *               summary: Final artwork, two files
+ *               value:
+ *                 type: FINAL
+ *                 note: Final files attached — 4K master and a web-sized export.
+ *             wip:
+ *               summary: Work in progress draft
+ *               value:
+ *                 type: WIP
+ *                 note: Rough composition, feedback welcome.
+ *     responses:
+ *       201:
+ *         description: Deliverable recorded; commission advanced if this was the final submission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SubmitDeliverableResponse'
+ *             example:
+ *               success: true
+ *               data:
+ *                 deliverable:
+ *                   id: 2b7c1e4d-9f3a-4c8e-b1d2-6a5f7c8e9d0b
+ *                   commissionId: 8d1f4b2c-0a3e-4f5b-8c7d-1e2f3a4b5c6d
+ *                   type: FINAL
+ *                   status: SUBMITTED
+ *                   note: Final files attached — 4K master and a web-sized export.
+ *                   media: []
+ *                   createdAt: '2026-09-29T09:30:00.000Z'
+ *                 commissionStatus: DELIVERED
+ *       400:
+ *         description: A note over the length limit, or media that belongs to another user
  *         content:
  *           application/json:
  *             schema:
@@ -215,6 +260,13 @@
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
  *         description: Caller is not a participant of this commission
+ *               error:
+ *                 code: BAD_REQUEST
+ *                 message: Every attached media file must belong to you
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Caller is not the artist on this commission
  *         content:
  *           application/json:
  *             schema:
@@ -222,11 +274,121 @@
  *             example:
  *               success: false
  *               error: { code: FORBIDDEN, message: You do not participate in this commission }
+ *               error:
+ *                 code: FORBIDDEN
+ *                 message: Only the artist on this commission can submit deliverables
  *       404:
  *         description: Commission not found
  *       409:
  *         description: >-
  *           The commission can no longer be cancelled, or an open dispute
+ *           The commission is not in a submittable status (only `ACCEPTED`
+ *           and `IN_PROGRESS` accept submissions)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: CONFLICT
+ *                 message: Deliverables can only be submitted while a commission is ACCEPTED or IN_PROGRESS (this one is DELIVERED)
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
+ * /api/v1/commissions/{id}/deliverables/{did}:
+ *   patch:
+ *     summary: Review a submitted deliverable
+ *     description: >-
+ *       Client only. `ACCEPT` signs off the `FINAL` version: the deliverable
+ *       becomes `ACCEPTED`, the commission becomes `COMPLETED` — the state
+ *       change that releases the artist's escrow — and the artist is notified.
+ *       Only the final artefact can be accepted; a `WIP` draft is there to be
+ *       commented on. `REQUEST_CHANGES` requires `note`, records the
+ *       submission as `REJECTED` (that rejection is the revision), returns the
+ *       commission to `IN_PROGRESS` for the artist, and is refused once the
+ *       commission has used all `MAX_COMMISSION_REVISIONS` (default 3).
+ *       While a dispute is open escrow is held, so neither decision is
+ *       accepted until an admin resolves it.
+ *     tags: [Commissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: did
+ *         required: true
+ *         description: The deliverable being reviewed.
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ReviewDeliverableRequest'
+ *           examples:
+ *             accept:
+ *               summary: Accept the final delivery (releases escrow)
+ *               value:
+ *                 decision: ACCEPT
+ *             requestChanges:
+ *               summary: Send the work back with feedback
+ *               value:
+ *                 decision: REQUEST_CHANGES
+ *                 note: The palette is off here — please match the earlier draft.
+ *     responses:
+ *       200:
+ *         description: Deliverable reviewed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReviewDeliverableResponse'
+ *             example:
+ *               success: true
+ *               data:
+ *                 deliverable:
+ *                   id: 2b7c1e4d-9f3a-4c8e-b1d2-6a5f7c8e9d0b
+ *                   commissionId: 8d1f4b2c-0a3e-4f5b-8c7d-1e2f3a4b5c6d
+ *                   type: FINAL
+ *                   status: ACCEPTED
+ *                   note: Final files attached.
+ *                   media: []
+ *                 commissionStatus: COMPLETED
+ *                 revisionCount: 1
+ *                 maxRevisions: 3
+ *                 escrowReleased: true
+ *       400:
+ *         description: A note is required to request changes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: BAD_REQUEST
+ *                 message: A note is required when requesting changes
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Caller is not the client on this commission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: FORBIDDEN
+ *                 message: Only the client on this commission can review a deliverable
+ *       404:
+ *         description: Commission not found, or the deliverable is not on it
+ *       409:
+ *         description: >-
+ *           Already reviewed, a WIP draft was accepted, the commission is not
+ *           `DELIVERED`, the revision limit is reached, or an open dispute
  *           holds escrow
  *         content:
  *           application/json:
@@ -235,6 +397,11 @@
  *             examples:
  *               tooLate:
  *                 summary: Already delivered
+ *               alreadyReviewed:
+ *                 value:
+ *                   success: false
+ *                   error: { code: CONFLICT, message: This deliverable has already been accepted }
+ *               wipAccept:
  *                 value:
  *                   success: false
  *                   error:
@@ -242,6 +409,12 @@
  *                     message: This commission can no longer be cancelled (it is DELIVERED)
  *               escrowHeld:
  *                 summary: An open dispute holds escrow
+ *                     message: Only the final deliverable can be accepted — request changes on a work-in-progress draft instead
+ *               revisionLimit:
+ *                 value:
+ *                   success: false
+ *                   error: { code: CONFLICT, message: This commission has already used all 3 of its revisions }
+ *               escrowHeld:
  *                 value:
  *                   success: false
  *                   error:
@@ -494,9 +667,11 @@
 import { createFeatureRouter } from './router-factory';
 import {
   getCommissionById,
+  patchCommissionDeliverable,
   patchCommissionStatus,
   postCommission,
   postCommissionCancellation,
+  postCommissionDeliverable,
   postCommissionDispute,
   postCommissionDisputeResolution,
 } from '@/controllers';
@@ -504,10 +679,13 @@ import { authenticate, validate } from '@/middlewares';
 import {
   commissionBodySchema,
   commissionCancelBodySchema,
+  commissionDeliverableParamsSchema,
   commissionDisputeBodySchema,
   commissionDisputeResolveBodySchema,
   commissionStatusBodySchema,
   commissionStatusParamsSchema,
+  reviewDeliverableBodySchema,
+  submitDeliverableBodySchema,
 } from '@/validators';
 
 export const commissionsRouter = createFeatureRouter('commissions');
@@ -534,6 +712,21 @@ commissionsRouter.post(
   authenticate,
   validate({ params: commissionStatusParamsSchema, body: commissionCancelBodySchema }),
   postCommissionCancellation,
+// Deliverables (#784): the artist submits a WIP draft or the final artefact.
+commissionsRouter.post(
+  '/:id/deliverables',
+  authenticate,
+  validate({ params: commissionStatusParamsSchema, body: submitDeliverableBodySchema }),
+  postCommissionDeliverable,
+);
+
+// Deliverable review (#823): the client accepts the final version — releasing
+// escrow — or sends it back for changes.
+commissionsRouter.patch(
+  '/:id/deliverables/:did',
+  authenticate,
+  validate({ params: commissionDeliverableParamsSchema, body: reviewDeliverableBodySchema }),
+  patchCommissionDeliverable,
 );
 
 commissionsRouter.post(

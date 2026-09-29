@@ -27,10 +27,7 @@ export interface ThreadView {
 /**
  * Find an existing 1:1 thread between two users, if any.
  */
-export async function findThreadBetween(
-  userA: string,
-  userB: string,
-): Promise<ThreadView | null> {
+export async function findThreadBetween(userA: string, userB: string): Promise<ThreadView | null> {
   const rows = await prisma.threadParticipant.findMany({
     where: { userId: { in: [userA, userB] } },
     select: { threadId: true, userId: true },

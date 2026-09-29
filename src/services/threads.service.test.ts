@@ -22,9 +22,9 @@ beforeEach(() => {
 
 describe('createOrGetThread (#837)', () => {
   it('rejects self-threads', async () => {
-    await expect(
-      createOrGetThread('u1', { participantId: 'u1' }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(createOrGetThread('u1', { participantId: 'u1' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
   });
 
   it('returns existing thread for the same pair', async () => {

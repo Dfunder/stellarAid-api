@@ -1,6 +1,6 @@
 /**
  * Marketplace service logic tests: trending ranking, search ranking,
- * browse-result caching, and price conversion accuracy.
+ * browse caching/filtering/sorting/pagination, and price conversion.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +33,7 @@ const originalFetch = global.fetch;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  prismaMock.artwork.findMany.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -131,79 +132,6 @@ describe('browse caching behavior', () => {
   });
 });
 
-describe('price conversion accuracy', () => {
-  it('computes the mid price from the best bid/ask and caches it', async () => {
-    tryGetRedisClientMock.mockReturnValue(redisMock);
-    redisMock.get.mockResolvedValue(null);
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ bids: [{ price: '0.10' }], asks: [{ price: '0.12' }] }),
-    }) as unknown as typeof fetch;
-
-    const rate = await getRate('XLM', 'USDC');
-
-    expect(rate).toBeCloseTo(0.11);
-    expect(redisMock.set).toHaveBeenCalled();
-  });
-
-  it('serves a cached rate without calling the DEX again', async () => {
-    tryGetRedisClientMock.mockReturnValue(redisMock);
-    redisMock.get.mockResolvedValue('0.5');
-    global.fetch = vi.fn() as unknown as typeof fetch;
-
-    const rate = await getRate('XLM', 'USDC');
-
-    expect(rate).toBe(0.5);
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('converts an amount using the resolved rate', async () => {
-    tryGetRedisClientMock.mockReturnValue(undefined);
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ bids: [{ price: '2' }], asks: [{ price: '2' }] }),
-    }) as unknown as typeof fetch;
-
-    const result = await convertAmount(10, 'XLM', 'USDC');
-
-    expect(result.rate).toBe(2);
-    expect(result.amount).toBe(20);
-  });
-
-  it('reports no rate, rather than guessing, for an asset with no configured issuer', async () => {
-    tryGetRedisClientMock.mockReturnValue(undefined);
-    global.fetch = vi.fn() as unknown as typeof fetch;
-
-    const rate = await getRate('NGNT', 'XLM');
-
-    expect(rate).toBeNull();
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('rejects conversion with a clear error when no rate is available', async () => {
-    tryGetRedisClientMock.mockReturnValue(undefined);
-    global.fetch = vi.fn() as unknown as typeof fetch;
-
-    await expect(convertAmount(10, 'NGNT', 'XLM')).rejects.toThrow(AppError);
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const { prismaMock } = vi.hoisted(() => {
-  const prisma = {
-    artwork: { findMany: vi.fn() },
-    artistProfile: { findMany: vi.fn() },
-  };
-  return { prismaMock: prisma };
-});
-
-vi.mock('@/services', () => ({ prisma: prismaMock }));
-
-import { browseArtworks } from './marketplace.service';
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  prismaMock.artwork.findMany.mockResolvedValue([]);
-});
-
 describe('browseArtworks — filtering', () => {
   it('always scopes to published, unsold artworks', async () => {
     await browseArtworks({}, 'newest', undefined, 20);
@@ -288,5 +216,62 @@ describe('browseArtworks — cursor pagination', () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.nextCursor).toBeNull();
+  });
+});
+
+describe('price conversion accuracy', () => {
+  it('computes the mid price from the best bid/ask and caches it', async () => {
+    tryGetRedisClientMock.mockReturnValue(redisMock);
+    redisMock.get.mockResolvedValue(null);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ bids: [{ price: '0.10' }], asks: [{ price: '0.12' }] }),
+    }) as unknown as typeof fetch;
+
+    const rate = await getRate('XLM', 'USDC');
+
+    expect(rate).toBeCloseTo(0.11);
+    expect(redisMock.set).toHaveBeenCalled();
+  });
+
+  it('serves a cached rate without calling the DEX again', async () => {
+    tryGetRedisClientMock.mockReturnValue(redisMock);
+    redisMock.get.mockResolvedValue('0.5');
+    global.fetch = vi.fn() as unknown as typeof fetch;
+
+    const rate = await getRate('XLM', 'USDC');
+
+    expect(rate).toBe(0.5);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('converts an amount using the resolved rate', async () => {
+    tryGetRedisClientMock.mockReturnValue(undefined);
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ bids: [{ price: '2' }], asks: [{ price: '2' }] }),
+    }) as unknown as typeof fetch;
+
+    const result = await convertAmount(10, 'XLM', 'USDC');
+
+    expect(result.rate).toBe(2);
+    expect(result.amount).toBe(20);
+  });
+
+  it('reports no rate, rather than guessing, for an asset with no configured issuer', async () => {
+    tryGetRedisClientMock.mockReturnValue(undefined);
+    global.fetch = vi.fn() as unknown as typeof fetch;
+
+    const rate = await getRate('NGNT', 'XLM');
+
+    expect(rate).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects conversion with a clear error when no rate is available', async () => {
+    tryGetRedisClientMock.mockReturnValue(undefined);
+    global.fetch = vi.fn() as unknown as typeof fetch;
+
+    await expect(convertAmount(10, 'NGNT', 'XLM')).rejects.toThrow(AppError);
   });
 });

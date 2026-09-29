@@ -48,9 +48,7 @@ export const postTag = catchAsync(async (req, res: Response<ApiResponse<TagRecor
 export const putArtworkTags = catchAsync(
   async (req, res: Response<ApiResponse<{ tags: readonly string[] }>>) => {
     const { sub } = getAuthUser(req);
-    const { params, body } = getValidated<SyncArtworkTagsSchema, ArtworkParamsSchema, unknown>(
-      req,
-    );
+    const { params, body } = getValidated<SyncArtworkTagsSchema, ArtworkParamsSchema, unknown>(req);
     const tags = await syncArtworkTags(sub, params.id, body.tags);
     res.status(200).json({ success: true, data: { tags } });
   },

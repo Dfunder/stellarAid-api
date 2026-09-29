@@ -91,12 +91,7 @@ import { createFeatureRouter } from './router-factory';
 
 export const mediaRouter = createFeatureRouter('media');
 
-mediaRouter.post(
-  '/presign',
-  authenticate,
-  validate({ body: presignUploadSchema }),
-  presignUpload,
-);
+mediaRouter.post('/presign', authenticate, validate({ body: presignUploadSchema }), presignUpload);
 mediaRouter.post(
   '/:id/complete',
   authenticate,

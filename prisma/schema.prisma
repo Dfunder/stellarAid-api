@@ -254,15 +254,51 @@ model Commission {
   asset        Asset
   deadline     DateTime
   status       CommissionStatus @default(PENDING)
+  /// Number of change-request rounds the client has used (cap: COMMISSION_MAX_REVISIONS).
+  revisionCount Int             @default(0)
+  cancelReason  String?
+  cancelledAt   DateTime?
+  cancelledById String?
+  /// Set once the client's funds are held in escrow; drives refund/release.
+  escrowFunded     Boolean   @default(false)
+  escrowTxHash     String?
+  escrowReleasedAt DateTime?
+  escrowRefundedAt DateTime?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   transactions Transaction[]
   deliverables Deliverable[]
   reviews      Review[]
+  events       CommissionEvent[]
 
   @@index([clientId])
   @@index([artistId])
   @@index([status])
+}
+
+/// Timeline entry for a commission: submissions, reviews, cancellation, escrow.
+enum CommissionEventType {
+  STATUS_CHANGED
+  DELIVERABLE_SUBMITTED
+  DELIVERABLE_ACCEPTED
+  CHANGES_REQUESTED
+  CANCELLED
+  ESCROW_RELEASED
+  ESCROW_REFUNDED
+}
+
+model CommissionEvent {
+  id           String              @id @default(uuid())
+  commissionId String
+  type         CommissionEventType
+  actorId      String
+  message      String?
+  data         Json?
+  createdAt    DateTime            @default(now())
+  commission   Commission          @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+
+  @@index([commissionId, createdAt])
+  @@index([actorId])
 }
 
 /// A version of a commission deliverable — WIP drafts or the FINAL artefact.
@@ -272,6 +308,14 @@ model Deliverable {
   note         String?
   type         DeliverableType
   status       DeliverableStatus @default(UPLOADED)
+  /// Uploaded media attached to this submission (Media ids; stored as JSON
+  /// because deliverables may attach several files).
+  mediaIds   Json?
+  /// Which revision round this submission belongs to (1-based).
+  revision   Int                 @default(1)
+  /// Client feedback when changes are requested.
+  feedback   String?
+  reviewedAt DateTime?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   commission   Commission        @relation(fields: [commissionId], references: [id], onDelete: Cascade)
@@ -484,24 +528,12 @@ model Artwork {
   @@index([price])
 }
 
-/// A user saving/favoriting an artwork. `userId` is a plain indexed column
-/// (User is delivered elsewhere, per the cross-scope convention documented
-/// at the top of this file); `artworkId` is a real relation since Artwork
-/// is defined in this same schema. Unique per (userId, artworkId) so
-/// toggling save/unsave is idempotent at the database level too.
-model Save {
-  id        String   @id @default(uuid())
-  userId    String
-  artworkId String
-  createdAt DateTime @default(now())
-  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, artworkId])
-  @@index([userId])
-  @@index([artworkId])
-}
-
-/// A user bookmarking an artwork. Toggled (save/unsave), not a like counter.
+/// A user saving/favoriting an artwork (toggled, not a like counter).
+/// `userId` is a plain indexed column (User is delivered elsewhere, per the
+/// cross-scope convention documented at the top of this file); `artworkId`
+/// is a real relation since Artwork is defined in this same schema. Unique
+/// per (userId, artworkId) so toggling save/unsave is idempotent at the
+/// database level too.
 model Save {
   id        String   @id @default(uuid())
   userId    String

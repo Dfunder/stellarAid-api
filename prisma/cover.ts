@@ -28,7 +28,6 @@ const SKILLS: Array<{ name: string; slug: string; category: string }> = [
   { name: 'Sound Design', slug: 'sound-design', category: 'Audio' },
   { name: 'Music Production', slug: 'music-production', category: 'Audio' },
   { name: 'Movie Production', slug: 'movie-production', category: 'image' },
-
 ];
 
 async function main(): Promise<void> {

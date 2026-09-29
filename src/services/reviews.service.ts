@@ -152,9 +152,7 @@ export async function computeRatingSummary(targetId: string): Promise<RatingSumm
 
 /** Cached average + distribution for an artist (#832). */
 export async function getCachedRatingSummary(targetId: string): Promise<RatingSummary> {
-  return cached(`reviews:avg:${targetId}`, AVG_CACHE_TTL_SEC, () =>
-    computeRatingSummary(targetId),
-  );
+  return cached(`reviews:avg:${targetId}`, AVG_CACHE_TTL_SEC, () => computeRatingSummary(targetId));
 }
 
 export async function listReviewsForUsername(
@@ -184,9 +182,7 @@ export async function listReviewsForUsername(
   });
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
-  const data = rows.map((r) =>
-    toPublicReview({ ...r, author: authorMap.get(r.authorId) ?? null }),
-  );
+  const data = rows.map((r) => toPublicReview({ ...r, author: authorMap.get(r.authorId) ?? null }));
 
   return {
     data,
@@ -208,10 +204,7 @@ function assertRating(rating: number): void {
  * Create a review for a completed order or commission.
  * Enforces one-review-per-order / per-commission (#836).
  */
-export async function createReview(
-  authorId: string,
-  input: CreateReviewInput,
-): Promise<Review> {
+export async function createReview(authorId: string, input: CreateReviewInput): Promise<Review> {
   assertRating(input.rating);
   if (!input.body?.trim()) {
     throw new AppError('BAD_REQUEST', 'Review body is required');
@@ -289,7 +282,14 @@ export async function reportReview(
   reviewId: string,
   reporterId: string,
   input: ReportReviewInput,
-): Promise<{ id: string; reviewId: string; reason: string; note: string | null; createdAt: Date; message: string }> {
+): Promise<{
+  id: string;
+  reviewId: string;
+  reason: string;
+  note: string | null;
+  createdAt: Date;
+  message: string;
+}> {
   if (!input.reason?.trim()) {
     throw new AppError('BAD_REQUEST', 'Reason is required');
   }

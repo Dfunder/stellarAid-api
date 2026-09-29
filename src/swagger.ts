@@ -31,21 +31,22 @@ export const openApiSpec = swaggerJsdoc({
     tags: [
       { name: 'Auth', description: 'Registration, login, sessions and the current user.' },
       { name: 'Users', description: 'User profile management.' },
-      { name: 'Stats', description: 'Public, aggregate platform metrics.' },
-      { name: 'Analytics', description: 'Product-analytics event ingestion.' },
+      { name: 'Media', description: 'File uploads for artworks, portfolios and deliverables.' },
+      { name: 'Taxonomy', description: 'Browsable categories and the shared tag vocabulary.' },
       { name: 'Artworks', description: 'Artwork detail, view tracking, and save/unsave.' },
       {
         name: 'Marketplace',
         description: 'Browsing, trending, and recommended published artworks.',
       },
       { name: 'Search', description: 'Full-text search across published artworks.' },
+      {
+        name: 'Portfolios',
+        description: 'Showcase (not-for-sale) portfolio items and ordering.',
+      },
+      { name: 'Orders', description: 'Purchasing (order creation).' },
       { name: 'Categories', description: 'Browsable category taxonomy.' },
-      { name: 'Artworks', description: 'Artwork CRUD, publishing, and view tracking.' },
-      { name: 'Marketplace', description: 'Browsing and discovering published artworks.' },
-      { name: 'Search', description: 'Full-text search across artworks.' },
-      { name: 'Media', description: 'File uploads for artworks, portfolios and deliverables.' },
-      { name: 'Taxonomy', description: 'Browsable categories and the shared tag vocabulary.' },
-      { name: 'Artworks', description: 'Artwork listings, tags and saves.' },
+      { name: 'Stats', description: 'Public, aggregate platform metrics.' },
+      { name: 'Analytics', description: 'Product-analytics event ingestion.' },
     ],
     components: {
       securitySchemes: {
@@ -113,7 +114,60 @@ export const openApiSpec = swaggerJsdoc({
           },
         },
       },
+      parameters: {},
       schemas: {
+        Health: {
+          type: 'object',
+          required: ['status', 'uptime', 'timestamp'],
+          properties: {
+            status: { type: 'string', enum: ['ok'] },
+            uptime: { type: 'number', description: 'Process uptime in seconds.' },
+            timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
+        ErrorResponse: {
+          type: 'object',
+          required: ['success', 'error'],
+          properties: {
+            success: { type: 'boolean', enum: [false] },
+            error: {
+              type: 'object',
+              required: ['code', 'message'],
+              properties: {
+                code: { type: 'string', example: 'NOT_FOUND' },
+                message: { type: 'string' },
+                details: { description: 'Optional structured context.' },
+              },
+            },
+          },
+        },
+        ValidationError: {
+          type: 'object',
+          required: ['success', 'error'],
+          properties: {
+            success: { type: 'boolean', enum: [false] },
+            error: {
+              type: 'object',
+              required: ['code', 'message', 'fields'],
+              properties: {
+                code: { type: 'string', enum: ['VALIDATION_ERROR'] },
+                message: { type: 'string' },
+                fields: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    required: ['path', 'message'],
+                    properties: {
+                      path: { type: 'string', example: 'body.email' },
+                      message: { type: 'string' },
+                      code: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
         PublicUser: {
           type: 'object',
           required: ['id', 'name', 'username', 'email', 'role', 'emailVerified'],
@@ -273,94 +327,6 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
-        PlatformStats: {
-          type: 'object',
-          properties: {
-            totalUsers: { type: 'integer' },
-            totalArtists: { type: 'integer' },
-            totalArtworks: { type: 'integer' },
-            totalSales: { type: 'integer', description: 'Count of COMPLETED orders.' },
-            totalVolume: {
-              type: 'string',
-              description: 'Sum of COMPLETED order amounts.',
-              example: '128450.00',
-            },
-          },
-        },
-        PlatformStatsResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', enum: [true] },
-            data: { $ref: '#/components/schemas/PlatformStats' },
-          },
-        },
-        AnalyticsEvent: {
-          type: 'object',
-          required: ['type'],
-          properties: {
-            type: {
-              type: 'string',
-              enum: [
-                'PAGE_VIEW',
-                'ARTWORK_VIEW',
-                'SAVE',
-                'PURCHASE_START',
-                'PURCHASE_COMPLETE',
-                'COMMISSION_REQUEST',
-              ],
-            },
-            userId: { type: 'string', format: 'uuid' },
-            properties: {
-              type: 'object',
-              description: 'Must not contain PII keys (email, password, phone, etc.).',
-              additionalProperties: true,
-            },
-            timestamp: { type: 'string', format: 'date-time' },
-          },
-        },
-        AnalyticsEventBatchRequest: {
-          type: 'object',
-          required: ['events'],
-          properties: {
-            events: {
-              type: 'array',
-              minItems: 1,
-              maxItems: 100,
-              items: { $ref: '#/components/schemas/AnalyticsEvent' },
-        Artwork: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            userId: { type: 'string', format: 'uuid' },
-            title: { type: 'string' },
-            description: { type: 'string', nullable: true },
-            category: { type: 'string', example: 'DIGITAL_PAINTING' },
-            tags: { nullable: true },
-            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
-            price: { type: 'string', nullable: true, example: '120.00' },
-            asset: { type: 'string', enum: ['USDC', 'XLM'], nullable: true },
-            published: { type: 'boolean' },
-            sold: { type: 'boolean' },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        ArtworkResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', enum: [true] },
-            data: { $ref: '#/components/schemas/Artwork' },
-          },
-        },
-        ArtworkListResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', enum: [true] },
-            data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
-          },
-        },
-        ArtworkOffsetPageResponse: {
-        ArtworkPageResponse: {
         PresignUploadRequest: {
           type: 'object',
           required: ['type', 'mimeType', 'filename', 'size'],
@@ -380,23 +346,6 @@ export const openApiSpec = swaggerJsdoc({
             data: {
               type: 'object',
               properties: {
-                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
-                page: { type: 'integer' },
-                limit: { type: 'integer' },
-                total: {
-                  type: 'integer',
-                  description: 'Omitted (not tracked) for search result pages.',
-                },
-              },
-            },
-          },
-        },
-                nextCursor: { type: 'string', nullable: true },
-              },
-            },
-          },
-        },
-        ArtworkDetailResponse: {
                 mediaId: { type: 'string', format: 'uuid' },
                 uploadUrl: { type: 'string', format: 'uri' },
                 key: { type: 'string' },
@@ -421,87 +370,6 @@ export const openApiSpec = swaggerJsdoc({
             data: {
               type: 'object',
               properties: {
-                artwork: { $ref: '#/components/schemas/Artwork' },
-                mediaIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
-                relatedArtworks: {
-                  type: 'array',
-                  items: { $ref: '#/components/schemas/Artwork' },
-                },
-                reviewSummary: {
-                  type: 'object',
-                  description: 'Aggregated from the owning artist\'s reviews.',
-                  properties: {
-                    averageRating: { type: 'number', nullable: true },
-                    count: { type: 'integer' },
-                  },
-                },
-              },
-            },
-          },
-        },
-        CreateArtworkRequest: {
-          type: 'object',
-          required: ['title', 'category'],
-          properties: {
-            title: { type: 'string', maxLength: 200 },
-            description: { type: 'string', maxLength: 5000 },
-            category: { type: 'string', example: 'DIGITAL_PAINTING' },
-            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
-            price: { type: 'number', minimum: 0 },
-            asset: { type: 'string', enum: ['USDC', 'XLM'] },
-          },
-        },
-        UpdateArtworkRequest: {
-          type: 'object',
-          properties: {
-            title: { type: 'string', maxLength: 200 },
-            description: { type: 'string', maxLength: 5000 },
-            category: { type: 'string', example: 'DIGITAL_PAINTING' },
-            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
-            price: { type: 'number', minimum: 0 },
-            asset: { type: 'string', enum: ['USDC', 'XLM'] },
-          },
-        },
-        PortfolioItem: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            userId: { type: 'string', format: 'uuid' },
-            title: { type: 'string' },
-            description: { type: 'string', nullable: true },
-            tags: { nullable: true },
-            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
-            order: { type: 'integer' },
-            published: { type: 'boolean' },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        OrderResponse: {
-        PortfolioItemResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', enum: [true] },
-            data: { $ref: '#/components/schemas/PortfolioItem' },
-          },
-        },
-        PortfolioItemListResponse: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean', enum: [true] },
-            data: { type: 'array', items: { $ref: '#/components/schemas/PortfolioItem' } },
-          },
-        },
-        CreatePortfolioItemRequest: {
-          type: 'object',
-          required: ['title'],
-          properties: {
-            title: { type: 'string', maxLength: 200 },
-            description: { type: 'string', maxLength: 5000 },
-            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
-          },
-        },
-        UpdatePortfolioItemRequest: {
                 id: { type: 'string', format: 'uuid' },
                 type: { type: 'string', enum: ['IMAGE', 'DIGITAL_FILE'] },
                 url: { type: 'string', format: 'uri' },
@@ -526,12 +394,6 @@ export const openApiSpec = swaggerJsdoc({
             slug: { type: 'string' },
             parentId: { type: 'string', format: 'uuid', nullable: true },
             children: { type: 'array', items: { type: 'object' } },
-            name: { type: 'string', example: 'Illustration' },
-            slug: { type: 'string', example: 'illustration' },
-            children: {
-              type: 'array',
-              items: { $ref: '#/components/schemas/CategoryNode' },
-            },
           },
         },
         CategoryListResponse: {
@@ -587,49 +449,6 @@ export const openApiSpec = swaggerJsdoc({
             data: {
               type: 'object',
               properties: {
-                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
-                nextCursor: { type: 'string', nullable: true },
-              },
-            },
-          },
-        },
-        CreateArtworkRequest: {
-          type: 'object',
-          required: ['title', 'category'],
-          properties: {
-            title: { type: 'string', maxLength: 200 },
-            description: { type: 'string', maxLength: 5000 },
-            category: { type: 'string', example: 'DIGITAL_PAINTING' },
-            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
-            price: { type: 'number', minimum: 0 },
-            asset: { type: 'string', enum: ['USDC', 'XLM'] },
-          },
-        },
-        UpdateArtworkRequest: {
-          type: 'object',
-          properties: {
-            title: { type: 'string', maxLength: 200 },
-            description: { type: 'string', maxLength: 5000 },
-            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
-            published: { type: 'boolean' },
-          },
-        },
-        ReorderPortfolioItemsRequest: {
-          type: 'object',
-          required: ['orderedIds'],
-          properties: {
-            orderedIds: {
-              type: 'array',
-              items: { type: 'string', format: 'uuid' },
-              minItems: 1,
-              description: 'Must contain exactly the caller\'s portfolio item ids.',
-            category: { type: 'string', example: 'DIGITAL_PAINTING' },
-            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
-            price: { type: 'number', minimum: 0 },
-            asset: { type: 'string', enum: ['USDC', 'XLM'] },
-          },
-        },
-        RecentlyViewedResponse: {
                 tags: { type: 'array', items: { type: 'string' } },
               },
             },
@@ -667,15 +486,6 @@ export const openApiSpec = swaggerJsdoc({
               properties: {
                 items: {
                   type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', format: 'uuid' },
-                      title: { type: 'string' },
-                      category: { type: 'string' },
-                      coverMediaId: { type: 'string', format: 'uuid', nullable: true },
-                    },
-                  },
                   items: { $ref: '#/components/schemas/SavedArtworkSummary' },
                 },
                 page: { type: 'integer' },
@@ -685,55 +495,302 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
-        Health: {
+        Artwork: {
           type: 'object',
-          required: ['status', 'uptime', 'timestamp'],
           properties: {
-            status: { type: 'string', enum: ['ok'] },
-            uptime: { type: 'number', description: 'Process uptime in seconds.' },
-            timestamp: { type: 'string', format: 'date-time' },
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            published: { type: 'boolean' },
+            sold: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
           },
         },
-        ErrorResponse: {
+        ArtworkResponse: {
           type: 'object',
-          required: ['success', 'error'],
           properties: {
-            success: { type: 'boolean', enum: [false] },
-            error: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/Artwork' },
+          },
+        },
+        ArtworkListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+          },
+        },
+        ArtworkPageResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
               type: 'object',
-              required: ['code', 'message'],
               properties: {
-                code: { type: 'string', example: 'NOT_FOUND' },
-                message: { type: 'string' },
-                details: { description: 'Optional structured context.' },
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                nextCursor: { type: 'string', nullable: true },
               },
             },
           },
         },
-        ValidationError: {
+        CreateArtworkRequest: {
           type: 'object',
-          required: ['success', 'error'],
+          required: ['title', 'category'],
           properties: {
-            success: { type: 'boolean', enum: [false] },
-            error: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        UpdateArtworkRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            category: { type: 'string', example: 'DIGITAL_PAINTING' },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            price: { type: 'number', minimum: 0 },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+          },
+        },
+        RecentlyViewedResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
               type: 'object',
-              required: ['code', 'message', 'fields'],
               properties: {
-                code: { type: 'string', enum: ['VALIDATION_ERROR'] },
-                message: { type: 'string' },
-                fields: {
+                items: {
                   type: 'array',
                   items: {
                     type: 'object',
-                    required: ['path', 'message'],
                     properties: {
-                      path: { type: 'string', example: 'body.email' },
-                      message: { type: 'string' },
-                      code: { type: 'string' },
+                      id: { type: 'string', format: 'uuid' },
+                      title: { type: 'string' },
+                      category: { type: 'string' },
+                      coverMediaId: { type: 'string', format: 'uuid', nullable: true },
                     },
                   },
                 },
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: { type: 'integer' },
               },
+            },
+          },
+        },
+        ArtworkDetailResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                artwork: { $ref: '#/components/schemas/Artwork' },
+                mediaIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
+                relatedArtworks: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Artwork' },
+                },
+                reviewSummary: {
+                  type: 'object',
+                  description: "Aggregated from the owning artist's reviews.",
+                  properties: {
+                    averageRating: { type: 'number', nullable: true },
+                    count: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        PortfolioItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            tags: { nullable: true },
+            coverMediaId: { type: 'string', format: 'uuid', nullable: true },
+            order: { type: 'integer' },
+            published: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PortfolioItemResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/PortfolioItem' },
+          },
+        },
+        PortfolioItemListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { type: 'array', items: { $ref: '#/components/schemas/PortfolioItem' } },
+          },
+        },
+        CreatePortfolioItemRequest: {
+          type: 'object',
+          required: ['title'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+          },
+        },
+        UpdatePortfolioItemRequest: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string', maxLength: 5000 },
+            tags: { type: 'array', items: { type: 'string' }, maxItems: 30 },
+            published: { type: 'boolean' },
+          },
+        },
+        ReorderPortfolioItemsRequest: {
+          type: 'object',
+          required: ['orderedIds'],
+          properties: {
+            orderedIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              minItems: 1,
+              description: "Must contain exactly the caller's portfolio item ids.",
+            },
+          },
+        },
+        Order: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            buyerId: { type: 'string', format: 'uuid' },
+            sellerId: { type: 'string', format: 'uuid' },
+            artworkId: { type: 'string', format: 'uuid' },
+            amount: { type: 'string', example: '120.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+            platformFee: { type: 'string', example: '6.00' },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED'],
+            },
+            idempotencyKey: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        OrderResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                order: { $ref: '#/components/schemas/Order' },
+                total: {
+                  type: 'string',
+                  description: 'amount + platformFee, formatted to 2 decimal places.',
+                  example: '126.00',
+                },
+              },
+            },
+          },
+        },
+        CreateOrderRequest: {
+          type: 'object',
+          required: ['artworkId'],
+          properties: {
+            artworkId: { type: 'string', format: 'uuid' },
+            idempotencyKey: {
+              type: 'string',
+              maxLength: 200,
+              description: 'A repeated request with the same key returns the original order.',
+            },
+          },
+        },
+        ArtworkOffsetPageResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                items: { type: 'array', items: { $ref: '#/components/schemas/Artwork' } },
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: {
+                  type: 'integer',
+                  description: 'Omitted (not tracked) for search result pages.',
+                },
+              },
+            },
+          },
+        },
+        PlatformStats: {
+          type: 'object',
+          properties: {
+            totalUsers: { type: 'integer' },
+            totalArtists: { type: 'integer' },
+            totalArtworks: { type: 'integer' },
+            totalSales: { type: 'integer', description: 'Count of COMPLETED orders.' },
+            totalVolume: {
+              type: 'string',
+              description: 'Sum of COMPLETED order amounts.',
+              example: '128450.00',
+            },
+          },
+        },
+        PlatformStatsResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/PlatformStats' },
+          },
+        },
+        AnalyticsEvent: {
+          type: 'object',
+          required: ['type'],
+          properties: {
+            type: {
+              type: 'string',
+              enum: [
+                'PAGE_VIEW',
+                'ARTWORK_VIEW',
+                'SAVE',
+                'PURCHASE_START',
+                'PURCHASE_COMPLETE',
+                'COMMISSION_REQUEST',
+              ],
+            },
+            userId: { type: 'string', format: 'uuid' },
+            properties: {
+              type: 'object',
+              description: 'Must not contain PII keys (email, password, phone, etc.).',
+              additionalProperties: true,
+            },
+            timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
+        AnalyticsEventBatchRequest: {
+          type: 'object',
+          required: ['events'],
+          properties: {
+            events: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 100,
+              items: { $ref: '#/components/schemas/AnalyticsEvent' },
             },
           },
         },

@@ -73,15 +73,18 @@ const schema = z.object({
   S3_BUCKET: optionalString,
   S3_REGION: optionalString,
   STELLAR_NETWORK: z.enum(['testnet', 'public']).default('testnet'),
-  PLATFORM_FEE_BPS: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .max(10000)
-    .default(DEFAULT_PLATFORM_FEE_BPS),
+  PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10000).default(DEFAULT_PLATFORM_FEE_BPS),
   USDC_ASSET_ISSUER: optionalString,
   EURC_ASSET_ISSUER: optionalString,
   NGNT_ASSET_ISSUER: optionalString,
+  /** Escrow account that holds commission/order funds until release. */
+  STELLAR_ESCROW_ADDRESS: optionalString,
+  /** Soroban escrow contract invoked for commission payments, when set. */
+  STELLAR_ESCROW_CONTRACT_ID: optionalString,
+  /** Maximum change-request rounds a client may request on a commission. */
+  COMMISSION_MAX_REVISIONS: z.coerce.number().int().min(0).max(50).default(3),
+  /** Lifetime of a generated payment-intent transaction, in seconds. */
+  PAYMENT_INTENT_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(300),
   SMTP_HOST: optionalString,
   SMTP_PORT: optionalPort,
   SMTP_USER: optionalString,
@@ -125,6 +128,10 @@ export interface AppEnv {
     readonly EURC: string | undefined;
     readonly NGNT: string | undefined;
   };
+  readonly stellarEscrowAddress: string | undefined;
+  readonly stellarEscrowContractId: string | undefined;
+  readonly commissionMaxRevisions: number;
+  readonly paymentIntentTtlSeconds: number;
   /** Present only when SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS are all set. */
   readonly smtp: SmtpConfig | undefined;
   /** Comma-separated allowed CORS origins, or undefined to reflect the request origin. */
@@ -174,6 +181,10 @@ function loadEnv(): AppEnv {
       EURC: raw.EURC_ASSET_ISSUER,
       NGNT: raw.NGNT_ASSET_ISSUER,
     },
+    stellarEscrowAddress: raw.STELLAR_ESCROW_ADDRESS,
+    stellarEscrowContractId: raw.STELLAR_ESCROW_CONTRACT_ID,
+    commissionMaxRevisions: raw.COMMISSION_MAX_REVISIONS,
+    paymentIntentTtlSeconds: raw.PAYMENT_INTENT_TTL_SECONDS,
     smtp,
     corsOrigins: raw.CORS_ORIGIN
       ? raw.CORS_ORIGIN.split(',')

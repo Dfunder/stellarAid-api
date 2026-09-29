@@ -39,7 +39,6 @@ export function logCacheMetrics(): void {
   for (const [namespace, { hits, misses }] of metrics) {
     const total = hits + misses;
     const hitRate = total === 0 ? 0 : Math.round((hits / total) * 100);
-    // eslint-disable-next-line no-console
     console.log(`[cache] ${namespace}: ${hits} hits, ${misses} misses (${hitRate}% hit rate)`);
   }
 }

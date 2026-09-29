@@ -18,7 +18,6 @@ import { env } from '@/config';
 import { AppError } from '@/middlewares';
 
 import { tryGetRedisClient } from './redis.service';
-import { getRedisClient } from './redis.service';
 
 export type PriceAsset = 'XLM' | 'USDC' | 'NGNT' | 'EURC';
 
@@ -65,7 +64,10 @@ function assetQueryParams(prefix: 'selling' | 'buying', asset: PriceAsset): [str
  * network error, empty order book — so callers get a uniform "unavailable"
  * signal regardless of cause.
  */
-async function fetchOrderBookMidPrice(base: PriceAsset, counter: PriceAsset): Promise<number | null> {
+async function fetchOrderBookMidPrice(
+  base: PriceAsset,
+  counter: PriceAsset,
+): Promise<number | null> {
   try {
     const params = new URLSearchParams([
       ...assetQueryParams('selling', base),
@@ -106,13 +108,8 @@ export async function getRate(base: PriceAsset, counter: PriceAsset): Promise<nu
   }
 
   const redis = tryGetRedisClient();
-
   if (redis !== undefined) {
     const cached = await redis.get(cacheKey(base, counter));
-  const hasRedis = env.redisUrl !== undefined;
-
-  if (hasRedis) {
-    const cached = await getRedisClient().get(cacheKey(base, counter));
     if (cached !== null) {
       return Number.parseFloat(cached);
     }
@@ -122,8 +119,6 @@ export async function getRate(base: PriceAsset, counter: PriceAsset): Promise<nu
 
   if (rate !== null && redis !== undefined) {
     await redis.set(cacheKey(base, counter), rate.toString(), 'EX', CACHE_TTL_SECONDS);
-  if (rate !== null && hasRedis) {
-    await getRedisClient().set(cacheKey(base, counter), rate.toString(), 'EX', CACHE_TTL_SECONDS);
   }
 
   return rate;

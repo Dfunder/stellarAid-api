@@ -42,5 +42,9 @@ export async function enqueueImageProcessing(mediaId: string): Promise<void> {
     logger.warn('Image processing queue unavailable (no REDIS_URL); skipping', { mediaId });
     return;
   }
-  await q.add('process-image', { mediaId }, { attempts: 3, backoff: { type: 'exponential', delay: 2000 } });
+  await q.add(
+    'process-image',
+    { mediaId },
+    { attempts: 3, backoff: { type: 'exponential', delay: 2000 } },
+  );
 }

@@ -98,7 +98,7 @@ export async function reorderPortfolioItems(
   if (orderedIds.length !== owned.length || !orderedIds.every((id) => ownedIds.has(id))) {
     throw new AppError(
       'BAD_REQUEST',
-      'orderedIds must contain exactly the caller\'s portfolio item ids.',
+      "orderedIds must contain exactly the caller's portfolio item ids.",
     );
   }
 

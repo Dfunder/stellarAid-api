@@ -34,10 +34,9 @@ const PII_PROPERTY_KEYS = new Set([
 
 const eventPropertiesSchema = z
   .record(z.string(), z.unknown())
-  .refine(
-    (props) => Object.keys(props).every((key) => !PII_PROPERTY_KEYS.has(key.toLowerCase())),
-    { error: 'properties must not contain PII fields (email, password, phone, etc.).' },
-  )
+  .refine((props) => Object.keys(props).every((key) => !PII_PROPERTY_KEYS.has(key.toLowerCase())), {
+    error: 'properties must not contain PII fields (email, password, phone, etc.).',
+  })
   .optional();
 
 export const analyticsEventSchema = z.object({

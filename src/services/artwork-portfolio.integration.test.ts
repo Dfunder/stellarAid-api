@@ -25,7 +25,10 @@ const { prismaMock } = vi.hoisted(() => {
     },
     portfolioItem: {
       findFirst: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
       findMany: vi.fn(),
     },
     review: {
@@ -39,7 +42,11 @@ const { prismaMock } = vi.hoisted(() => {
 vi.mock('@/services', () => ({ prisma: prismaMock }));
 
 import { browseArtworks } from './marketplace.service';
-import { createPortfolioItem, listPortfolioItems, reorderPortfolioItems } from './portfolios.service';
+import {
+  createPortfolioItem,
+  listPortfolioItems,
+  reorderPortfolioItems,
+} from './portfolios.service';
 import { createArtwork, getArtworkDetail, setArtworkPublished } from './artworks.service';
 
 beforeEach(() => {
@@ -197,14 +204,14 @@ describe('portfolio: creation and reordering', () => {
     expect(reordered.map((item) => item.id)).toEqual(['item-2', 'item-1']);
   });
 
-  it('rejects a reorder that does not match the caller\'s item ids', async () => {
+  it("rejects a reorder that does not match the caller's item ids", async () => {
     prismaMock.portfolioItem.findMany.mockResolvedValueOnce([{ id: 'item-1', userId }]);
     await expect(reorderPortfolioItems(userId, ['item-1', 'someone-elses-item'])).rejects.toThrow(
       AppError,
     );
   });
 
-  it('lists the caller\'s items ordered by position', async () => {
+  it("lists the caller's items ordered by position", async () => {
     const items = [
       { id: 'item-1', userId, order: 0 },
       { id: 'item-2', userId, order: 1 },

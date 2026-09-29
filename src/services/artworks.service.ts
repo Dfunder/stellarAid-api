@@ -1,25 +1,18 @@
 /**
- * Artwork listing and detail lookup.
+ * Artwork CRUD, publishing workflow, listing, and detail lookup.
  *
  * Listings are the highest-traffic read in the API, so they're cached
  * (cache-aside, 5-minute TTL — the "stale data within a 5-minute window"
  * budget named in the caching issue).
  */
 
-import type { Artwork, ArtworkCategory } from '@prisma/client';
- * Artwork CRUD, publishing-workflow, and detail service.
- */
-
-import type { Asset, Artwork, ArtworkCategory } from '@prisma/client';
- * Artwork CRUD and publishing-workflow service.
- */
-
-import type { Asset, ArtworkCategory } from '@prisma/client';
+import type { Artwork, ArtworkCategory, Asset } from '@prisma/client';
 
 import { AppError } from '@/middlewares';
 import { prisma } from '@/services';
 
 import { cached } from './cache.service';
+import { recordArtworkView } from './recently-viewed.service';
 
 export interface ListArtworksFilters {
   readonly category?: ArtworkCategory;
@@ -63,9 +56,6 @@ export async function listPublishedArtworks(
     return { items, page, limit, total };
   });
 }
-
-export async function getArtworkById(artworkId: string): Promise<Artwork> {
-import { recordArtworkView } from './recently-viewed.service';
 
 export interface CreateArtworkInput {
   readonly title: string;
@@ -126,7 +116,7 @@ export async function updateArtwork(userId: string, artworkId: string, input: Up
   });
 }
 
-export async function getArtworkById(artworkId: string) {
+export async function getArtworkById(artworkId: string): Promise<Artwork> {
   const artwork = await prisma.artwork.findUnique({ where: { id: artworkId } });
   if (artwork === null) {
     throw new AppError('NOT_FOUND', 'Artwork not found');

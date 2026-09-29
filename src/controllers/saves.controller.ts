@@ -16,14 +16,12 @@ import type { ApiResponse } from '@/types';
 import type { ArtworkParamsSchema, PaginationSchema } from '@/validators';
 
 /** POST /api/v1/artworks/:id/save and DELETE /api/v1/artworks/:id/save — both toggle. */
-export const toggleSave = catchAsync(
-  async (req, res: Response<ApiResponse<ToggleSaveResult>>) => {
-    const { sub } = getAuthUser(req);
-    const { params } = getValidated<unknown, ArtworkParamsSchema, unknown>(req);
-    const result = await toggleArtworkSave(sub, params.id);
-    res.status(200).json({ success: true, data: result });
-  },
-);
+export const toggleSave = catchAsync(async (req, res: Response<ApiResponse<ToggleSaveResult>>) => {
+  const { sub } = getAuthUser(req);
+  const { params } = getValidated<unknown, ArtworkParamsSchema, unknown>(req);
+  const result = await toggleArtworkSave(sub, params.id);
+  res.status(200).json({ success: true, data: result });
+});
 
 /** GET /api/v1/users/me/saves */
 export const getMySaves = catchAsync(

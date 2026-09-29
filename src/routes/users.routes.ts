@@ -131,10 +131,7 @@ import { getMyRecentlyViewed, getMySaves, updateMe, updateUserById } from '@/con
 import { getUserReviews } from '@/controllers/reviews.controller';
 import { authenticate, validate } from '@/middlewares';
 import { paginationSchema, updateProfileSchema, userIdParamsSchema } from '@/validators';
-import {
-  listReviewsParamsSchema,
-  listReviewsQuerySchema,
-} from '@/validators/reviews.schemas';
+import { listReviewsParamsSchema, listReviewsQuerySchema } from '@/validators/reviews.schemas';
 import { createFeatureRouter } from './router-factory';
 
 export const usersRouter = createFeatureRouter('users');
@@ -153,7 +150,6 @@ usersRouter.patch(
   validate({ params: userIdParamsSchema, body: updateProfileSchema }),
   updateUserById,
 );
-
 
 usersRouter.get(
   '/:username/reviews',

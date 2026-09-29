@@ -23,13 +23,7 @@ import { check } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 
-const CATEGORIES = [
-  'ART',
-  'ILLUSTRATION',
-  'PHOTOGRAPHY',
-  'DIGITAL_PAINTING',
-  'MUSIC',
-];
+const CATEGORIES = ['ART', 'ILLUSTRATION', 'PHOTOGRAPHY', 'DIGITAL_PAINTING', 'MUSIC'];
 const SEARCH_TERMS = ['sunset', 'portrait', 'abstract', 'landscape', 'character design'];
 
 function pick(list) {

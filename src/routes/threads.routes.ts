@@ -9,9 +9,4 @@ import { createThreadBodySchema } from '@/validators/threads.schemas';
 
 export const threadsRouter = createFeatureRouter('threads');
 
-threadsRouter.post(
-  '/',
-  authenticate,
-  validate({ body: createThreadBodySchema }),
-  postThread,
-);
+threadsRouter.post('/', authenticate, validate({ body: createThreadBodySchema }), postThread);

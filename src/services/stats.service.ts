@@ -23,17 +23,16 @@ export interface PlatformStats {
 }
 
 async function computePlatformStats(): Promise<PlatformStats> {
-  const [totalUsers, totalArtists, totalArtworks, totalSales, volumeAggregate] =
-    await Promise.all([
-      prisma.user.count(),
-      prisma.artistProfile.count(),
-      prisma.artwork.count(),
-      prisma.order.count({ where: { status: 'COMPLETED' } }),
-      prisma.order.aggregate({
-        where: { status: 'COMPLETED' },
-        _sum: { amount: true },
-      }),
-    ]);
+  const [totalUsers, totalArtists, totalArtworks, totalSales, volumeAggregate] = await Promise.all([
+    prisma.user.count(),
+    prisma.artistProfile.count(),
+    prisma.artwork.count(),
+    prisma.order.count({ where: { status: 'COMPLETED' } }),
+    prisma.order.aggregate({
+      where: { status: 'COMPLETED' },
+      _sum: { amount: true },
+    }),
+  ]);
 
   return {
     totalUsers,

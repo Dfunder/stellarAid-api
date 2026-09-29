@@ -30,7 +30,11 @@ async function createVariant(
   width: number | null,
   height: number | null,
 ): Promise<void> {
-  const key = buildObjectKey(original.userId, `images/variants/${label}`, `${original.id}.${extension}`);
+  const key = buildObjectKey(
+    original.userId,
+    `images/variants/${label}`,
+    `${original.id}.${extension}`,
+  );
   await uploadObjectBuffer(key, buffer, mimeType);
   await prisma.media.create({
     data: {
@@ -72,8 +76,18 @@ async function processImage(job: Job<ImageProcessingJobData>): Promise<void> {
     thumbnail.info.height,
   );
 
-  const webp = await sharp(original).webp({ quality: WEBP_QUALITY }).toBuffer({ resolveWithObject: true });
-  await createVariant(media, 'webp', webp.data, 'image/webp', 'webp', webp.info.width, webp.info.height);
+  const webp = await sharp(original)
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer({ resolveWithObject: true });
+  await createVariant(
+    media,
+    'webp',
+    webp.data,
+    'image/webp',
+    'webp',
+    webp.info.width,
+    webp.info.height,
+  );
 
   logger.info('Image processing complete', { mediaId });
 }
@@ -91,7 +105,10 @@ export function startMediaWorker(): Worker<ImageProcessingJobData> | undefined {
   });
 
   worker.on('failed', (job, err) => {
-    logger.error('Image processing job failed', { mediaId: job?.data.mediaId, message: err.message });
+    logger.error('Image processing job failed', {
+      mediaId: job?.data.mediaId,
+      message: err.message,
+    });
   });
 
   return worker;

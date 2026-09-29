@@ -135,9 +135,7 @@ describe('setArtworkPublished — publishing workflow', () => {
     prismaMock.artwork.findUnique.mockResolvedValue(makeArtwork({ published: false }));
     prismaMock.artworkMedia.count.mockResolvedValue(0);
 
-    await expect(setArtworkPublished(OWNER_ID, ARTWORK_ID, true)).rejects.toBeInstanceOf(
-      AppError,
-    );
+    await expect(setArtworkPublished(OWNER_ID, ARTWORK_ID, true)).rejects.toBeInstanceOf(AppError);
     await expect(setArtworkPublished(OWNER_ID, ARTWORK_ID, true)).rejects.toMatchObject({
       code: 'UNPROCESSABLE_ENTITY',
     });
@@ -169,9 +167,9 @@ describe('setArtworkPublished — publishing workflow', () => {
   it('rejects publishing by a non-owner', async () => {
     prismaMock.artwork.findUnique.mockResolvedValue(makeArtwork({ userId: OWNER_ID }));
 
-    await expect(
-      setArtworkPublished(OTHER_USER_ID, ARTWORK_ID, true),
-    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(setArtworkPublished(OTHER_USER_ID, ARTWORK_ID, true)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
   });
 });
 

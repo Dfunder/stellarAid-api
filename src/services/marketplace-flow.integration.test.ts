@@ -86,10 +86,7 @@ describe('browse -> search -> filter -> artwork detail', () => {
 describe('trending', () => {
   it('ranks by trending score and falls back to recent artworks when nothing has a score', async () => {
     redisMock.zrevrange.mockResolvedValueOnce(['artwork-2', 'artwork-1']);
-    prismaMock.artwork.findMany.mockResolvedValueOnce([
-      { id: 'artwork-1' },
-      { id: 'artwork-2' },
-    ]);
+    prismaMock.artwork.findMany.mockResolvedValueOnce([{ id: 'artwork-1' }, { id: 'artwork-2' }]);
     redisMock.get.mockResolvedValue(null);
 
     const trending = await getTrendingArtworks();

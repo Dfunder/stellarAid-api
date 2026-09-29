@@ -26,14 +26,12 @@ export const presignUpload = catchAsync(
 );
 
 /** POST /api/v1/media/:id/complete */
-export const completeUpload = catchAsync(
-  async (req, res: Response<ApiResponse<MediaRecord>>) => {
-    const { sub } = getAuthUser(req);
-    const { params } = getValidated<unknown, MediaIdParamsSchema, unknown>(req);
-    const media = await confirmMediaUpload(sub, params.id);
-    res.status(200).json({ success: true, data: media });
-  },
-);
+export const completeUpload = catchAsync(async (req, res: Response<ApiResponse<MediaRecord>>) => {
+  const { sub } = getAuthUser(req);
+  const { params } = getValidated<unknown, MediaIdParamsSchema, unknown>(req);
+  const media = await confirmMediaUpload(sub, params.id);
+  res.status(200).json({ success: true, data: media });
+});
 
 /** GET /api/v1/media/:id */
 export const getMedia = catchAsync(async (req, res: Response<ApiResponse<MediaRecord>>) => {

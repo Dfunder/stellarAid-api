@@ -23,8 +23,15 @@ const ARTWORK_CATEGORIES = [
 ] as const;
 const artworkCategorySchema = z.enum(ARTWORK_CATEGORIES);
 
-export const artworkIdParamsSchema = z.object({ id: uuidSchema });
 const assetSchema = z.enum(['USDC', 'XLM']);
+
+const cursorPaginationSchema = z.object({
+  cursor: z.string().trim().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const artworkIdParamsSchema = z.object({ id: uuidSchema });
+export const artworkParamsSchema = z.object({ id: uuidSchema });
 
 export const userParamsSchema = z.object({ userId: uuidSchema });
 export const listUsersSchema = z.object({ query: paginationSchema });
@@ -68,23 +75,9 @@ export const artworkSchema = z.object({
 
 export const updateArtworkSchema = artworkSchema.partial();
 
-export const artworkIdParamsSchema = z.object({ id: uuidSchema });
-
 export const setArtworkPublishedSchema = z.object({ published: z.boolean() });
 
 export const categorySchema = z.object({ slug: slugSchema });
-
-export const marketplaceListSchema = paginationSchema.extend({
-  category: artworkCategorySchema.optional(),
-});
-
-export const searchQuerySchema = paginationSchema.extend({
-  q: z.string().trim().max(200).default(''),
-  category: artworkCategorySchema.optional(),
-const cursorPaginationSchema = z.object({
-  cursor: z.string().trim().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
 
 export const marketplaceListSchema = cursorPaginationSchema.extend({
   category: artworkCategorySchema.optional(),
@@ -101,9 +94,7 @@ export const searchQuerySchema = cursorPaginationSchema.extend({
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   asset: assetSchema.optional(),
-export const artworkParamsSchema = z.object({ id: uuidSchema });
-
-export const categorySchema = z.object({ slug: slugSchema });
+});
 
 const tagName = z.string().trim().min(1).max(40);
 
@@ -115,10 +106,6 @@ export const syncArtworkTagsSchema = z.object({
 
 export const tagListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
-});
-
-export const marketplaceListSchema = z.object({
-  query: paginationSchema.extend({ category: z.string().optional() }),
 });
 
 export const orderParamsSchema = z.object({ orderId: uuidSchema });
@@ -152,6 +139,7 @@ export const commissionStatusBodySchema = z
   .object({
     status: z.enum(['ACCEPTED', 'IN_PROGRESS', 'DELIVERED', 'COMPLETED', 'DISPUTED', 'CANCELLED']),
     review: commissionReviewSchema.optional(),
+    reason: z.string().trim().min(3).max(1000).optional(),
   })
   .superRefine((value, context) => {
     if (value.status === 'COMPLETED' && value.review === undefined) {
@@ -161,7 +149,49 @@ export const commissionStatusBodySchema = z
         message: 'A review is required when completing a commission.',
       });
     }
+    if (value.status === 'CANCELLED' && value.reason === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['reason'],
+        message: 'A cancellation reason is required.',
+      });
+    }
   });
+
+export const cancelCommissionBodySchema = z.object({
+  reason: z.string().trim().min(3).max(1000),
+});
+
+/** POST /api/v1/commissions/:id/deliverables */
+export const deliverableSubmissionBodySchema = z.object({
+  note: z.string().trim().max(2000).optional(),
+  type: z.enum(['WIP', 'FINAL']),
+  mediaIds: z.array(uuidSchema).max(20).optional(),
+});
+
+/** PATCH /api/v1/commissions/:id/deliverables/:deliverableId */
+export const deliverableReviewParamsSchema = z.object({
+  id: uuidSchema,
+  deliverableId: uuidSchema,
+});
+
+export const deliverableReviewBodySchema = z
+  .object({
+    decision: z.enum(['ACCEPT', 'REQUEST_CHANGES']),
+    feedback: z.string().trim().max(2000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.decision === 'REQUEST_CHANGES' && !value.feedback) {
+      context.addIssue({
+        code: 'custom',
+        path: ['feedback'],
+        message: 'Feedback is required when requesting changes.',
+      });
+    }
+  });
+
+/** POST /api/v1/orders/:id/payment-intent */
+export const orderPaymentIntentParamsSchema = z.object({ id: uuidSchema });
 
 export const reviewBodySchema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -179,21 +209,24 @@ export const adminParamsSchema = z.object({ userId: uuidSchema });
 export const reportParamsSchema = z.object({ reportId: uuidSchema });
 
 export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
-export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
-export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;
+export type ArtworkParamsSchema = z.infer<typeof artworkParamsSchema>;
 export type ArtworkSchema = z.infer<typeof artworkSchema>;
 export type UpdateArtworkSchema = z.infer<typeof updateArtworkSchema>;
-export type ArtworkIdParamsSchema = z.infer<typeof artworkIdParamsSchema>;
 export type SetArtworkPublishedSchema = z.infer<typeof setArtworkPublishedSchema>;
 export type MarketplaceListSchema = z.infer<typeof marketplaceListSchema>;
+export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;
+export type CreateTagSchema = z.infer<typeof createTagSchema>;
+export type SyncArtworkTagsSchema = z.infer<typeof syncArtworkTagsSchema>;
+export type TagListQuerySchema = z.infer<typeof tagListQuerySchema>;
 export type PortfolioItemIdParamsSchema = z.infer<typeof portfolioItemIdParamsSchema>;
 export type CreatePortfolioItemSchema = z.infer<typeof createPortfolioItemSchema>;
 export type UpdatePortfolioItemSchema = z.infer<typeof updatePortfolioItemSchema>;
 export type ReorderPortfolioItemsSchema = z.infer<typeof reorderPortfolioItemsSchema>;
-export type SearchQuerySchema = z.infer<typeof searchQuerySchema>;
-export type ArtworkParamsSchema = z.infer<typeof artworkParamsSchema>;
-export type CreateTagSchema = z.infer<typeof createTagSchema>;
-export type SyncArtworkTagsSchema = z.infer<typeof syncArtworkTagsSchema>;
-export type TagListQuerySchema = z.infer<typeof tagListQuerySchema>;
+export type OrderBodySchema = z.infer<typeof orderBodySchema>;
 export type CommissionStatusParamsSchema = z.infer<typeof commissionStatusParamsSchema>;
 export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;
+export type CancelCommissionBodySchema = z.infer<typeof cancelCommissionBodySchema>;
+export type DeliverableSubmissionBodySchema = z.infer<typeof deliverableSubmissionBodySchema>;
+export type DeliverableReviewParamsSchema = z.infer<typeof deliverableReviewParamsSchema>;
+export type DeliverableReviewBodySchema = z.infer<typeof deliverableReviewBodySchema>;
+export type OrderPaymentIntentParamsSchema = z.infer<typeof orderPaymentIntentParamsSchema>;

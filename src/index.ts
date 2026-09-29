@@ -53,7 +53,7 @@ async function bootstrap(): Promise<void> {
     shuttingDown = true;
     logger.info('Shutdown requested', { signal });
     server.close(() => {
-      void (mediaCleanupWorker?.close() ?? Promise.resolve())
+      void (mediaCleanupWorker?.close() ?? Promise.resolve());
       void Promise.resolve(mediaWorker?.close())
         .catch(() => undefined)
         .then(() => disconnectDatabase())

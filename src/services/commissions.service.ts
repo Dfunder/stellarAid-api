@@ -564,6 +564,131 @@ export async function resolveCommissionDispute(
   });
 }
 
+export const CANCEL_REASON_MAX_LENGTH = 2000;
+
+export interface CancelCommissionInput {
+  /** Why the commission is being cancelled; shown to both parties. */
+  readonly reason: string;
+}
+
+export interface CommissionRefund {
+  /** True when the commission was funded and the client is owed a refund. */
+  readonly required: boolean;
+  readonly amount: string | null;
+  readonly asset: Asset | null;
+}
+
+export interface CommissionCancellation {
+  readonly commission: Commission;
+  readonly refund: CommissionRefund;
+}
+
+/**
+ * Either party cancels a commission with a reason (#826).
+ *
+ * Cancellation is only possible before delivery — `PENDING`, `ACCEPTED` or
+ * `IN_PROGRESS` — and while no dispute is open, because an open dispute holds
+ * escrow and only an admin decision may move the money.
+ *
+ * The refund is *assessed*, not settled: a commission counts as funded once a
+ * confirmed transaction references it, and the answer is reported back and
+ * carried in both notifications. The API holds no signing keys, so the
+ * `refund_client` contract call that actually returns the funds is the
+ * backend's to make — the same boundary as a completed commission releasing
+ * escrow (see `updateCommissionStatus`) and an accepted dispute (#827).
+ */
+export async function cancelCommission(
+  commissionId: string,
+  userId: string,
+  input: CancelCommissionInput,
+): Promise<CommissionCancellation> {
+  const reason = input.reason?.trim() ?? '';
+  if (reason.length === 0) {
+    throw new AppError('BAD_REQUEST', 'A reason is required to cancel a commission');
+  }
+  if (reason.length > CANCEL_REASON_MAX_LENGTH) {
+    throw new AppError(
+      'BAD_REQUEST',
+      `A cancellation reason must be at most ${CANCEL_REASON_MAX_LENGTH} characters`,
+    );
+  }
+
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const commission = await tx.commission.findUnique({ where: { id: commissionId } });
+    if (commission === null) {
+      throw new AppError('NOT_FOUND', 'Commission not found');
+    }
+
+    const isClient = commission.clientId === userId;
+    const isArtist = commission.artistId === userId;
+    if (!isClient && !isArtist) {
+      throw new AppError('FORBIDDEN', 'You do not participate in this commission');
+    }
+    if (!CANCELLABLE_STATUSES.includes(commission.status)) {
+      throw new AppError(
+        'CONFLICT',
+        `This commission can no longer be cancelled (it is ${commission.status})`,
+      );
+    }
+
+    const openDispute = await tx.commissionDispute.findFirst({
+      where: { commissionId, status: { in: [...OPEN_DISPUTE_STATUSES] } },
+    });
+    if (openDispute !== null) {
+      throw new AppError(
+        'CONFLICT',
+        'This commission has an open dispute; an admin must resolve it first',
+      );
+    }
+
+    // Funded = a confirmed transaction against this commission. The most
+    // recent one is what the client paid, and therefore what is refundable.
+    const funding = await tx.transaction.findFirst({
+      where: { commissionId, confirmed: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    const refund: CommissionRefund =
+      funding === null
+        ? { required: false, amount: null, asset: null }
+        : { required: true, amount: funding.amount.toFixed(2), asset: funding.asset };
+
+    const cancelled = await tx.commission.update({
+      where: { id: commissionId },
+      data: { status: 'CANCELLED' },
+    });
+
+    // The reason goes on the timeline, so the audit trail explains itself.
+    await tx.commissionEvent.create({
+      data: {
+        commissionId,
+        fromStatus: commission.status,
+        toStatus: 'CANCELLED',
+        actorId: userId,
+        note: reason,
+      },
+    });
+
+    // Both parties are notified — including the one that cancelled, so the
+    // reason and the refund it triggers reach the other side either way.
+    await tx.notification.createMany({
+      data: [commission.clientId, commission.artistId].map((recipient) => ({
+        userId: recipient,
+        type: 'COMMISSION_CANCELLED',
+        data: {
+          commissionId,
+          cancelledById: userId,
+          reason,
+          refundRequired: refund.required,
+          refundAmount: refund.amount,
+          refundAsset: refund.asset,
+        },
+      })),
+    });
+
+    return { commission: cancelled, refund };
+  });
+}
+
 /**
  * Admin queue of disputes awaiting a decision (OPEN/REVIEWING by default),
  * each with the commission it belongs to so the decision can be made from

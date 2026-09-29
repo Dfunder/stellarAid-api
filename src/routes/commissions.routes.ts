@@ -136,6 +136,21 @@
  *               error: { code: NOT_FOUND, message: Commission not found }
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
+ * /api/v1/commissions/{id}/cancel:
+ *   post:
+ *     summary: Cancel a commission
+ *     description: >-
+ *       Either party may cancel, with a reason the other side sees, while the
+ *       commission is `PENDING`, `ACCEPTED` or `IN_PROGRESS`. Once the work
+ *       has been delivered it can only be completed or disputed; while a
+ *       dispute is open escrow is held, so only an admin resolution may move
+ *       it.
+ *
+ *
+ *       A commission is *funded* once a confirmed transaction references it.
+ *       When it is, the response reports the refund the client is owed and
+ *       carries it in both notifications. The API holds no signing keys, so
+ *       the on-chain `refund_client` call is the backend's to make.
  * /api/v1/commissions/{id}/deliverables:
  *   post:
  *     summary: Submit a deliverable
@@ -161,6 +176,46 @@
  *       content:
  *         application/json:
  *           schema:
+ *             $ref: '#/components/schemas/CancelCommissionRequest'
+ *           examples:
+ *             scopeChanged:
+ *               summary: The client's plans changed
+ *               value:
+ *                 reason: The brief changed on our side, we'll come back to this.
+ *     responses:
+ *       200:
+ *         description: Commission cancelled, with the refund it owes (if any)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CancelCommissionResponse'
+ *             examples:
+ *               unfunded:
+ *                 summary: Not funded yet — nothing to refund
+ *                 value:
+ *                   success: true
+ *                   data:
+ *                     commission:
+ *                       id: 8d1f4b2c-0a3e-4f5b-8c7d-1e2f3a4b5c6d
+ *                       status: CANCELLED
+ *                     refund:
+ *                       required: false
+ *                       amount: null
+ *                       asset: null
+ *               funded:
+ *                 summary: Funded — the client is owed a refund
+ *                 value:
+ *                   success: true
+ *                   data:
+ *                     commission:
+ *                       id: 8d1f4b2c-0a3e-4f5b-8c7d-1e2f3a4b5c6d
+ *                       status: CANCELLED
+ *                     refund:
+ *                       required: true
+ *                       amount: '450.00'
+ *                       asset: USDC
+ *       400:
+ *         description: The reason is missing or too long
  *             $ref: '#/components/schemas/SubmitDeliverableRequest'
  *           examples:
  *             final:
@@ -200,6 +255,11 @@
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
  *               success: false
+ *               error: { code: BAD_REQUEST, message: A reason is required to cancel a commission }
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Caller is not a participant of this commission
  *               error:
  *                 code: BAD_REQUEST
  *                 message: Every attached media file must belong to you
@@ -213,6 +273,7 @@
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
  *               success: false
+ *               error: { code: FORBIDDEN, message: You do not participate in this commission }
  *               error:
  *                 code: FORBIDDEN
  *                 message: Only the artist on this commission can submit deliverables
@@ -220,6 +281,7 @@
  *         description: Commission not found
  *       409:
  *         description: >-
+ *           The commission can no longer be cancelled, or an open dispute
  *           The commission is not in a submittable status (only `ACCEPTED`
  *           and `IN_PROGRESS` accept submissions)
  *         content:
@@ -333,6 +395,8 @@
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *             examples:
+ *               tooLate:
+ *                 summary: Already delivered
  *               alreadyReviewed:
  *                 value:
  *                   success: false
@@ -342,6 +406,9 @@
  *                   success: false
  *                   error:
  *                     code: CONFLICT
+ *                     message: This commission can no longer be cancelled (it is DELIVERED)
+ *               escrowHeld:
+ *                 summary: An open dispute holds escrow
  *                     message: Only the final deliverable can be accepted — request changes on a work-in-progress draft instead
  *               revisionLimit:
  *                 value:
@@ -603,6 +670,7 @@ import {
   patchCommissionDeliverable,
   patchCommissionStatus,
   postCommission,
+  postCommissionCancellation,
   postCommissionDeliverable,
   postCommissionDispute,
   postCommissionDisputeResolution,
@@ -610,6 +678,7 @@ import {
 import { authenticate, validate } from '@/middlewares';
 import {
   commissionBodySchema,
+  commissionCancelBodySchema,
   commissionDeliverableParamsSchema,
   commissionDisputeBodySchema,
   commissionDisputeResolveBodySchema,
@@ -637,6 +706,12 @@ commissionsRouter.patch(
   patchCommissionStatus,
 );
 
+// Cancellation (#826): either party, with a reason, before delivery.
+commissionsRouter.post(
+  '/:id/cancel',
+  authenticate,
+  validate({ params: commissionStatusParamsSchema, body: commissionCancelBodySchema }),
+  postCommissionCancellation,
 // Deliverables (#784): the artist submits a WIP draft or the final artefact.
 commissionsRouter.post(
   '/:id/deliverables',

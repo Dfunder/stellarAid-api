@@ -3,6 +3,7 @@ import type { Response } from 'express';
 
 import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
 import {
+  cancelCommission,
   createCommission,
   getCommissionDetail,
   listCommissionDisputes,
@@ -12,6 +13,7 @@ import {
   reviewDeliverable,
   submitDeliverable,
   updateCommissionStatus,
+  type CommissionCancellation,
   type CommissionDetail,
   type PaginatedCommissions,
   type ResolvedDispute,
@@ -21,6 +23,7 @@ import {
 import type { ApiResponse } from '@/types';
 import type {
   CommissionBodySchema,
+  CommissionCancelBodySchema,
   CommissionDeliverableParamsSchema,
   CommissionDisputeBodySchema,
   CommissionDisputeListQuerySchema,
@@ -75,6 +78,16 @@ export const getCommissionById = catchAsync(
   },
 );
 
+/** POST /api/v1/commissions/:id/cancel — either party cancels with a reason (#826). */
+export const postCommissionCancellation = catchAsync(
+  async (req, res: Response<ApiResponse<CommissionCancellation>>) => {
+    const { sub } = getAuthUser(req);
+    const { params, body } = getValidated<
+      CommissionCancelBodySchema,
+      CommissionStatusParamsSchema,
+      unknown
+    >(req);
+    const result = await cancelCommission(params.id, sub, body);
 /** POST /api/v1/commissions/:id/deliverables — the artist submits work (#784). */
 export const postCommissionDeliverable = catchAsync(
   async (req, res: Response<ApiResponse<SubmitDeliverableResult>>) => {

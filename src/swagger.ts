@@ -761,6 +761,40 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
+        CancelCommissionRequest: {
+          type: 'object',
+          required: ['reason'],
+          properties: {
+            reason: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 2000,
+              description: 'Shown to both parties in the cancellation notification.',
+            },
+          },
+        },
+        CancelCommissionResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                commission: { $ref: '#/components/schemas/Commission' },
+                refund: {
+                  type: 'object',
+                  description:
+                    "Whether the commission was funded and what the client is owed. The API reports the refund; the on-chain `refund_client` call is the backend's to make.",
+                  properties: {
+                    required: { type: 'boolean' },
+                    amount: { type: 'string', nullable: true, example: '450.00' },
+                    asset: { type: 'string', enum: ['USDC', 'XLM'], nullable: true },
+                  },
+                },
+              },
+            },
+          },
+        },
         ErrorResponse: {
           type: 'object',
           required: ['success', 'error'],

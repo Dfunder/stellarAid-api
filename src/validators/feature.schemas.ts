@@ -182,6 +182,30 @@ export const submitDeliverableBodySchema = z.object({
   mediaIds: z.array(uuidSchema).max(20).optional(),
 });
 
+/** Client review of a submitted deliverable (#823). Feedback is mandatory when
+ * sending the work back, which is why the refinement lives here as well as in
+ * the service. */
+export const reviewDeliverableBodySchema = z
+  .object({
+    decision: z.enum(['ACCEPT', 'REQUEST_CHANGES']),
+    note: z.string().trim().max(2000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.decision === 'REQUEST_CHANGES' && !value.note) {
+      context.addIssue({
+        code: 'custom',
+        path: ['note'],
+        message: 'A note is required when requesting changes.',
+      });
+    }
+  });
+
+/** `:id` is the commission, `:did` the deliverable being reviewed (#823). */
+export const commissionDeliverableParamsSchema = z.object({
+  id: uuidSchema,
+  did: uuidSchema,
+});
+
 const COMMISSION_DISPUTE_STATUSES = ['OPEN', 'REVIEWING', 'RESOLVED', 'REJECTED'] as const;
 
 /** Client-raised dispute on a delivered commission (#827). */
@@ -245,6 +269,8 @@ export type CommissionDisputeResolveBodySchema = z.infer<typeof commissionDisput
 export type CommissionDisputeListQuerySchema = z.infer<typeof commissionDisputeListQuerySchema>;
 export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;
 export type SubmitDeliverableBodySchema = z.infer<typeof submitDeliverableBodySchema>;
+export type ReviewDeliverableBodySchema = z.infer<typeof reviewDeliverableBodySchema>;
+export type CommissionDeliverableParamsSchema = z.infer<typeof commissionDeliverableParamsSchema>;
 export type ReviewBodySchema = z.infer<typeof reviewBodySchema>;
 export type MessageBodySchema = z.infer<typeof messageBodySchema>;
 export type NotificationParamsSchema = z.infer<typeof notificationParamsSchema>;

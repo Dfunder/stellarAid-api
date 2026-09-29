@@ -589,6 +589,57 @@ export const openApiSpec = swaggerJsdoc({
             },
           },
         },
+        ReviewDeliverableRequest: {
+          type: 'object',
+          required: ['decision'],
+          properties: {
+            decision: {
+              type: 'string',
+              enum: ['ACCEPT', 'REQUEST_CHANGES'],
+              description:
+                '`ACCEPT` completes the commission and releases escrow; `REQUEST_CHANGES` sends it back for another version.',
+            },
+            note: {
+              type: 'string',
+              maxLength: 2000,
+              description: 'Required when `decision` is `REQUEST_CHANGES`.',
+            },
+          },
+        },
+        ReviewDeliverableResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'object',
+              properties: {
+                deliverable: { $ref: '#/components/schemas/Deliverable' },
+                commissionStatus: {
+                  type: 'string',
+                  enum: [
+                    'PENDING',
+                    'ACCEPTED',
+                    'IN_PROGRESS',
+                    'DELIVERED',
+                    'COMPLETED',
+                    'DISPUTED',
+                    'CANCELLED',
+                  ],
+                },
+                revisionCount: {
+                  type: 'integer',
+                  description: 'Rejections recorded against the commission.',
+                },
+                maxRevisions: { type: 'integer', example: 3 },
+                escrowReleased: {
+                  type: 'boolean',
+                  description:
+                    "True once the artist's payout has been released (commission `COMPLETED`).",
+                },
+              },
+            },
+          },
+        },
         SubmitDeliverableResponse: {
           type: 'object',
           properties: {

@@ -233,6 +233,128 @@
  *                 message: Deliverables can only be submitted while a commission is ACCEPTED or IN_PROGRESS (this one is DELIVERED)
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
+ * /api/v1/commissions/{id}/deliverables/{did}:
+ *   patch:
+ *     summary: Review a submitted deliverable
+ *     description: >-
+ *       Client only. `ACCEPT` signs off the `FINAL` version: the deliverable
+ *       becomes `ACCEPTED`, the commission becomes `COMPLETED` — the state
+ *       change that releases the artist's escrow — and the artist is notified.
+ *       Only the final artefact can be accepted; a `WIP` draft is there to be
+ *       commented on. `REQUEST_CHANGES` requires `note`, records the
+ *       submission as `REJECTED` (that rejection is the revision), returns the
+ *       commission to `IN_PROGRESS` for the artist, and is refused once the
+ *       commission has used all `MAX_COMMISSION_REVISIONS` (default 3).
+ *       While a dispute is open escrow is held, so neither decision is
+ *       accepted until an admin resolves it.
+ *     tags: [Commissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: path
+ *         name: did
+ *         required: true
+ *         description: The deliverable being reviewed.
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ReviewDeliverableRequest'
+ *           examples:
+ *             accept:
+ *               summary: Accept the final delivery (releases escrow)
+ *               value:
+ *                 decision: ACCEPT
+ *             requestChanges:
+ *               summary: Send the work back with feedback
+ *               value:
+ *                 decision: REQUEST_CHANGES
+ *                 note: The palette is off here — please match the earlier draft.
+ *     responses:
+ *       200:
+ *         description: Deliverable reviewed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReviewDeliverableResponse'
+ *             example:
+ *               success: true
+ *               data:
+ *                 deliverable:
+ *                   id: 2b7c1e4d-9f3a-4c8e-b1d2-6a5f7c8e9d0b
+ *                   commissionId: 8d1f4b2c-0a3e-4f5b-8c7d-1e2f3a4b5c6d
+ *                   type: FINAL
+ *                   status: ACCEPTED
+ *                   note: Final files attached.
+ *                   media: []
+ *                 commissionStatus: COMPLETED
+ *                 revisionCount: 1
+ *                 maxRevisions: 3
+ *                 escrowReleased: true
+ *       400:
+ *         description: A note is required to request changes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: BAD_REQUEST
+ *                 message: A note is required when requesting changes
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Caller is not the client on this commission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: FORBIDDEN
+ *                 message: Only the client on this commission can review a deliverable
+ *       404:
+ *         description: Commission not found, or the deliverable is not on it
+ *       409:
+ *         description: >-
+ *           Already reviewed, a WIP draft was accepted, the commission is not
+ *           `DELIVERED`, the revision limit is reached, or an open dispute
+ *           holds escrow
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               alreadyReviewed:
+ *                 value:
+ *                   success: false
+ *                   error: { code: CONFLICT, message: This deliverable has already been accepted }
+ *               wipAccept:
+ *                 value:
+ *                   success: false
+ *                   error:
+ *                     code: CONFLICT
+ *                     message: Only the final deliverable can be accepted — request changes on a work-in-progress draft instead
+ *               revisionLimit:
+ *                 value:
+ *                   success: false
+ *                   error: { code: CONFLICT, message: This commission has already used all 3 of its revisions }
+ *               escrowHeld:
+ *                 value:
+ *                   success: false
+ *                   error:
+ *                     code: CONFLICT
+ *                     message: This commission has an open dispute; an admin must resolve it first
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/commissions/{id}/disputes:
  *   post:
  *     summary: Dispute the final delivery of a commission
@@ -478,6 +600,7 @@
 import { createFeatureRouter } from './router-factory';
 import {
   getCommissionById,
+  patchCommissionDeliverable,
   patchCommissionStatus,
   postCommission,
   postCommissionDeliverable,
@@ -487,10 +610,12 @@ import {
 import { authenticate, validate } from '@/middlewares';
 import {
   commissionBodySchema,
+  commissionDeliverableParamsSchema,
   commissionDisputeBodySchema,
   commissionDisputeResolveBodySchema,
   commissionStatusBodySchema,
   commissionStatusParamsSchema,
+  reviewDeliverableBodySchema,
   submitDeliverableBodySchema,
 } from '@/validators';
 
@@ -518,6 +643,15 @@ commissionsRouter.post(
   authenticate,
   validate({ params: commissionStatusParamsSchema, body: submitDeliverableBodySchema }),
   postCommissionDeliverable,
+);
+
+// Deliverable review (#823): the client accepts the final version — releasing
+// escrow — or sends it back for changes.
+commissionsRouter.patch(
+  '/:id/deliverables/:did',
+  authenticate,
+  validate({ params: commissionDeliverableParamsSchema, body: reviewDeliverableBodySchema }),
+  patchCommissionDeliverable,
 );
 
 commissionsRouter.post(

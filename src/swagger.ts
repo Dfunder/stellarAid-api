@@ -33,7 +33,33 @@ export const openApiSpec = swaggerJsdoc({
       { name: 'Users', description: 'User profile management.' },
       { name: 'Stats', description: 'Public, aggregate platform metrics.' },
       { name: 'Analytics', description: 'Product-analytics event ingestion.' },
-      { name: 'Commissions', description: 'Commission lifecycle, deliverables and reviews.' },
+      {
+        name: 'Commissions',
+        description:
+          'Commission lifecycle, deliverables, disputes and the review written on completion.\n\n' +
+          '### Flow\n' +
+          '1. **Request** — the client calls `POST /api/v1/commissions`; the commission is created `PENDING` and the artist is notified.\n' +
+          '2. **Accept** — the artist moves it to `ACCEPTED`, then to `IN_PROGRESS` while working.\n' +
+          '3. **Deliver** — the artist marks the work `DELIVERED`.\n' +
+          '4. **Accept or dispute** — the client either completes it (a review is **required**, and is stored as the commission review) or raises a dispute, which holds escrow.\n' +
+          '5. **Resolve** — an admin releases the funds to the artist, refunds the client, or rejects the dispute.\n\n' +
+          '### Status machine\n' +
+          '```\n' +
+          'PENDING ──▶ ACCEPTED ──▶ IN_PROGRESS ──▶ DELIVERED ──▶ COMPLETED\n' +
+          '   │            │              │             │\n' +
+          '   │            │              │             └──▶ DISPUTED ──▶ COMPLETED (RELEASE_TO_ARTIST)\n' +
+          '   │            │              │                          ──▶ CANCELLED (REFUND_CLIENT)\n' +
+          '   │            │              │                          ──▶ DELIVERED (REJECT)\n' +
+          '   └────────────┴──────────────┴──▶ CANCELLED\n' +
+          '```\n' +
+          '\n' +
+          '- `ACCEPTED` / `IN_PROGRESS` / `DELIVERED` — the artist moves the commission forward.\n' +
+          '- `COMPLETED` — the client, and the request must carry a `review`.\n' +
+          '- `CANCELLED` — either party, but only from `PENDING`, `ACCEPTED` or `IN_PROGRESS`.\n' +
+          '- `DISPUTED` — the client, only from `DELIVERED`; escrow stays held while the dispute is `OPEN` or `REVIEWING`, so the commission cannot be completed or cancelled until an admin resolves it.\n' +
+          '\n' +
+          'Every transition is appended to an immutable `CommissionEvent` audit trail, which is what `GET /api/v1/commissions/{id}` returns as its `timeline`.',
+      },
     ],
     components: {
       securitySchemes: {
@@ -45,6 +71,37 @@ export const openApiSpec = swaggerJsdoc({
         },
       },
       responses: {
+        CommissionConflict: {
+          description: 'The requested transition is not allowed from the current status',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+              example: {
+                success: false,
+                error: {
+                  code: 'CONFLICT',
+                  message: 'Cannot change commission from PENDING to COMPLETED',
+                },
+              },
+            },
+          },
+        },
+        EscrowHeld: {
+          description:
+            'Escrow is held by an open dispute — the commission cannot be completed or cancelled until an admin resolves it',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+              example: {
+                success: false,
+                error: {
+                  code: 'CONFLICT',
+                  message: 'This commission has an open dispute; an admin must resolve it first',
+                },
+              },
+            },
+          },
+        },
         Unauthorized: {
           description: 'Missing, invalid or expired access token',
           content: {
@@ -406,17 +463,95 @@ export const openApiSpec = swaggerJsdoc({
             },
             deliverables: {
               type: 'array',
-              items: { type: 'object', additionalProperties: true },
+              description: 'Oldest first.',
+              items: { $ref: '#/components/schemas/Deliverable' },
             },
             reviews: {
               type: 'array',
-              items: { type: 'object', additionalProperties: true },
+              description: 'Reviews written against this commission (at most one).',
+              items: { $ref: '#/components/schemas/CommissionReview' },
+            },
+            dispute: {
+              allOf: [{ $ref: '#/components/schemas/CommissionDispute' }],
+              nullable: true,
             },
             timeline: {
               type: 'array',
               description: 'Oldest first; always starts with the CREATED entry.',
               items: { $ref: '#/components/schemas/CommissionTimelineEntry' },
             },
+          },
+        },
+        Deliverable: {
+          type: 'object',
+          description:
+            'A version of the work — a `WIP` draft or the `FINAL` artefact. Moves UPLOADED -> SUBMITTED -> ACCEPTED | REJECTED.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            commissionId: { type: 'string', format: 'uuid' },
+            note: { type: 'string', nullable: true },
+            type: { type: 'string', enum: ['WIP', 'FINAL'] },
+            status: {
+              type: 'string',
+              enum: ['UPLOADED', 'SUBMITTED', 'ACCEPTED', 'REJECTED'],
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CommissionReview: {
+          type: 'object',
+          description:
+            'The review recorded when a commission is completed — one per commission, written by the client and targeting the artist.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            commissionId: { type: 'string', format: 'uuid', nullable: true },
+            authorId: { type: 'string', format: 'uuid', description: 'The client.' },
+            targetId: { type: 'string', format: 'uuid', description: 'The artist.' },
+            rating: { type: 'integer', minimum: 1, maximum: 5 },
+            title: { type: 'string', nullable: true },
+            body: { type: 'string' },
+            edited: { type: 'boolean' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateCommissionRequest: {
+          type: 'object',
+          required: ['artistId', 'title', 'description', 'budget', 'asset', 'deadline'],
+          properties: {
+            artistId: {
+              type: 'string',
+              format: 'uuid',
+              description: 'The artist to request work from. Must not be the caller.',
+            },
+            title: { type: 'string', minLength: 1, maxLength: 200, example: 'Album cover' },
+            description: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 5000,
+              example: 'A painted cover for an upcoming album.',
+            },
+            budget: {
+              type: 'number',
+              exclusiveMinimum: true,
+              minimum: 0,
+              description: 'Positive amount, in the units of `asset`.',
+              example: 250,
+            },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+            deadline: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Must be in the future.',
+              example: '2027-01-01T00:00:00.000Z',
+            },
+          },
+        },
+        CommissionResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/Commission' },
           },
         },
         CommissionListItem: {

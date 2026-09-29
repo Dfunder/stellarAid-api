@@ -1,5 +1,7 @@
 /**
- * Admin routes (v1).
+ * Admin routes (v1) — commission dispute queue (#827) and review moderation
+ * (#834). Both admin surfaces mount here behind `authenticate`, and each
+ * controller re-checks the caller's role.
  *
  * @openapi
  * /api/v1/admin/commissions/disputes:
@@ -37,17 +39,9 @@
 
 import { createFeatureRouter } from './router-factory';
 import { getCommissionDisputes } from '@/controllers';
+import { getReportedReviews, patchAdminReview } from '@/controllers/review-moderation.controller';
 import { authenticate, validate } from '@/middlewares';
 import { commissionDisputeListQuerySchema } from '@/validators';
- * Admin routes (v1) — review moderation (#834).
- */
-
-import { createFeatureRouter } from './router-factory';
-import {
-  getReportedReviews,
-  patchAdminReview,
-} from '@/controllers/review-moderation.controller';
-import { authenticate, validate } from '@/middlewares';
 import {
   moderateReviewBodySchema,
   reportedReviewsQuerySchema,
@@ -61,6 +55,9 @@ adminRouter.get(
   authenticate,
   validate({ query: commissionDisputeListQuerySchema }),
   getCommissionDisputes,
+);
+
+adminRouter.get(
   '/reviews/reported',
   authenticate,
   validate({ query: reportedReviewsQuerySchema }),

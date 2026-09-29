@@ -181,6 +181,18 @@ enum DeliverableType {
   FINAL
 }
 
+/// Lifecycle of a client-raised dispute. Escrow is held (the commission
+/// cannot move to COMPLETED or CANCELLED) while the dispute is OPEN or
+/// REVIEWING; an admin resolution either releases the funds to the artist
+/// (RESOLVED) or refunds the client (RESOLVED), or rejects the dispute
+/// (REJECTED), which returns the commission to DELIVERED.
+enum CommissionDisputeStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  REJECTED
+}
+
 enum DeliverableStatus {
   UPLOADED
   SUBMITTED
@@ -260,6 +272,7 @@ model Commission {
   deliverables Deliverable[]
   reviews      Review[]
   events       CommissionEvent[]
+  dispute      CommissionDispute?
 
   @@index([clientId])
   @@index([artistId])
@@ -281,6 +294,27 @@ model CommissionEvent {
   commission   Commission        @relation(fields: [commissionId], references: [id], onDelete: Cascade)
 
   @@index([commissionId, createdAt])
+}
+
+/// A client-raised dispute on a delivered commission (#827). One dispute per
+/// commission (`commissionId` is unique); `evidence` is free-form JSON so
+/// callers can attach links or ids without a schema change.
+model CommissionDispute {
+  id           String                  @id @default(uuid())
+  commissionId String                  @unique
+  raisedById   String
+  reason       String
+  evidence     Json?
+  status       CommissionDisputeStatus @default(OPEN)
+  resolution   String?
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  commission   Commission              @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([raisedById])
 }
 
 /// A version of a commission deliverable — WIP drafts or the FINAL artefact.

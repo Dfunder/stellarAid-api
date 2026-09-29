@@ -463,6 +463,59 @@ export const openApiSpec = swaggerJsdoc({
             data: { $ref: '#/components/schemas/CommissionDetail' },
           },
         },
+        CommissionDispute: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            commissionId: { type: 'string', format: 'uuid' },
+            raisedById: { type: 'string', format: 'uuid' },
+            reason: { type: 'string' },
+            evidence: { description: 'Free-form dispute evidence.', nullable: true },
+            status: {
+              type: 'string',
+              enum: ['OPEN', 'REVIEWING', 'RESOLVED', 'REJECTED'],
+            },
+            resolution: { type: 'string', nullable: true },
+            resolvedById: { type: 'string', format: 'uuid', nullable: true },
+            resolvedAt: { type: 'string', format: 'date-time', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreateCommissionDisputeRequest: {
+          type: 'object',
+          required: ['reason'],
+          properties: {
+            reason: { type: 'string', minLength: 1, maxLength: 2000 },
+            evidence: { type: 'object', additionalProperties: true },
+          },
+        },
+        CommissionDisputeResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/CommissionDispute' },
+          },
+        },
+        CommissionDisputeListResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: {
+              type: 'array',
+              items: {
+                allOf: [
+                  { $ref: '#/components/schemas/CommissionDispute' },
+                  {
+                    type: 'object',
+                    properties: {
+                      commission: { $ref: '#/components/schemas/Commission' },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
         ErrorResponse: {
           type: 'object',
           required: ['success', 'error'],

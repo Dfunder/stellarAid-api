@@ -173,6 +173,24 @@ export const commissionStatusBodySchema = z
     }
   });
 
+const COMMISSION_DISPUTE_STATUSES = ['OPEN', 'REVIEWING', 'RESOLVED', 'REJECTED'] as const;
+
+/** Client-raised dispute on a delivered commission (#827). */
+export const commissionDisputeBodySchema = z.object({
+  reason: z.string().trim().min(1).max(2000),
+  evidence: z.record(z.string(), z.unknown()).optional(),
+});
+
+/** Admin decision that ends a dispute. */
+export const commissionDisputeResolveBodySchema = z.object({
+  decision: z.enum(['RELEASE_TO_ARTIST', 'REFUND_CLIENT', 'REJECT']),
+  resolution: z.string().trim().min(1).max(2000).optional(),
+});
+
+export const commissionDisputeListQuerySchema = z.object({
+  status: z.enum(COMMISSION_DISPUTE_STATUSES).optional(),
+});
+
 export const reviewBodySchema = z.object({
   rating: z.number().int().min(1).max(5),
   title: z.string().max(120).optional(),
@@ -213,6 +231,9 @@ export type PaymentParamsSchema = z.infer<typeof paymentParamsSchema>;
 export type CommissionBodySchema = z.infer<typeof commissionBodySchema>;
 export type CommissionStatusParamsSchema = z.infer<typeof commissionStatusParamsSchema>;
 export type CommissionListQuerySchema = z.infer<typeof commissionListQuerySchema>;
+export type CommissionDisputeBodySchema = z.infer<typeof commissionDisputeBodySchema>;
+export type CommissionDisputeResolveBodySchema = z.infer<typeof commissionDisputeResolveBodySchema>;
+export type CommissionDisputeListQuerySchema = z.infer<typeof commissionDisputeListQuerySchema>;
 export type CommissionStatusBodySchema = z.infer<typeof commissionStatusBodySchema>;
 export type ReviewBodySchema = z.infer<typeof reviewBodySchema>;
 export type MessageBodySchema = z.infer<typeof messageBodySchema>;

@@ -85,17 +85,27 @@
  *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/users/me/recently-viewed:
  *   get:
- *     summary: The caller's recently viewed artworks
- *     description: >
- *       Most-recently-viewed first. Stored in Redis, not the database;
- *       empty when Redis isn't configured.
  *     summary: List the current user's recently viewed artworks
  *     description: >
- *       Backed by Redis, not the database. Capped at the 50 most recent
- *       views (see POST /api/v1/artworks/{id}/view).
+ *       Most-recently-viewed first. Backed by Redis, not the database, and
+ *       capped at the 50 most recent views (see POST
+ *       /api/v1/artworks/{id}/view). Empty when Redis isn't configured.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Recently viewed artworks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ArtworkOffsetPageResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  * /api/v1/users/me/saves:
  *   get:
  *     summary: List the current user's saved artworks
+ *     description: Newest save first, paginated.
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
@@ -108,16 +118,6 @@
  *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
  *     responses:
  *       200:
- *         description: Recently viewed artworks
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ArtworkOffsetPageResponse'
- *         description: Paginated recently viewed artworks
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/RecentlyViewedResponse'
  *         description: Paginated saved artworks
  *         content:
  *           application/json:

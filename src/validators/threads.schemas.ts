@@ -8,3 +8,19 @@ export const createThreadBodySchema = z.object({
 });
 
 export type CreateThreadBodySchema = z.infer<typeof createThreadBodySchema>;
+
+export const threadIdParamsSchema = z.object({
+  id: uuidSchema,
+});
+
+export const sendMessageBodySchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+});
+
+export const listMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  cursor: z.string().datetime().optional(),
+});
+
+export type SendMessageBodySchema = z.infer<typeof sendMessageBodySchema>;
+export type ListMessagesQuerySchema = z.infer<typeof listMessagesQuerySchema>;

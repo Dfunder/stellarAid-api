@@ -2,12 +2,21 @@ import type { Commission } from '@prisma/client';
 import type { Response } from 'express';
 
 import { catchAsync, getAuthUser, getValidated } from '@/middlewares';
-import { updateCommissionStatus } from '@/services';
+import { createCommission, updateCommissionStatus } from '@/services';
 import type { ApiResponse } from '@/types';
 import type {
+  CommissionBodySchema,
   CommissionStatusBodySchema,
   CommissionStatusParamsSchema,
 } from '@/validators';
+
+/** POST /api/v1/commissions — a client requests work from an artist. */
+export const postCommission = catchAsync(async (req, res: Response<ApiResponse<Commission>>) => {
+  const { sub } = getAuthUser(req);
+  const { body } = getValidated<CommissionBodySchema, unknown, unknown>(req);
+  const commission = await createCommission(sub, body);
+  res.status(201).json({ success: true, data: commission });
+});
 
 export const patchCommissionStatus = catchAsync(
   async (req, res: Response<ApiResponse<Commission>>) => {

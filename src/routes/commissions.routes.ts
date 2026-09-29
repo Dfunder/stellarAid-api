@@ -136,6 +136,103 @@
  *               error: { code: NOT_FOUND, message: Commission not found }
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
+ * /api/v1/commissions/{id}/deliverables:
+ *   post:
+ *     summary: Submit a deliverable
+ *     description: >-
+ *       Artist only. Records a version of the work — a `WIP` draft or the
+ *       `FINAL` artefact — with an optional note and the ids of media the
+ *       artist has already uploaded. A `FINAL` submission moves the commission
+ *       to `DELIVERED` for the client to review; a `WIP` submission starts or
+ *       continues the work (`IN_PROGRESS`). Submissions are only accepted
+ *       while the commission is `ACCEPTED` or `IN_PROGRESS`, so a version
+ *       awaiting review can never be replaced underneath the client. The
+ *       client is notified with the submission details.
+ *     tags: [Commissions]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SubmitDeliverableRequest'
+ *           examples:
+ *             final:
+ *               summary: Final artwork, two files
+ *               value:
+ *                 type: FINAL
+ *                 note: Final files attached — 4K master and a web-sized export.
+ *             wip:
+ *               summary: Work in progress draft
+ *               value:
+ *                 type: WIP
+ *                 note: Rough composition, feedback welcome.
+ *     responses:
+ *       201:
+ *         description: Deliverable recorded; commission advanced if this was the final submission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SubmitDeliverableResponse'
+ *             example:
+ *               success: true
+ *               data:
+ *                 deliverable:
+ *                   id: 2b7c1e4d-9f3a-4c8e-b1d2-6a5f7c8e9d0b
+ *                   commissionId: 8d1f4b2c-0a3e-4f5b-8c7d-1e2f3a4b5c6d
+ *                   type: FINAL
+ *                   status: SUBMITTED
+ *                   note: Final files attached — 4K master and a web-sized export.
+ *                   media: []
+ *                   createdAt: '2026-09-29T09:30:00.000Z'
+ *                 commissionStatus: DELIVERED
+ *       400:
+ *         description: A note over the length limit, or media that belongs to another user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: BAD_REQUEST
+ *                 message: Every attached media file must belong to you
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Caller is not the artist on this commission
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: FORBIDDEN
+ *                 message: Only the artist on this commission can submit deliverables
+ *       404:
+ *         description: Commission not found
+ *       409:
+ *         description: >-
+ *           The commission is not in a submittable status (only `ACCEPTED`
+ *           and `IN_PROGRESS` accept submissions)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: CONFLICT
+ *                 message: Deliverables can only be submitted while a commission is ACCEPTED or IN_PROGRESS (this one is DELIVERED)
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
  * /api/v1/commissions/{id}/disputes:
  *   post:
  *     summary: Dispute the final delivery of a commission
@@ -383,6 +480,7 @@ import {
   getCommissionById,
   patchCommissionStatus,
   postCommission,
+  postCommissionDeliverable,
   postCommissionDispute,
   postCommissionDisputeResolution,
 } from '@/controllers';
@@ -393,6 +491,7 @@ import {
   commissionDisputeResolveBodySchema,
   commissionStatusBodySchema,
   commissionStatusParamsSchema,
+  submitDeliverableBodySchema,
 } from '@/validators';
 
 export const commissionsRouter = createFeatureRouter('commissions');
@@ -411,6 +510,14 @@ commissionsRouter.patch(
   authenticate,
   validate({ params: commissionStatusParamsSchema, body: commissionStatusBodySchema }),
   patchCommissionStatus,
+);
+
+// Deliverables (#784): the artist submits a WIP draft or the final artefact.
+commissionsRouter.post(
+  '/:id/deliverables',
+  authenticate,
+  validate({ params: commissionStatusParamsSchema, body: submitDeliverableBodySchema }),
+  postCommissionDeliverable,
 );
 
 commissionsRouter.post(

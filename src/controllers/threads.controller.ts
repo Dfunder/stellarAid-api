@@ -5,6 +5,7 @@ import {
   createOrGetThread,
   listThreadMessages,
   listUserThreads,
+  markThreadRead,
   sendMessage,
 } from '@/services/threads.service';
 import type { ApiResponse } from '@/types';
@@ -43,23 +44,23 @@ export const getThreads = catchAsync(async (req, res: Response) => {
 /** POST /api/v1/threads/:id/messages (#838) */
 export const postThreadMessage = catchAsync(async (req, res: Response) => {
   const { sub } = getAuthUser(req);
-  const { params, body } = getValidated<
-    SendMessageBodySchema,
-    { id: string },
-    unknown
-  >(req);
+  const { params, body } = getValidated<SendMessageBodySchema, { id: string }, unknown>(req);
   const message = await sendMessage(params.id, sub, body.body);
   res.status(201).json({ success: true, data: message } satisfies ApiResponse<typeof message>);
+});
+
+/** PATCH /api/v1/threads/:id/read (#840) */
+export const patchThreadRead = catchAsync(async (req, res: Response) => {
+  const { sub } = getAuthUser(req);
+  const { params } = getValidated<unknown, { id: string }, unknown>(req);
+  const result = await markThreadRead(params.id, sub);
+  res.status(200).json({ success: true, data: result } satisfies ApiResponse<typeof result>);
 });
 
 /** GET /api/v1/threads/:id/messages (#839) */
 export const getThreadMessages = catchAsync(async (req, res: Response) => {
   const { sub } = getAuthUser(req);
-  const { params, query } = getValidated<
-    unknown,
-    { id: string },
-    ListMessagesQuerySchema
-  >(req);
+  const { params, query } = getValidated<unknown, { id: string }, ListMessagesQuerySchema>(req);
   const page = await listThreadMessages(params.id, sub, {
     limit: query.limit,
     cursor: query.cursor,

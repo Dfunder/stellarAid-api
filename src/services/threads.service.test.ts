@@ -3,18 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => {
   const prisma = {
     user: { findUnique: vi.fn(), findMany: vi.fn() },
-    threadParticipant: { findMany: vi.fn() },
+    threadParticipant: { findMany: vi.fn(), findUnique: vi.fn() },
     messageThread: {
       findUnique: vi.fn(),
       create: vi.fn(),
     },
+    message: { updateMany: vi.fn(), count: vi.fn() },
   };
   return { prismaMock: prisma };
 });
 
 vi.mock('@/services/prisma.service', () => ({ prisma: prismaMock }));
 
-import { createOrGetThread } from './threads.service';
+import { createOrGetThread, markThreadRead } from './threads.service';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -22,9 +23,9 @@ beforeEach(() => {
 
 describe('createOrGetThread (#837)', () => {
   it('rejects self-threads', async () => {
-    await expect(
-      createOrGetThread('u1', { participantId: 'u1' }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(createOrGetThread('u1', { participantId: 'u1' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
   });
 
   it('returns existing thread for the same pair', async () => {
@@ -69,5 +70,47 @@ describe('createOrGetThread (#837)', () => {
     const result = await createOrGetThread('u1', { participantId: 'u2' });
     expect(result.created).toBe(true);
     expect(result.thread.id).toBe('t-new');
+  });
+});
+
+describe('markThreadRead (#840)', () => {
+  it('marks unread messages addressed to the caller and reports the new unread count', async () => {
+    prismaMock.threadParticipant.findUnique.mockResolvedValue({
+      threadId: 't1',
+      userId: 'u1',
+    });
+    prismaMock.message.updateMany.mockResolvedValue({ count: 3 });
+    prismaMock.message.count.mockResolvedValue(0);
+
+    const result = await markThreadRead('t1', 'u1');
+
+    expect(result).toMatchObject({ threadId: 't1', markedRead: 3, unreadCount: 0 });
+    expect(result.readAt).toBeInstanceOf(Date);
+    // Only messages addressed to the caller, and only the still-unread ones.
+    expect(prismaMock.message.updateMany).toHaveBeenCalledWith({
+      where: { threadId: 't1', senderId: { not: 'u1' }, readAt: null },
+      data: { readAt: result.readAt },
+    });
+  });
+
+  it('is idempotent — a second call stamps nothing new', async () => {
+    prismaMock.threadParticipant.findUnique.mockResolvedValue({
+      threadId: 't1',
+      userId: 'u1',
+    });
+    prismaMock.message.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.message.count.mockResolvedValue(0);
+
+    const result = await markThreadRead('t1', 'u1');
+    expect(result.markedRead).toBe(0);
+  });
+
+  it('leaves messages unread when the caller is not a participant', async () => {
+    prismaMock.threadParticipant.findUnique.mockResolvedValue(null);
+
+    await expect(markThreadRead('t1', 'stranger')).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(prismaMock.message.updateMany).not.toHaveBeenCalled();
   });
 });

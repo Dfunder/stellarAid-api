@@ -1,11 +1,13 @@
 /**
- * Message threads (v1) — create, list, send, fetch messages (#837–#839).
+ * Message threads (v1) — create, list, send, fetch messages and mark read
+ * (#837–#840).
  */
 
 import { createFeatureRouter } from './router-factory';
 import {
   getThreadMessages,
   getThreads,
+  patchThreadRead,
   postThread,
   postThreadMessage,
 } from '@/controllers/threads.controller';
@@ -19,12 +21,7 @@ import {
 
 export const threadsRouter = createFeatureRouter('threads');
 
-threadsRouter.post(
-  '/',
-  authenticate,
-  validate({ body: createThreadBodySchema }),
-  postThread,
-);
+threadsRouter.post('/', authenticate, validate({ body: createThreadBodySchema }), postThread);
 
 threadsRouter.get('/', authenticate, getThreads);
 
@@ -40,4 +37,12 @@ threadsRouter.get(
   authenticate,
   validate({ params: threadIdParamsSchema, query: listMessagesQuerySchema }),
   getThreadMessages,
+);
+
+// Read receipts (#840): stamps every unread message addressed to the caller.
+threadsRouter.patch(
+  '/:id/read',
+  authenticate,
+  validate({ params: threadIdParamsSchema }),
+  patchThreadRead,
 );

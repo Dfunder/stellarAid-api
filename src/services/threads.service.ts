@@ -27,10 +27,7 @@ export interface ThreadView {
 /**
  * Find an existing 1:1 thread between two users, if any.
  */
-export async function findThreadBetween(
-  userA: string,
-  userB: string,
-): Promise<ThreadView | null> {
+export async function findThreadBetween(userA: string, userB: string): Promise<ThreadView | null> {
   const rows = await prisma.threadParticipant.findMany({
     where: { userId: { in: [userA, userB] } },
     select: { threadId: true, userId: true },
@@ -149,11 +146,7 @@ async function assertParticipant(threadId: string, userId: string): Promise<void
 /**
  * Send a message in a thread (#838).
  */
-export async function sendMessage(
-  threadId: string,
-  senderId: string,
-  body: string,
-) {
+export async function sendMessage(threadId: string, senderId: string, body: string) {
   const trimmed = body?.trim() ?? '';
   if (trimmed.length === 0) {
     throw new AppError('BAD_REQUEST', 'Message body cannot be empty');
@@ -186,9 +179,7 @@ export async function sendMessage(
     return msg;
   });
 
-  const others = thread.participants
-    .map((p) => p.userId)
-    .filter((id) => id !== senderId);
+  const others = thread.participants.map((p) => p.userId).filter((id) => id !== senderId);
 
   if (others.length > 0) {
     await prisma.notification.createMany({
@@ -294,4 +285,48 @@ export async function listThreadMessages(
   }
 
   return { items: page, nextCursor };
+}
+
+export interface MarkThreadReadResult {
+  threadId: string;
+  /** Messages that flipped from unread to read in this call. */
+  markedRead: number;
+  /** Messages still unread for the caller after the update. */
+  unreadCount: number;
+  /** Timestamp stamped onto the messages this call marked as read. */
+  readAt: Date;
+}
+
+/**
+ * Mark every unread message in a thread as read for the calling user (#840).
+ *
+ * Authorisation: the caller must be a participant, so a thread belonging to
+ * two other users can never be stamped from the outside (403 otherwise) —
+ * only the caller's own threads are ever touched.
+ *
+ * `readAt` records when a *recipient* saw a message, so the caller's own
+ * messages are excluded: sending a message never marks it read, and the
+ * unread count returned is the recipient-side count (the same number
+ * `listUserThreads` reports). The update is idempotent — rows already
+ * carrying a `readAt` are left alone, so a second call reports
+ * `markedRead: 0` and the same unread count instead of re-stamping
+ * timestamps.
+ */
+export async function markThreadRead(
+  threadId: string,
+  userId: string,
+): Promise<MarkThreadReadResult> {
+  await assertParticipant(threadId, userId);
+
+  const readAt = new Date();
+  const { count } = await prisma.message.updateMany({
+    where: { threadId, senderId: { not: userId }, readAt: null },
+    data: { readAt },
+  });
+
+  const unreadCount = await prisma.message.count({
+    where: { threadId, senderId: { not: userId }, readAt: null },
+  });
+
+  return { threadId, markedRead: count, unreadCount, readAt };
 }

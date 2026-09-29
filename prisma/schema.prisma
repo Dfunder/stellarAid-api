@@ -259,10 +259,28 @@ model Commission {
   transactions Transaction[]
   deliverables Deliverable[]
   reviews      Review[]
+  events       CommissionEvent[]
 
   @@index([clientId])
   @@index([artistId])
   @@index([status])
+}
+
+/// Append-only audit trail of a commission's status changes (#824). The
+/// current status still lives on `Commission.status`; these rows exist so
+/// the detail endpoint can return an ordered, complete timeline of how a
+/// commission got to where it is.
+model CommissionEvent {
+  id           String            @id @default(uuid())
+  commissionId String
+  fromStatus   CommissionStatus?
+  toStatus     CommissionStatus
+  actorId      String
+  note         String?
+  createdAt    DateTime          @default(now())
+  commission   Commission        @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+
+  @@index([commissionId, createdAt])
 }
 
 /// A version of a commission deliverable — WIP drafts or the FINAL artefact.

@@ -1,4 +1,12 @@
-import type { Asset, Commission, CommissionStatus, Prisma, Role } from '@prisma/client';
+import type {
+  Asset,
+  Commission,
+  CommissionStatus,
+  Deliverable,
+  Prisma,
+  Review,
+  Role,
+} from '@prisma/client';
 
 import { AppError } from '@/middlewares';
 import { prisma } from '@/services';
@@ -71,6 +79,38 @@ export interface CommissionReviewInput {
 export interface UpdateCommissionStatusInput {
   readonly status: CommissionStatus;
   readonly review?: CommissionReviewInput;
+}
+
+/** Public shape of a commission participant (never the password hash). */
+export interface CommissionParty {
+  readonly id: string;
+  readonly name: string;
+  readonly username: string;
+  readonly role: Role;
+}
+
+export type CommissionTimelineType = 'CREATED' | 'STATUS_CHANGED';
+
+/** One entry in a commission's timeline, oldest first. */
+export interface CommissionTimelineEntry {
+  readonly id: string;
+  readonly type: CommissionTimelineType;
+  readonly fromStatus: CommissionStatus | null;
+  readonly toStatus: CommissionStatus;
+  readonly actorId: string | null;
+  readonly note: string | null;
+  readonly at: Date;
+}
+
+export interface CommissionDetail {
+  readonly commission: Commission;
+  readonly parties: {
+    readonly client: CommissionParty | null;
+    readonly artist: CommissionParty | null;
+  };
+  readonly deliverables: readonly Deliverable[];
+  readonly reviews: readonly Review[];
+  readonly timeline: readonly CommissionTimelineEntry[];
 }
 
 const ARTIST_TRANSITIONS: Partial<Record<CommissionStatus, CommissionStatus>> = {
@@ -148,9 +188,102 @@ export async function updateCommissionStatus(
       });
     }
 
-    return tx.commission.update({
+    const updated = await tx.commission.update({
       where: { id: commissionId },
       data: { status: input.status },
     });
+
+    // Append-only audit trail — the detail endpoint builds its timeline from
+    // these rows, so every transition is recorded in the same transaction.
+    await tx.commissionEvent.create({
+      data: {
+        commissionId,
+        fromStatus: commission.status,
+        toStatus: input.status,
+        actorId: userId,
+      },
+    });
+
+    return updated;
   });
+}
+
+async function loadParties(userIds: readonly string[]): Promise<Map<string, CommissionParty>> {
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) {
+    return new Map();
+  }
+  const users = await prisma.user.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, name: true, username: true, role: true },
+  });
+  return new Map(users.map((user) => [user.id, user]));
+}
+
+function canView(commission: Commission, userId: string, role: Role): boolean {
+  return commission.clientId === userId || commission.artistId === userId || role === 'ADMIN';
+}
+
+/**
+ * Full commission read model: parties, deliverables, reviews and the
+ * status timeline. Only the client, the artist or an admin may read it.
+ */
+export async function getCommissionDetail(
+  commissionId: string,
+  userId: string,
+  role: Role,
+): Promise<CommissionDetail> {
+  const commission = await prisma.commission.findUnique({ where: { id: commissionId } });
+  if (commission === null) {
+    throw new AppError('NOT_FOUND', 'Commission not found');
+  }
+  if (!canView(commission, userId, role)) {
+    throw new AppError(
+      'FORBIDDEN',
+      'Only the client, the artist or an admin can view this commission',
+    );
+  }
+
+  const [events, deliverables, reviews, parties] = await Promise.all([
+    prisma.commissionEvent.findMany({
+      where: { commissionId },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.deliverable.findMany({ where: { commissionId }, orderBy: { createdAt: 'asc' } }),
+    prisma.review.findMany({ where: { commissionId }, orderBy: { createdAt: 'asc' } }),
+    loadParties([commission.clientId, commission.artistId]),
+  ]);
+
+  const timeline: CommissionTimelineEntry[] = [
+    {
+      id: `${commission.id}:created`,
+      type: 'CREATED',
+      fromStatus: null,
+      toStatus: 'PENDING',
+      actorId: commission.clientId,
+      note: null,
+      at: commission.createdAt,
+    },
+    ...events.map((event): CommissionTimelineEntry => ({
+      id: event.id,
+      type: 'STATUS_CHANGED',
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      actorId: event.actorId,
+      note: event.note,
+      at: event.createdAt,
+    })),
+  ];
+  timeline.sort((a, b) => a.at.getTime() - b.at.getTime());
+
+  return {
+    commission,
+    parties: {
+      client: parties.get(commission.clientId) ?? null,
+      artist: parties.get(commission.artistId) ?? null,
+    },
+    deliverables,
+    reviews,
+    timeline,
+  };
 }

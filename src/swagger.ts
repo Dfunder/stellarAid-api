@@ -33,6 +33,7 @@ export const openApiSpec = swaggerJsdoc({
       { name: 'Users', description: 'User profile management.' },
       { name: 'Stats', description: 'Public, aggregate platform metrics.' },
       { name: 'Analytics', description: 'Product-analytics event ingestion.' },
+      { name: 'Commissions', description: 'Commission lifecycle, deliverables and reviews.' },
     ],
     components: {
       securitySchemes: {
@@ -324,6 +325,105 @@ export const openApiSpec = swaggerJsdoc({
             status: { type: 'string', enum: ['ok'] },
             uptime: { type: 'number', description: 'Process uptime in seconds.' },
             timestamp: { type: 'string', format: 'date-time' },
+          },
+        },
+        CommissionParty: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            username: { type: 'string' },
+            role: { type: 'string', enum: ['USER', 'ARTIST', 'ADMIN'] },
+          },
+        },
+        CommissionEvent: {
+          type: 'object',
+          description: 'Append-only status change recorded against a commission.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            fromStatus: { type: 'string', nullable: true, example: 'IN_PROGRESS' },
+            toStatus: { type: 'string', example: 'DELIVERED' },
+            actorId: { type: 'string', format: 'uuid' },
+            note: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CommissionTimelineEntry: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string', enum: ['CREATED', 'STATUS_CHANGED'] },
+            fromStatus: { type: 'string', nullable: true },
+            toStatus: { type: 'string' },
+            actorId: { type: 'string', format: 'uuid', nullable: true },
+            note: { type: 'string', nullable: true },
+            at: { type: 'string', format: 'date-time' },
+          },
+        },
+        Commission: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            clientId: { type: 'string', format: 'uuid' },
+            artistId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            budget: { type: 'string', example: '450.00' },
+            asset: { type: 'string', enum: ['USDC', 'XLM'] },
+            deadline: { type: 'string', format: 'date-time' },
+            status: {
+              type: 'string',
+              enum: [
+                'PENDING',
+                'ACCEPTED',
+                'IN_PROGRESS',
+                'DELIVERED',
+                'COMPLETED',
+                'DISPUTED',
+                'CANCELLED',
+              ],
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CommissionDetail: {
+          type: 'object',
+          properties: {
+            commission: { $ref: '#/components/schemas/Commission' },
+            parties: {
+              type: 'object',
+              properties: {
+                client: {
+                  allOf: [{ $ref: '#/components/schemas/CommissionParty' }],
+                  nullable: true,
+                },
+                artist: {
+                  allOf: [{ $ref: '#/components/schemas/CommissionParty' }],
+                  nullable: true,
+                },
+              },
+            },
+            deliverables: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+            },
+            reviews: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+            },
+            timeline: {
+              type: 'array',
+              description: 'Oldest first; always starts with the CREATED entry.',
+              items: { $ref: '#/components/schemas/CommissionTimelineEntry' },
+            },
+          },
+        },
+        CommissionDetailResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', enum: [true] },
+            data: { $ref: '#/components/schemas/CommissionDetail' },
           },
         },
         ErrorResponse: {

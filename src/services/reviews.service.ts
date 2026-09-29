@@ -8,7 +8,7 @@ import { AppError } from '@/middlewares';
 import { cached, invalidateNamespace } from '@/services/cache.service';
 import { prisma } from '@/services/prisma.service';
 
-const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (#833)
 const REPORTS_PER_DAY = 5;
 const AVG_CACHE_TTL_SEC = 300;
 const OPEN_REPORT_STATUSES = ['OPEN', 'REVIEWING'] as const;
@@ -34,6 +34,8 @@ export interface PublicReview {
   title: string | null;
   body: string;
   edited: boolean;
+  /** Client badge: review was edited after creation (#833). */
+  editedBadge: boolean;
   createdAt: Date;
   author: ReviewAuthor;
 }
@@ -71,13 +73,14 @@ function authorSelect() {
   return { id: true, name: true, username: true } as const;
 }
 
-function toPublicReview(
+export function toPublicReview(
   review: Review & { author?: { id: string; name: string; username: string } | null },
 ): PublicReview {
   return {
     id: review.id,
     rating: review.rating,
     title: review.title,
+    editedBadge: review.edited,
     body: review.body,
     edited: review.edited,
     createdAt: review.createdAt,
@@ -353,6 +356,157 @@ export async function moderateReport(
   });
   await invalidateNamespace('reviews');
   return updated;
+}
+
+/**
+ * Delete own review (#833). Recalculates artist average (cache invalidation).
+ */
+export async function deleteReview(
+  reviewId: string,
+  authorId: string,
+): Promise<{ deleted: true; summary: RatingSummary }> {
+  const review = await prisma.review.findUnique({ where: { id: reviewId } });
+  if (review === null) {
+    throw new AppError('NOT_FOUND', 'Review not found');
+  }
+  if (review.authorId !== authorId) {
+    throw new AppError('FORBIDDEN', 'You can only delete your own review');
+  }
+
+  await prisma.review.delete({ where: { id: reviewId } });
+  await invalidateNamespace('reviews');
+  const summary = await computeRatingSummary(review.targetId);
+  return { deleted: true, summary };
+}
+
+/**
+ * List reports awaiting moderation (#834).
+ */
+export async function listReportedReviews(options?: {
+  status?: 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED';
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: Array<{
+    report: ReviewReport;
+    review: PublicReview;
+  }>;
+  page: number;
+  limit: number;
+  total: number;
+}> {
+  const status = options?.status ?? 'OPEN';
+  const page = Math.max(options?.page ?? 1, 1);
+  const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
+  const skip = (page - 1) * limit;
+
+  const where = { status: status as 'OPEN' };
+  const [total, reports] = await Promise.all([
+    prisma.reviewReport.count({ where }),
+    prisma.reviewReport.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      skip,
+      take: limit,
+      include: { review: true },
+    }),
+  ]);
+
+  const authorIds = [...new Set(reports.map((r) => r.review.authorId))];
+  const authors = await prisma.user.findMany({
+    where: { id: { in: authorIds } },
+    select: authorSelect(),
+  });
+  const authorMap = new Map(authors.map((a) => [a.id, a]));
+
+  return {
+    page,
+    limit,
+    total,
+    data: reports.map((r) => ({
+      report: r,
+      review: toPublicReview({
+        ...r.review,
+        author: authorMap.get(r.review.authorId) ?? null,
+      }),
+    })),
+  };
+}
+
+/**
+ * Admin approve/remove a review (#834).
+ * - approve: dismiss open reports (review stays public)
+ * - remove: resolve reports and delete review (hidden from public); notify reporters
+ */
+export async function moderateReviewById(
+  reviewId: string,
+  moderatorId: string,
+  action: 'approve' | 'remove',
+  note?: string,
+): Promise<{ action: string; reportsUpdated: number; reviewId: string }> {
+  const review = await prisma.review.findUnique({ where: { id: reviewId } });
+  if (review === null) {
+    throw new AppError('NOT_FOUND', 'Review not found');
+  }
+
+  const openReports = await prisma.reviewReport.findMany({
+    where: { reviewId, status: { in: [...OPEN_REPORT_STATUSES] } },
+  });
+
+  if (action === 'remove') {
+    await prisma.$transaction([
+      prisma.reviewReport.updateMany({
+        where: { reviewId, status: { in: [...OPEN_REPORT_STATUSES] } },
+        data: { status: 'RESOLVED' },
+      }),
+      prisma.review.delete({ where: { id: reviewId } }),
+    ]);
+    await invalidateNamespace('reviews');
+    await computeRatingSummary(review.targetId);
+
+    if (openReports.length > 0) {
+      await prisma.notification.createMany({
+        data: openReports.map((r) => ({
+          userId: r.reporterId,
+          type: 'REVIEW_MODERATION_OUTCOME',
+          data: {
+            reviewId,
+            reportId: r.id,
+            outcome: 'REMOVED',
+            note: note ?? null,
+            moderatorId,
+          },
+        })),
+      });
+    }
+
+    return { action: 'remove', reportsUpdated: openReports.length, reviewId };
+  }
+
+  // approve
+  const result = await prisma.reviewReport.updateMany({
+    where: { reviewId, status: { in: [...OPEN_REPORT_STATUSES] } },
+    data: { status: 'DISMISSED' },
+  });
+  await invalidateNamespace('reviews');
+
+  if (openReports.length > 0) {
+    await prisma.notification.createMany({
+      data: openReports.map((r) => ({
+        userId: r.reporterId,
+        type: 'REVIEW_MODERATION_OUTCOME',
+        data: {
+          reviewId,
+          reportId: r.id,
+          outcome: 'APPROVED',
+          note: note ?? null,
+          moderatorId,
+        },
+      })),
+    });
+  }
+
+  return { action: 'approve', reportsUpdated: result.count, reviewId };
 }
 
 export const REVIEW_EDIT_WINDOW_MS = EDIT_WINDOW_MS;

@@ -67,6 +67,25 @@ describe('commissionBodySchema (commission creation)', () => {
     }
   });
 
+  it('rejects a budget below the minimum required for the asset', () => {
+    const usdcBelowMin = commissionBodySchema.safeParse({ ...valid, asset: 'USDC', budget: 0.5 });
+    expect(usdcBelowMin.success).toBe(false);
+    expect(usdcBelowMin.error?.issues[0]?.message).toBe('Budget must be at least 1 USDC.');
+
+    const xlmBelowMin = commissionBodySchema.safeParse({ ...valid, asset: 'XLM', budget: 0.99 });
+    expect(xlmBelowMin.success).toBe(false);
+    expect(xlmBelowMin.error?.issues[0]?.message).toBe('Budget must be at least 1 XLM.');
+  });
+
+  it('accepts a budget equal to or above the minimum required for the asset', () => {
+    expect(commissionBodySchema.safeParse({ ...valid, asset: 'USDC', budget: 1 }).success).toBe(
+      true,
+    );
+    expect(commissionBodySchema.safeParse({ ...valid, asset: 'XLM', budget: 1 }).success).toBe(
+      true,
+    );
+  });
+
   it('rejects an unsupported asset', () => {
     expect(commissionBodySchema.safeParse({ ...valid, asset: 'BTC' }).success).toBe(false);
   });

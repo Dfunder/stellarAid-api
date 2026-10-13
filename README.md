@@ -82,9 +82,10 @@ annotations in `src/routes/**/*.routes.ts`.
 | Auth endpoints   | 10/min  | RateLimit-Limit / Remaining / Reset + Retry-After |
 | Password reset   | 3/min   | RateLimit-Limit / Remaining / Reset + Retry-After |
 
-Over-limit requests return `429`. The store is the shared in-memory store by
-default; set `REDIS_URL` for a Redis-backed store so limits hold across
-multiple instances. Requests to `/api/docs` and `OPTIONS` are not counted.
+Over-limit requests return `429`. Without `REDIS_URL`, each limiter uses its own in-memory store within the
+current process. This is sufficient for a single instance, but limits are not
+shared between multiple instances. Set `REDIS_URL` to use a Redis-backed store
+so limits hold across instances. Requests to `/api/docs` and `OPTIONS` are not counted.
 
 ## Request validation
 

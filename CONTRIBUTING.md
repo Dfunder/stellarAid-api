@@ -225,8 +225,10 @@ route → controller → service
 - Global limiter (100/min) applies in `src/app.ts` to every request.
 - Feature-specific limiters come from `src/middlewares/rate-limit.middleware.ts`:
   auth is 10/min via the router factory, password reset 3/min.
-- With `REDIS_URL` set, limits use a Redis-backed store; otherwise a shared
-  in-memory store is used (fine for a single instance / local dev).
+- With `REDIS_URL` set, limits use a Redis-backed store shared across
+  instances. Without it, each limiter uses its own in-memory store within the
+  current process; that is suitable for a single instance or local development,
+  but limits are not shared between multiple instances.
 
 ## Authentication
 

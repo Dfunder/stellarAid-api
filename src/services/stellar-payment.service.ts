@@ -90,9 +90,17 @@ export function networkPassphrase(): string {
 /** Circle's USDC on Stellar is the only issuer the app has a default for, which
  * is exactly what `priceAssetIssuers.USDC` resolves to. */
 function assetFor(asset: Order['asset']): StellarAsset {
-  return asset === 'XLM'
-    ? StellarAsset.native()
-    : new StellarAsset(asset, env.priceAssetIssuers[asset]);
+  if (asset === 'XLM') {
+    return StellarAsset.native();
+  }
+  const issuer = env.priceAssetIssuers[asset];
+  if (!issuer) {
+    throw new AppError(
+      'UNPROCESSABLE_ENTITY',
+      `Missing Stellar asset issuer configuration for ${asset}. Please configure ${asset}_ASSET_ISSUER.`,
+    );
+  }
+  return new StellarAsset(asset, issuer);
 }
 
 function isPayable(status: Order['status']): boolean {

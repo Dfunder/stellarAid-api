@@ -53,11 +53,11 @@ const optionalPort = z
 const optionalStellarAccount = z
   .preprocess(
     emptyToUndefined,
-    z.string().regex(STELLAR_ACCOUNT_RE, 'must be a Stellar account address'),
+    z.string().regex(STELLAR_ACCOUNT_RE, 'must be a Stellar account address').optional(),
   )
   .optional();
 
-const schema = z.object({
+export const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce
     .number({ error: PORT_ERROR })
@@ -96,9 +96,9 @@ const schema = z.object({
     .min(0, 'MAX_COMMISSION_REVISIONS cannot be negative.')
     .max(50, 'MAX_COMMISSION_REVISIONS must be 50 or fewer.')
     .default(DEFAULT_MAX_COMMISSION_REVISIONS),
-  USDC_ASSET_ISSUER: optionalString,
-  EURC_ASSET_ISSUER: optionalString,
-  NGNT_ASSET_ISSUER: optionalString,
+  USDC_ASSET_ISSUER: optionalStellarAccount,
+  EURC_ASSET_ISSUER: optionalStellarAccount,
+  NGNT_ASSET_ISSUER: optionalStellarAccount,
   STELLAR_HORIZON_URL: optionalUrl,
   STELLAR_ESCROW_ADDRESS: optionalStellarAccount,
   STELLAR_PLATFORM_FEE_ADDRESS: optionalStellarAccount,

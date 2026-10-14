@@ -240,6 +240,29 @@ describe('createOrderPaymentIntent (#764)', () => {
     expect(pay!.asset.isNative()).toBe(true);
   });
 
+  it('throws a descriptive error when asset issuer is not configured', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(makeOrder({ asset: 'EURC' }));
+
+    await expect(createOrderPaymentIntent(ORDER_ID, BUYER_ID, makeDeps())).rejects.toMatchObject({
+      code: 'UNPROCESSABLE_ENTITY',
+      message: 'Missing Stellar asset issuer configuration for EURC. Please configure EURC_ASSET_ISSUER.',
+    });
+  });
+
+  it('builds payment with configured custom asset issuer', async () => {
+    const EURC_ISSUER = 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN';
+    envMock.priceAssetIssuers.EURC = EURC_ISSUER;
+    prismaMock.order.findUnique.mockResolvedValue(makeOrder({ asset: 'EURC' }));
+
+    const intent = await createOrderPaymentIntent(ORDER_ID, BUYER_ID, makeDeps());
+    expect(intent.asset).toBe('EURC');
+    const [pay] = paymentOperations(intent);
+    expect(pay!.asset.code).toBe('EURC');
+    expect(pay!.asset.issuer).toBe(EURC_ISSUER);
+
+    envMock.priceAssetIssuers.EURC = undefined;
+  });
+
   it('pays a second platform-fee operation for XLM orders too', async () => {
     prismaMock.order.findUnique.mockResolvedValue(makeOrder({ asset: 'XLM' }));
     envMock.stellarPlatformFeeAddress = FEE_KEY;

@@ -35,6 +35,11 @@ export const resetPasswordSchema = z.object({
   password: registerSchema.shape.password,
 });
 
+/**
+ * Validate the logout payload shape only. The authenticated user's identity
+ * is available to the service layer, which also scopes token revocation by
+ * user ID so a foreign refresh token cannot be revoked.
+ */
 export const logoutSchema = z.object({
   refreshToken: z.string().trim().min(1, 'refreshToken is required.'),
 });

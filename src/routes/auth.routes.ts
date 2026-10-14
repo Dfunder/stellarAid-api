@@ -141,8 +141,10 @@
  * /api/v1/auth/logout:
  *   post:
  *     summary: Log out the current session
- *     description: Revokes the given refresh token. Idempotent — revoking an
- *       unknown or already-revoked token still returns 204.
+ *     description: Request validation checks the refresh-token shape, while
+ *       the service layer revokes it only when it belongs to the authenticated
+ *       user. Revoking an unknown, foreign or already-revoked token is
+ *       idempotent and still returns 204.
  *     tags: [Auth]
  *     security:
  *       - BearerAuth: []

@@ -22,6 +22,7 @@ import {
   issueTokenPair,
   revokeAllUserTokens,
   revokeRefreshToken,
+  revokeRefreshTokenByValue,
   verifyAccessToken,
   verifyRefreshToken,
 } from './token.service';
@@ -177,6 +178,15 @@ describe('revocation', () => {
     await revokeAllUserTokens('user-1');
     expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
       where: { userId: 'user-1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+
+  it('does not revoke a refresh token outside the authenticated user scope', async () => {
+    await revokeRefreshTokenByValue('user-1', 'raw');
+
+    expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { token: sha256('raw'), userId: 'user-1', revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
   });

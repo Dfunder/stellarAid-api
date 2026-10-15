@@ -10,13 +10,36 @@ vi.mock('@/services/token.service', () => ({ verifyAccessToken: verifyMock }));
 vi.mock('@/utils/logger', () => ({ logger: loggerMock }));
 
 import { AppError } from './app-error.middleware';
-import { getOptionalAuthUser } from './auth.middleware';
+import { getOptionalAuthUser, requireAdmin } from './auth.middleware';
 
 const reqWith = (authorization?: string): Request =>
   ({ headers: authorization === undefined ? {} : { authorization } }) as Request;
 
+const reqWithUser = (user: { sub: string; role: 'ADMIN' | 'USER' | 'ARTIST' }): Request =>
+  ({ user }) as Request;
+
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('requireAdmin', () => {
+  it('allows an administrator through', () => {
+    const next = vi.fn();
+    requireAdmin(reqWithUser({ sub: 'admin-1', role: 'ADMIN' }), {} as never, next);
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it.each(['USER', 'ARTIST'] as const)('rejects a %s user', (role) => {
+    const next = vi.fn();
+    requireAdmin(reqWithUser({ sub: 'user-1', role }), {} as never, next);
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ code: 'FORBIDDEN' }));
+  });
+
+  it('rejects a request without an authenticated user', () => {
+    const next = vi.fn();
+    requireAdmin(reqWith(), {} as never, next);
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ code: 'UNAUTHORIZED' }));
+  });
 });
 
 describe('getOptionalAuthUser', () => {

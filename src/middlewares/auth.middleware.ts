@@ -33,6 +33,18 @@ export const authenticate: RequestHandler = (req, _res, next) => {
   }
 };
 
+/** Require an authenticated administrator on routes already protected by `authenticate`. */
+export const requireAdmin: RequestHandler = (req, _res, next) => {
+  try {
+    if (getAuthUser(req).role !== 'ADMIN') {
+      throw new AppError('FORBIDDEN', 'Admin access required');
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
 /** Read the authenticated identity; only valid on routes behind `authenticate`. */
 export function getAuthUser(req: Request): AccessTokenPayload {
   const user = (req as AuthenticatedRequest).user;

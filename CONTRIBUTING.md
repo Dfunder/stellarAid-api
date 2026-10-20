@@ -176,6 +176,10 @@ route → controller → service
 - Same-folder imports stay relative: `import { createApp } from './app'`.
 - Import from the folder barrel (`@/services`), not deep paths
   (`@/services/health.service`) — each folder's `index.ts` is its public API.
+- Never import your own module from its folder barrel. A module re-exported by
+  that barrel must import shared dependencies from their direct module (for
+  example, a service importing `prisma` from `@/services/prisma.service`). The
+  barrel is for consumers outside the folder.
 - Prefer `import type` for type-only imports.
 
 ### Environment variables

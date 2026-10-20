@@ -11,7 +11,7 @@ import type {
 } from '@prisma/client';
 
 import { AppError } from '@/middlewares';
-import { prisma } from '@/services';
+import { prisma } from '@/services/prisma.service';
 import { scheduleCommissionRefund } from '@/services/commission-refund.service';
 import { invalidateNamespace } from '@/services/cache.service';
 

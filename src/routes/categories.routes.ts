@@ -14,7 +14,7 @@
  *       200:
  *         description: Categories
  *     summary: List all categories, with sub-categories nested
- *     tags: [Taxonomy]
+ *     tags: [Categories]
  *     responses:
  *       200:
  *         description: Category tree

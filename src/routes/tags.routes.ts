@@ -5,7 +5,7 @@
  * /api/v1/tags:
  *   get:
  *     summary: List popular tags
- *     tags: [Taxonomy]
+ *     tags: [Tags]
  *     parameters:
  *       - in: query
  *         name: limit
@@ -23,7 +23,7 @@
  *       Also created implicitly from PUT /api/v1/artworks/{id}/tags on
  *       first use — this endpoint is for creating a tag ahead of time
  *       (e.g. curated taxonomy).
- *     tags: [Taxonomy]
+ *     tags: [Tags]
  *     security:
  *       - BearerAuth: []
  *     requestBody:

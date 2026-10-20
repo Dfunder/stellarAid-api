@@ -173,6 +173,29 @@
  *         $ref: '#/components/responses/Unauthorized'
  *       422:
  *         $ref: '#/components/responses/ValidationFailed'
+ * /api/v1/users/{username}/reviews:
+ *   get:
+ *     summary: List reviews for a user
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, enum: [newest, oldest] }
+ *     responses:
+ *       200:
+ *         description: User reviews page
+ *       422:
+ *         $ref: '#/components/responses/ValidationFailed'
  */
 
 import {

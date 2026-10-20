@@ -33,6 +33,18 @@ export const openApiSpec = swaggerJsdoc({
       { name: 'Users', description: 'User profile management.' },
       { name: 'Stats', description: 'Public, aggregate platform metrics.' },
       { name: 'Analytics', description: 'Product-analytics event ingestion.' },
+      { name: 'Artworks', description: 'Browse, publish and manage artworks.' },
+      { name: 'Categories', description: 'Browse artwork categories and their hierarchy.' },
+      { name: 'Health', description: 'Service liveness and readiness checks.' },
+      { name: 'Marketplace', description: 'Discover artworks and view ranked selections.' },
+      { name: 'Media', description: 'Upload and manage media assets.' },
+      { name: 'Notifications', description: 'List notifications and manage read status.' },
+      { name: 'Orders', description: 'Purchase artworks and manage payment intents.' },
+      { name: 'Portfolios', description: 'Manage portfolio showcase items.' },
+      { name: 'Reviews', description: 'Read, create, report and manage reviews.' },
+      { name: 'Search', description: 'Search published artworks and artists.' },
+      { name: 'Tags', description: 'Browse the artwork tag taxonomy.' },
+      { name: 'Threads', description: 'Create message threads and exchange messages.' },
       {
         name: 'Commissions',
         description:

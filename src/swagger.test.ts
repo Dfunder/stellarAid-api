@@ -9,6 +9,8 @@
  * stops being explained on the tag.
  */
 
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { openApiSpec } from '@/swagger';
@@ -93,5 +95,20 @@ describe('OpenAPI document (#830)', () => {
     expect(
       Object.keys(status.patch.responses['409']!.content!['application/json'].examples!),
     ).toEqual(expect.arrayContaining(['invalidTransition', 'notCancellable', 'escrowHeld']));
+  });
+
+  it('declares every tag used in route JSDoc', () => {
+    const declared = new Set(spec.tags.map((tag) => tag.name));
+    const routeDirectory = join(__dirname, 'routes');
+    const routeTags = readdirSync(routeDirectory)
+      .filter((file) => file.endsWith('.routes.ts'))
+      .flatMap((file) => {
+        const source = readFileSync(join(routeDirectory, file), 'utf8');
+        return [...source.matchAll(/tags:\s*\[([^\]]+)\]/g)].flatMap((match) =>
+          match[1]!.split(',').map((tag) => tag.trim()),
+        );
+      });
+
+    expect([...new Set(routeTags)].filter((tag) => !declared.has(tag))).toEqual([]);
   });
 });

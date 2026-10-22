@@ -50,8 +50,34 @@ export interface LoginInput {
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const MIN_PASSWORD_LENGTH = 8;
+
 const PASSWORD_RESET_MESSAGE =
   'If an account exists for that email, a password reset link has been sent.';
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function normalizeName(name: string): string {
+  return name.trim();
+}
+
+function validatePassword(password: string): void {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new AppError(
+      'BAD_REQUEST',
+      `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`,
+    );
+  }
+}
+
+function validateEmail(email: string): void {
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!isValidEmail) {
+    throw new AppError('BAD_REQUEST', 'Invalid email address');
+  }
+}
 
 export function toPublicUser(user: User): PublicUser {
   return {
@@ -77,6 +103,7 @@ function usernameFromEmail(email: string): string {
     .replace(/_{2,}/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 20);
+
   return base === '' ? 'user' : base;
 }
 
@@ -89,15 +116,16 @@ const USERNAME_SUFFIX_BYTES = 4;
 
 async function uniqueUsername(email: string): Promise<string> {
   const base = usernameFromEmail(email);
+
   for (let attempt = 0; attempt < USERNAME_MAX_ATTEMPTS; attempt += 1) {
     const candidate = `${base}_${randomBytes(USERNAME_SUFFIX_BYTES).toString('hex')}`;
     const existing = await prisma.user.findUnique({ where: { username: candidate } });
+
     if (existing === null) {
       return candidate;
     }
   }
-  // CONFLICT (not INTERNAL_ERROR): exhaustion is a transient collision the
-  // caller can retry, not a server fault (#868).
+
   throw new AppError(
     'CONFLICT',
     'Could not allocate a unique username, please retry',
@@ -109,7 +137,15 @@ export async function registerUser(input: RegisterInput): Promise<{
   tokens: TokenPair;
   verificationToken: string;
 }> {
-  const email = input.email.toLowerCase();
+  const email = normalizeEmail(input.email);
+  const name = normalizeName(input.name);
+
+  validateEmail(email);
+  if (!name) {
+    throw new AppError('BAD_REQUEST', 'Name is required');
+  }
+  validatePassword(input.password);
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing !== null) {
     throw new AppError('CONFLICT', 'Email already registered');
@@ -122,27 +158,45 @@ export async function registerUser(input: RegisterInput): Promise<{
 
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
-      data: { email, passwordHash, name: input.name, username, role: input.role },
+      data: {
+        email,
+        passwordHash,
+        name,
+        username,
+        role: input.role,
+      },
     });
+
     await tx.emailVerification.create({
-      data: { userId: created.id, token: verificationToken, expiresAt },
+      data: {
+        userId: created.id,
+        token: verificationToken,
+        expiresAt,
+      },
     });
+
     return created;
   });
 
   const tokens = await issueTokenPair({ id: user.id, role: user.role });
+
   return { user: toPublicUser(user), tokens, verificationToken };
 }
 
 export async function loginUser(
   input: LoginInput,
 ): Promise<{ user: PublicUser; tokens: TokenPair }> {
-  const email = input.email.toLowerCase();
+  const email = normalizeEmail(input.email);
+
+  validateEmail(email);
+
   const user = await prisma.user.findUnique({ where: { email } });
   if (user === null || !(await comparePassword(input.password, user.passwordHash))) {
     throw new AppError('UNAUTHORIZED', 'Invalid email or password');
   }
+
   const tokens = await issueTokenPair({ id: user.id, role: user.role });
+
   return { user: toPublicUser(user), tokens };
 }
 
@@ -171,15 +225,22 @@ export async function getCurrentUser(userId: string): Promise<CurrentUserProfile
     }),
     prisma.artistProfile.findUnique({ where: { userId } }),
   ]);
+
   if (user === null) {
     throw new AppError('UNAUTHORIZED', 'User no longer exists');
   }
+
   let publicArtistProfile: PublicArtistProfile | null = null;
   if (artistProfile !== null) {
     const { userId: _userId, ...rest } = artistProfile;
     publicArtistProfile = rest;
   }
-  return { ...toPublicUser(user), wallets, artistProfile: publicArtistProfile };
+
+  return {
+    ...toPublicUser(user),
+    wallets,
+    artistProfile: publicArtistProfile,
+  };
 }
 
 /**
@@ -201,31 +262,50 @@ export async function refreshSession(rawToken: string): Promise<{
 }> {
   const { refreshTokenId, sub } = await verifyRefreshToken(rawToken);
   const user = await prisma.user.findUnique({ where: { id: sub } });
+
   if (user === null) {
     throw new AppError('UNAUTHORIZED', 'Invalid or expired refresh token');
   }
+
   await revokeRefreshToken(refreshTokenId);
   const tokens = await issueTokenPair({ id: user.id, role: user.role });
+
   return { user: toPublicUser(user), tokens };
 }
 
 export async function requestPasswordReset(email: string): Promise<{ message: string }> {
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail) {
+    return { message: PASSWORD_RESET_MESSAGE };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (user !== null) {
     const token = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+
     await prisma.$transaction([
       prisma.passwordReset.updateMany({
         where: { userId: user.id, consumed: false },
         data: { consumed: true },
       }),
-      prisma.passwordReset.create({ data: { userId: user.id, token, expiresAt } }),
+      prisma.passwordReset.create({
+        data: {
+          userId: user.id,
+          token,
+          expiresAt,
+        },
+      }),
     ]);
   }
+
   return { message: PASSWORD_RESET_MESSAGE };
 }
 
 export async function resetPassword(token: string, password: string): Promise<{ message: string }> {
+  validatePassword(password);
+
   const reset = await prisma.passwordReset.findUnique({ where: { token } });
   if (reset === null) {
     throw new AppError(
@@ -236,22 +316,34 @@ export async function resetPassword(token: string, password: string): Promise<{ 
 
   const passwordHash = await hashPassword(password);
   const now = new Date();
+
   await prisma.$transaction(async (tx) => {
     const claimed = await tx.passwordReset.updateMany({
-      where: { id: reset.id, consumed: false, expiresAt: { gt: now } },
+      where: {
+        id: reset.id,
+        consumed: false,
+        expiresAt: { gt: now },
+      },
       data: { consumed: true },
     });
+
     if (claimed.count !== 1) {
       throw new AppError(
         'BAD_REQUEST',
         'Password reset token is invalid or expired. Request a new password reset token.',
       );
     }
-    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
+
+    await tx.user.update({
+      where: { id: reset.userId },
+      data: { passwordHash },
+    });
+
     await tx.refreshToken.updateMany({
       where: { userId: reset.userId, revokedAt: null },
       data: { revokedAt: now },
     });
   });
+
   return { message: 'Password reset successfully. Please log in again.' };
 }

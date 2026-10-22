@@ -443,6 +443,24 @@ describe('listCommissionsForUser', () => {
     expect(result.hasNext).toBe(true);
   });
 
+  it('loads parties in one bounded batch for the maximum page size', async () => {
+    const rows = Array.from({ length: 100 }, (_, index) => ({
+      id: `commission-${index}`,
+      clientId: CLIENT_ID,
+      artistId: `artist-${index}`,
+    }));
+    prismaMock.commission.findMany.mockResolvedValue(rows);
+
+    await listCommissionsForUser(CLIENT_ID, 'USER', { ...baseQuery, limit: 100 });
+
+    expect(prismaMock.commission.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 100 }),
+    );
+    expect(prismaMock.user.findMany).toHaveBeenCalledTimes(1);
+    const partyQuery = prismaMock.user.findMany.mock.calls[0]?.[0];
+    expect(partyQuery?.where.id.in).toHaveLength(101);
+  });
+
   it('returns an empty page without reporting more results', async () => {
     prismaMock.commission.count.mockResolvedValue(0);
     prismaMock.commission.findMany.mockResolvedValue([]);

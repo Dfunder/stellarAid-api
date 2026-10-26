@@ -1,123 +1,108 @@
-# lumora-services
+# 🌟 StellarAid
 
-Express + TypeScript backend service.
+Blockchain-powered crowdfunding for global impact — transparent, borderless, and secure.
+StellarAid is an open-source, decentralized crowdfunding platform built on the Stellar Network & Soroban smart contracts. It enables creators to raise funds in XLM or any Stellar-based asset, while donors enjoy transparent, verifiable on-chain contributions.
+Whether it’s humanitarian campaigns, community causes, startups, or global charity projects — StellarAid brings trust, transparency, and financial accessibility to fundraising.
 
-## Requirements
+# 📖 About StellarAid
 
-- Node.js >= 20
-- PostgreSQL 14+ (needed for the database and Prisma migrations)
+StellarAid empowers individuals and organizations to launch fundraising campaigns with full blockchain transparency.
+The platform supports multi-asset contributions, verifiable donation trails, automated fund releases through Soroban smart contracts, and wallet-based authentication.
 
-## Quick start
+- 🔐 Decentralized & Secure — Wallet-based login, non-custodial flows
+- 💸 Multi-Asset Support — XLM, USDC, NGNT, custom Stellar assets
+- 📊 Transparent — Every donation visible and verifiable on-chain
+- ⚙️ Modular & Open Source — Easy for contributors and developers
 
-```bash
-npm install
-cp .env.example .env
-docker compose up -d postgres   # starts a health-checked PostgreSQL
-npx prisma migrate deploy       # apply the schema migrations
-npm run dev
+# 🏗 Organization Repositories
+
+- stellarAid-api → Backend services (NestJS + PostgreSQL )
+  - User authentication (wallet + email verification)
+  - Campaign approval workflow
+  - Donation tracking + analytics
+  - Notifications (email/SMS)
+  - Admin API endpoints
+
+- the repo includes:
+
+```
+/docs        → Technical documentation
+/examples    → Sample integrations
+/scripts     → Dev and deployment utilities
 ```
 
-`.env` must provide `DATABASE_URL`, `JWT_SECRET` and `JWT_REFRESH_SECRET`
-(the defaults in `.env.example` work locally); startup fails fast otherwise.
+# 🔑 How StellarAid Works
 
-Run the unit tests (`bcrypt` password util and friends) with `npm test`.
-Optionally seed the skill taxonomy: `npx prisma db seed` (idempotent —
-upserts by slug).
+- 1️⃣ User connects Stellar wallet (Freighter, Albedo, Lobstr)
+- 2️⃣ Creator launches a campaign → stored in backend + contract ref
+- 3️⃣ Donors contribute using Stellar assets
+- 4️⃣ Soroban contract escrows funds safely
+- 5️⃣ Creators withdraw funds securely on-chain
+- 6️⃣ Admin tools handle verification, fraud detection & analytics
+  Everything is transparent, globally accessible, and verifiable.
 
-## Scripts
+# 🛠 Tech Stack
 
-- `npm run dev` — dev server that restarts on file changes
-- `npm run build` — compile to `dist/` (with path aliases rewritten)
-- `npm start` — run the compiled build
-- `npm run lint` / `npm run format` — code quality
-- `npm test` — run the unit tests once (vitest)
+### ⚙️ Backend Services
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full script table, the project
-structure and all conventions.
+- NestJS (modular monolith)
+- PostgreSQL (primary data store)
+- Redis (cache, rate-limits, nonce store)
+- Nodemailer (notifications)
 
-## Health check
+### 🗄 Data Layer
 
-```bash
-curl http://localhost:3000/health        # liveness — always 200
-curl http://localhost:3000/health/live   # liveness — always 200
-curl http://localhost:3000/health/ready  # readiness — DB (and Redis when set)
-```
+- PostgreSQL for core data
+- Redis for caching + session flow
+- Optional IPFS for media (campaign images, proofs)
 
-`/health`:
+# 🚀 Roadmap
 
-```json
-{ "status": "ok", "uptime": 4.2, "timestamp": "2026-09-23T09:00:00.000Z" }
-```
+### Phase 1 (MVP)
 
-`/health/ready` (healthy):
+- User registration + wallet login
+- Create & approve campaigns
+- Donate using XLM/USDC
+- Basic dashboard & on-chain transparency
+- Core Soroban contract (escrow + withdraw)
 
-```json
-{
-  "status": "ready",
-  "checks": { "database": "ok", "redis": "not_configured" },
-  "timestamp": "2026-09-23T09:00:00.000Z"
-}
-```
+### Phase 2
 
-`/health/ready` returns `503` when the database is unreachable. The port is
-configurable with `PORT` — see `.env.example`.
+- Email verification + KYC workflow
+- Advanced analytics
+- Multi-asset campaign support
+- Dispute handling
+- Social login (GitHub/Twitter/Discord)
 
-## API versioning
+### Phase 3
 
-All feature routes mount under `/api/v1/` (`/api/v1/auth`, `/api/v1/users`,
-`/api/v1/artworks`, …). Feature routers are produced by the router factory in
-`src/routes/router-factory.ts`. The legacy `/health` probe stays at the root.
+- Automated payout schedules
+- Community governance
+- Cross-border NGO support
+- Trust badges & identity verification
 
-## Documentation
+### Phase 4
 
-Swagger UI is served at http://localhost:3000/api/docs. The OpenAPI 3 spec is
-assembled by swagger-jsdoc from `src/swagger.ts` plus `@openapi` JSDoc
-annotations in `src/routes/**/*.routes.ts`.
+- AI-driven fraud scoring
+- Multi-chain campaign expansion
+- Ecosystem grant program
 
-## Rate limiting
+# 🤝 Contributing
 
-| Scope            | Limit   | Header                                            |
-| ---------------- | ------- | ------------------------------------------------- |
-| Global (all API) | 100/min | RateLimit-Limit / Remaining / Reset               |
-| Auth endpoints   | 10/min  | RateLimit-Limit / Remaining / Reset + Retry-After |
-| Password reset   | 3/min   | RateLimit-Limit / Remaining / Reset + Retry-After |
+StellarAid is fully open-source and welcomes contributions from:
 
-Over-limit requests return `429`. The store is the shared in-memory store by
-default; set `REDIS_URL` for a Redis-backed store so limits hold across
-multiple instances. Requests to `/api/docs` and `OPTIONS` are not counted.
+- Blockchain engineers
+- Rust/Soroban developers
+- Full-stack devs
+- Designers & documentation writers
+- Community moderators
 
-## Request validation
+See CONTRIBUTING.md for contribution workflow, code style, and development setup.
 
-Incoming `body` / `params` / `query` are validated against Zod schemas in
-`src/validators/` by the `validate()` middleware. Invalid requests return
-`422` with field-level errors and never reach a controller; controllers read
-parsed data through `getValidated()`.
+# 📜 License
 
-## Auth
+StellarAid is released under the MIT License, allowing free use, modification, and distribution with attribution.
 
-| Endpoint                     | Purpose                                                                                   |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
-| `POST /api/v1/auth/register` | Create a user + verification record; returns a token pair and a verification token (201). |
-| `POST /api/v1/auth/login`    | Exchange credentials for a token pair (200).                                              |
-| `POST /api/v1/auth/refresh`  | Rotate the presented refresh token (single-use; 200).                                     |
+# 🌐 Join the StellarAid Journey
 
-Access tokens are HS256 JWTs signed with `JWT_SECRET`, live for
-`ACCESS_TOKEN_TTL` (default `15m`). Refresh tokens are opaque 32-byte hex
-values whose SHA‑256 hash is stored in `RefreshToken`; they expire after
-`REFRESH_TOKEN_TTL_DAYS` (default `7`) and are revoked on rotation, so replay
-of a used refresh token returns `401`. Login errors stay generic to avoid user
-enumeration. The auth feature is rate-limited to 10 requests/minute through
-the router factory.
-
-## Header policy
-
-Set in `src/app.ts`, in this order:
-
-| Layer         | Policy                                                                                                                                                              |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `helmet`      | Helmet defaults: CSP, HSTS (production), `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `X-DNS-Prefetch-Control`, and others. |
-| `cors`        | Credentialed CORS. Origins come from `CORS_ORIGIN` (comma-separated). When unset, the request origin is reflected so any frontend can connect during development.   |
-| `compression` | gzip/deflate encoding for compressible responses in every environment.                                                                                              |
-| Request ID    | Every response carries `X-Request-Id` (incoming `X-Request-Id` is reused when present, otherwise a UUID is generated) and it appears in that request's log lines.   |
-
-`X-Powered-By` is disabled.
+Together, we can expand access to transparent, borderless fundraising — empowering communities and creators worldwide.

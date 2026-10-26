@@ -1,44 +1,35 @@
-import js from '@eslint/js';
+// @ts-check
+import eslint from '@eslint/js';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'coverage/', '.husky/_/'] },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
-  prettierConfig,
   {
-    // Plain CommonJS scripts, if any are added later, run under Node.
-    files: ['**/*.js', '**/*.cjs'],
+    ignores: ['eslint.config.mjs'],
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  eslintPluginPrettierRecommended,
+  {
     languageOptions: {
       globals: {
-        require: 'readonly',
-        module: 'writable',
-        exports: 'writable',
-        process: 'readonly',
-        __dirname: 'readonly',
-        console: 'readonly',
+        ...globals.node,
+        ...globals.jest,
+      },
+      sourceType: 'commonjs',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
   {
-    // k6 load-test scripts run in the k6 runtime, not Node — they only get
-    // the k6/web globals, not the Node globals above.
-    files: ['loadtest/**/*.js'],
-    languageOptions: {
-      globals: {
-        __ENV: 'readonly',
-        URLSearchParams: 'readonly',
-      },
-    },
-  },
-  {
-    files: ['src/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
 );

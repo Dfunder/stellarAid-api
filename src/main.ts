@@ -1,5 +1,6 @@
+import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from './index';
 
 function resolvePort(portEnv: string | undefined): number {
   if (portEnv === undefined || portEnv === '') {
@@ -16,6 +17,10 @@ function resolvePort(portEnv: string | undefined): number {
   return port;
 }
 
+function configureApp(app: INestApplication): INestApplication {
+  return app;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',')
@@ -25,6 +30,7 @@ async function bootstrap() {
   app.enableCors({
     origin: allowedOrigins?.length ? allowedOrigins : true,
   });
+  app.setGlobalPrefix('api/v1');
   await app.listen(resolvePort(process.env.PORT));
 }
 

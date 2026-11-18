@@ -87,6 +87,16 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 - Multi-chain campaign expansion
 - Ecosystem grant program
 
+# 📦 Import Aliases
+
+Source files can import from `src/` using the `@/*` alias instead of deep relative paths:
+
+```ts
+import { AppService } from '@/app.service';
+```
+
+The alias is declared in `tsconfig.json` and mapped for Jest in `package.json` and `test/jest-e2e.json`. Keep new imports consistent with this convention.
+
 # 🤝 Contributing
 
 StellarAid is fully open-source and welcomes contributions from:

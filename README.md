@@ -87,6 +87,12 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 - Multi-chain campaign expansion
 - Ecosystem grant program
 
+# 🔌 API Endpoints
+
+All routes are served under the global `/api` prefix.
+
+- `GET /api` — returns the current greeting (`"Hello World!"`).
+
 # 🤝 Contributing
 
 StellarAid is fully open-source and welcomes contributions from:

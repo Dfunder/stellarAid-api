@@ -87,6 +87,14 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 - Multi-chain campaign expansion
 - Ecosystem grant program
 
+# 🌐 CORS
+
+Cross-origin requests are enabled for local development by default. To restrict them, set `CORS_ORIGIN` to a comma-separated list of allowed origins, for example:
+
+```bash
+CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
+```
+
 # 🔌 API Endpoints
 
 All routes are served under the global `/api` prefix.

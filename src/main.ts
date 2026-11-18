@@ -23,6 +23,13 @@ function configureApp(app: INestApplication): INestApplication {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+
+  app.enableCors({
+    origin: allowedOrigins?.length ? allowedOrigins : true,
+  });
   app.setGlobalPrefix('api/v1');
   await app.listen(resolvePort(process.env.PORT));
 }

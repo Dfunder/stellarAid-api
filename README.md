@@ -96,6 +96,15 @@ import { AppService } from '@/app.service';
 ```
 
 The alias is declared in `tsconfig.json` and mapped for Jest in `package.json` and `test/jest-e2e.json`. Keep new imports consistent with this convention.
+# ⚙️ Environment Variables
+
+Supported environment variables are documented in [`.env.example`](./.env.example). Copy it to `.env` and adjust the values for your environment:
+
+```bash
+cp .env.example .env
+```
+
+`PORT` controls the port the API listens on and defaults to `3000` when unset. Only example values belong in `.env.example`; never commit real secrets.
 
 # 🤝 Contributing
 

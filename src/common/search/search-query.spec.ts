@@ -1,4 +1,8 @@
-import { clampOffset, MAX_SEARCH_OFFSET, withTiebreaker } from './search-query';
+import {
+  clampOffset,
+  MAX_SEARCH_OFFSET,
+  withTiebreaker,
+} from './search-query';
 
 describe('search-query', () => {
   it('clamps offsets', () => {

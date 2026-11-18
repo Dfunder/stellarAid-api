@@ -19,7 +19,9 @@ export interface SaveStore {
  * both insert; the loser hits a unique violation. That means the item is now
  * saved, so treat it as success instead of surfacing a 500.
  */
-export async function toggleSave(store: SaveStore): Promise<{ saved: boolean }> {
+export async function toggleSave(
+  store: SaveStore,
+): Promise<{ saved: boolean }> {
   if (await store.exists()) {
     await store.remove();
     return { saved: false };

@@ -87,6 +87,20 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 - Multi-chain campaign expansion
 - Ecosystem grant program
 
+# 🚨 Error Responses
+
+Errors are returned by the global HTTP exception filter in a consistent envelope:
+
+```json
+{
+  "statusCode": 404,
+  "message": "Cannot GET /missing",
+  "path": "/missing",
+  "timestamp": "2026-01-01T00:00:00.000Z"
+}
+```
+
+`statusCode` and `message` come from the thrown `HttpException`; unexpected errors are reported as a `500` with a generic message.
 # 🌐 CORS
 
 Cross-origin requests are enabled for local development by default. To restrict them, set `CORS_ORIGIN` to a comma-separated list of allowed origins, for example:

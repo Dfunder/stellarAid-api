@@ -22,7 +22,8 @@ function configureApp(app: INestApplication): INestApplication {
 }
 
 async function bootstrap() {
-  const app = configureApp(await NestFactory.create(AppModule));
+  const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api/v1');
   await app.listen(resolvePort(process.env.PORT));
 }
 

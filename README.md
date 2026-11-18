@@ -87,6 +87,68 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 - Multi-chain campaign expansion
 - Ecosystem grant program
 
+# ⚙️ Environment Configuration
+
+Configuration is read from process environment variables, with built-in defaults so the app can start without an environment file. Each environment has an example file documenting the supported variables:
+
+| Environment | Example file |
+| --- | --- |
+| Development | `.env.development.example` |
+| Test | `.env.test.example` |
+| Production | `.env.production.example` |
+
+Copy the relevant example (for example, `cp .env.development.example .env.development`), adjust the values, and provide them to the process through your shell, process manager, or deployment platform. Real environment files are ignored by Git; only the `.example` files belong in the repository.
+
+`NODE_ENV` identifies the target environment. `PORT` controls the listening port and defaults to `3000` when unset. Never place real secrets in the example files.
+# 🚨 Error Responses
+
+Errors are returned by the global HTTP exception filter in a consistent envelope:
+
+```json
+{
+  "statusCode": 404,
+  "message": "Cannot GET /missing",
+  "path": "/missing",
+  "timestamp": "2026-01-01T00:00:00.000Z"
+}
+```
+
+`statusCode` and `message` come from the thrown `HttpException`; unexpected errors are reported as a `500` with a generic message.
+# 🌐 CORS
+
+Cross-origin requests are enabled for local development by default. To restrict them, set `CORS_ORIGIN` to a comma-separated list of allowed origins, for example:
+
+```bash
+CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
+```
+
+# 🔌 API Endpoints
+
+All routes are served under the global `/api` prefix.
+
+- `GET /api` — returns the current greeting (`"Hello World!"`).
+All routes are served under the versioned `/api/v1` prefix.
+
+- `GET /api/v1` — returns the current greeting (`"Hello World!"`).
+# 📦 Import Aliases
+
+Source files can import from `src/` using the `@/*` alias instead of deep relative paths:
+
+```ts
+import { AppService } from '@/app.service';
+```
+
+The alias is declared in `tsconfig.json` and mapped for Jest in `package.json` and `test/jest-e2e.json`. Keep new imports consistent with this convention.
+# ⚙️ Environment Variables
+
+Supported environment variables are documented in [`.env.example`](./.env.example). Copy it to `.env` and adjust the values for your environment:
+
+```bash
+cp .env.example .env
+```
+
+`PORT` controls the port the API listens on and defaults to `3000` when unset. Only example values belong in `.env.example`; never commit real secrets.
+
 # 🤝 Contributing
 
 StellarAid is fully open-source and welcomes contributions from:

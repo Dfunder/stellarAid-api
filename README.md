@@ -89,6 +89,9 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 
 # 🔌 API Endpoints
 
+All routes are served under the global `/api` prefix.
+
+- `GET /api` — returns the current greeting (`"Hello World!"`).
 All routes are served under the versioned `/api/v1` prefix.
 
 - `GET /api/v1` — returns the current greeting (`"Hello World!"`).

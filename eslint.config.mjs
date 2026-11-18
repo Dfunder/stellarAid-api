@@ -1,5 +1,6 @@
 // @ts-check
 import eslint from '@eslint/js';
+import importPlugin from 'eslint-plugin-import';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -25,7 +26,11 @@ export default tseslint.config(
     },
   },
   {
+    plugins: { import: importPlugin },
     rules: {
+      'no-duplicate-imports': 'error',
+      'no-redeclare': 'error',
+      'import/no-cycle': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',

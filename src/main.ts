@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { BodyParserExceptionFilter } from './common/filters/body-parser-exception.filter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 function resolvePort(portEnv: string | undefined): number {

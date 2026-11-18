@@ -2,6 +2,7 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
+  HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -36,6 +37,11 @@ export function isBodyParserError(error: unknown): error is BodyParserError {
 export class BodyParserExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
+
+    if (exception instanceof HttpException) {
+      response.status(exception.getStatus()).json(exception.getResponse());
+      return;
+    }
 
     if (!isBodyParserError(exception)) {
       response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

@@ -101,6 +101,40 @@ Errors are returned by the global HTTP exception filter in a consistent envelope
 ```
 
 `statusCode` and `message` come from the thrown `HttpException`; unexpected errors are reported as a `500` with a generic message.
+# 🌐 CORS
+
+Cross-origin requests are enabled for local development by default. To restrict them, set `CORS_ORIGIN` to a comma-separated list of allowed origins, for example:
+
+```bash
+CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
+```
+
+# 🔌 API Endpoints
+
+All routes are served under the global `/api` prefix.
+
+- `GET /api` — returns the current greeting (`"Hello World!"`).
+All routes are served under the versioned `/api/v1` prefix.
+
+- `GET /api/v1` — returns the current greeting (`"Hello World!"`).
+# 📦 Import Aliases
+
+Source files can import from `src/` using the `@/*` alias instead of deep relative paths:
+
+```ts
+import { AppService } from '@/app.service';
+```
+
+The alias is declared in `tsconfig.json` and mapped for Jest in `package.json` and `test/jest-e2e.json`. Keep new imports consistent with this convention.
+# ⚙️ Environment Variables
+
+Supported environment variables are documented in [`.env.example`](./.env.example). Copy it to `.env` and adjust the values for your environment:
+
+```bash
+cp .env.example .env
+```
+
+`PORT` controls the port the API listens on and defaults to `3000` when unset. Only example values belong in `.env.example`; never commit real secrets.
 
 # 🤝 Contributing
 

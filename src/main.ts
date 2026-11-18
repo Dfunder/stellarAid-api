@@ -18,6 +18,7 @@ function resolvePort(portEnv: string | undefined): number {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api/v1');
   await app.listen(resolvePort(process.env.PORT));
 }
 

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-export type HelloResponse = string;
+export const DEFAULT_GREETING = 'Hello World!';
 
 @Injectable()
 export class AppService {
-  getHello(): HelloResponse {
-    return 'Hello World!';
+  getHello(): string {
+    return DEFAULT_GREETING;
   }
 }

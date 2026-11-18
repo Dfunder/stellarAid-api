@@ -87,6 +87,20 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 - Multi-chain campaign expansion
 - Ecosystem grant program
 
+# ⚙️ Environment Configuration
+
+Configuration is read from process environment variables, with built-in defaults so the app can start without an environment file. Each environment has an example file documenting the supported variables:
+
+| Environment | Example file |
+| --- | --- |
+| Development | `.env.development.example` |
+| Test | `.env.test.example` |
+| Production | `.env.production.example` |
+
+Copy the relevant example (for example, `cp .env.development.example .env.development`), adjust the values, and provide them to the process through your shell, process manager, or deployment platform. Real environment files are ignored by Git; only the `.example` files belong in the repository.
+
+`NODE_ENV` identifies the target environment. `PORT` controls the listening port and defaults to `3000` when unset. Never place real secrets in the example files.
+
 # 🤝 Contributing
 
 StellarAid is fully open-source and welcomes contributions from:

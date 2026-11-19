@@ -1,0 +1,22 @@
+// Database scaffold (#1105). PostgreSQL via DATABASE_URL.
+// Add to .env.example: DATABASE_URL="postgresql://user:password@localhost:5432/stellaraid"
+// Follow-up: add `prisma` + `@prisma/client` deps and a PrismaService in src/database/.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Placeholder model so the schema is valid; replace with real domain models.
+model Campaign {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  goalAmount  Decimal  @db.Decimal(20, 7)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

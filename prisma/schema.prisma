@@ -19,4 +19,8 @@ model Campaign {
   goalAmount  Decimal  @db.Decimal(20, 7)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Keep indexes aligned with actual filter, sort, and join predicates.
+  // Example for a future owner/status query: @@index([ownerId, status])
+  @@index([createdAt])
 }

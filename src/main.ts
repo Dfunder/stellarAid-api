@@ -19,7 +19,7 @@ function resolvePort(portEnv: string | undefined): number {
 
 async function bootstrap() {
   const startedAt = Date.now();
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);

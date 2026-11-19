@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { Request, Response, NextFunction } from 'express';
 import { BodyParserExceptionFilter } from './common/filters/body-parser-exception.filter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { configureBodyParser } from './common/http/body-parser';
 
 function mediaType(value: string | undefined): string {
   return (value?.split(';', 1)[0] ?? '').trim().toLowerCase();
@@ -24,6 +25,7 @@ function acceptsJson(value: string | undefined): boolean {
 }
 
 export function configureApp(app: INestApplication): INestApplication {
+  configureBodyParser(app);
   app.use((request: Request, response: Response, next: NextFunction) => {
     const path = request.path ?? request.url;
 

@@ -18,7 +18,7 @@ interface BodyParserError {
  * body-parser failures carry a string `type` and an HTTP-ish `status`, but are
  * not `HttpException`s, so Nest would otherwise answer 500.
  */
-const STATUS_BY_TYPE: Record<string, number> = {
+export const STATUS_BY_TYPE: Record<string, number> = {
   'entity.parse.failed': HttpStatus.BAD_REQUEST,
   'entity.verify.failed': HttpStatus.BAD_REQUEST,
   'request.aborted': HttpStatus.BAD_REQUEST,
@@ -27,6 +27,10 @@ const STATUS_BY_TYPE: Record<string, number> = {
   'charset.unsupported': HttpStatus.UNSUPPORTED_MEDIA_TYPE,
   'encoding.unsupported': HttpStatus.UNSUPPORTED_MEDIA_TYPE,
 };
+
+export function getBodyParserStatus(type: string): number {
+  return STATUS_BY_TYPE[type] ?? HttpStatus.BAD_REQUEST;
+}
 
 export function isBodyParserError(error: unknown): error is BodyParserError {
   if (typeof error !== 'object' || error === null) return false;
@@ -60,8 +64,7 @@ export class BodyParserExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const statusCode =
-      STATUS_BY_TYPE[exception.type as string] ?? HttpStatus.BAD_REQUEST;
+    const statusCode = getBodyParserStatus(exception.type as string);
     response.status(statusCode).json({
       statusCode,
       code: errorCodeForStatus(statusCode),

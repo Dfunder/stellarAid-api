@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppService, type HelloResponse } from './app.service';
 
@@ -13,7 +14,12 @@ export class AppController {
     description: 'The current API greeting.',
     schema: { type: 'string', example: 'Hello World!' },
   })
-  getHello(): HelloResponse {
-    return this.appService.getHello();
+  getHello(@Res({ passthrough: true }) response?: Response): HelloResponse {
+    const greeting = this.appService.getHello();
+    if (response) {
+      response.status(200).json(greeting);
+      return greeting;
+    }
+    return greeting;
   }
 }

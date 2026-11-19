@@ -29,6 +29,7 @@ describe('AppController (e2e)', () => {
     return request(app!.getHttpServer())
       .get('/api/v1')
       .expect(200)
+      .expect('Content-Type', /application\/json/)
       .expect(({ body }) => {
         expect(body).toBe('Hello World!');
       });
@@ -103,5 +104,34 @@ describe('AppController (e2e)', () => {
       statusCode: 404,
       code: 'NOT_FOUND',
     });
+  it('/api/v1 (GET) returns an explicit JSON content type', () => {
+    return request(app!.getHttpServer())
+      .get('/api/v1')
+      .set('Accept', 'application/json')
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+      .expect(({ body }) => {
+        expect(body).toBe('Hello World!');
+      });
+  });
+
+  it('rejects write requests that do not use JSON', () => {
+    return request(app!.getHttpServer())
+      .post('/api/v1/missing')
+      .set('Content-Type', 'text/plain')
+      .send('not-json')
+      .expect(415)
+      .expect('Content-Type', /application\/json/)
+      .expect(({ body }) => {
+        expect(body.message).toContain('application/json');
+      });
+  });
+
+  it('rejects representations other than JSON', () => {
+    return request(app!.getHttpServer())
+      .get('/api/v1')
+      .set('Accept', 'text/html')
+      .expect(406)
+      .expect('Content-Type', /application\/json/);
   });
 });

@@ -142,6 +142,14 @@ See [error responses and validation](./docs/errors-and-validation.md) for machin
 - `GET /api/v1/docs` — interactive Swagger UI; `/api/v1/docs-json` serves the
   generated OpenAPI document.
 
+# 📖 API Documentation
+
+- [Client usage examples](./docs/api.md)
+- [Inclusive API design guidelines](./docs/accessibility.md)
+- [API deprecation and change policy](./docs/deprecation-policy.md)
+
+API responses are JSON. JSON request bodies must use `Content-Type: application/json` (or another `+json` media type), and clients should send `Accept: application/json`. Unsupported write media types return `415`, and unsupported representations return `406` with the documented JSON error envelope.
+
 ## Admin and Media Scaffolds
 
 The admin module is intentionally fail-closed: its guard denies every request

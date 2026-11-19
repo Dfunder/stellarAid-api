@@ -1,4 +1,6 @@
 import { Controller, Get, Req, Res } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppService, type HelloResponse } from './app.service';
 import type { Request, Response } from 'express';
@@ -41,5 +43,12 @@ export class AppController {
 
     response.status(200).json(greeting);
     return;
+  getHello(@Res({ passthrough: true }) response?: Response): HelloResponse {
+    const greeting = this.appService.getHello();
+    if (response) {
+      response.status(200).json(greeting);
+      return greeting;
+    }
+    return greeting;
   }
 }

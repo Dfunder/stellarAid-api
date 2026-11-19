@@ -81,6 +81,43 @@ describe('AppController (e2e)', () => {
     });
   });
 
+  it('returns descriptive liveness metadata', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/health/live')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      service: 'stellaraid-api',
+      version: '0.0.1',
+    });
+    expect(response.body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('returns descriptive readiness metadata', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/health/ready')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      service: 'stellaraid-api',
+      checks: {
+        database: 'not-configured',
+        redis: 'not-configured',
+      },
+    });
+  });
+
+  it('returns service version metadata', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/version')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      name: 'stellarAid-api',
+      version: '0.0.1',
+    });
   it('/api/v1 (GET) supports cache validation', async () => {
     const first = await request(app!.getHttpServer())
       .get('/api/v1')

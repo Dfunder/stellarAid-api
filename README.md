@@ -141,6 +141,9 @@ See [error responses and validation](./docs/errors-and-validation.md) for machin
   authentication and authorization are implemented.
 - `GET /api/v1/docs` — interactive Swagger UI; `/api/v1/docs-json` serves the
   generated OpenAPI document.
+- `GET /api/v1/health/live` — liveness metadata: `status`, `service`, `version`, and `timestamp`.
+- `GET /api/v1/health/ready` — readiness metadata plus named dependency check states.
+- `GET /api/v1/version` — service name, version, and environment metadata.
 
 # 📖 API Documentation
 

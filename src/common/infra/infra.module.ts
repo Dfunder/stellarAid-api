@@ -1,4 +1,12 @@
-import { Controller, Get, Injectable, MiddlewareConsumer, Module, NestMiddleware, NestModule } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Injectable,
+  MiddlewareConsumer,
+  Module,
+  NestMiddleware,
+  NestModule,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -7,7 +15,8 @@ import type { NextFunction, Request, Response } from 'express';
 export class RequestIdMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     const incoming = req.headers['x-request-id'];
-    const id = typeof incoming === 'string' && incoming ? incoming : randomUUID();
+    const id =
+      typeof incoming === 'string' && incoming ? incoming : randomUUID();
     req.headers['x-request-id'] = id;
     res.setHeader('X-Request-Id', id);
     next();
@@ -19,13 +28,26 @@ export class RequestIdMiddleware implements NestMiddleware {
 export class HealthController {
   @Get('live')
   live() {
-    return { status: 'ok' };
+    return {
+      status: 'ok',
+      service: 'stellaraid-api',
+      version: process.env.npm_package_version ?? '0.0.1',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get('ready')
   ready() {
-    // Add dependency checks (DB, Redis) here as they are introduced.
-    return { status: 'ok', checks: {} };
+    return {
+      status: 'ok',
+      service: 'stellaraid-api',
+      version: process.env.npm_package_version ?? '0.0.1',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: 'not-configured',
+        redis: 'not-configured',
+      },
+    };
   }
 }
 

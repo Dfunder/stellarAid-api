@@ -24,6 +24,11 @@ export class ConfirmPasswordResetDto {
 
   @IsString()
   @MinLength(8)
+  @IsString({ message: 'Enter a valid password reset token.' })
+  token!: string;
+
+  @MinLength(8, { message: 'Password must contain at least 8 characters.' })
+  @IsString({ message: 'Enter a valid password.' })
   password!: string;
 }
 
@@ -52,6 +57,7 @@ export class PasswordResetController {
         translate(locale, 'validation.password.minLength'),
       );
     }
+  async confirm(@Body() body: ConfirmPasswordResetDto): Promise<void> {
     try {
       await this.handler.resetPassword(body.token, body.password);
     } catch {

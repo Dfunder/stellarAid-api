@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { errorCodeForStatus } from './error-code';
 
 interface BodyParserError {
   type?: string;
@@ -43,13 +44,21 @@ export class BodyParserExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
 
     if (exception instanceof HttpException) {
-      response.status(exception.getStatus()).json(exception.getResponse());
+      const status = exception.getStatus();
+      response.status(status).json({
+        ...((typeof exception.getResponse() === 'object'
+          ? exception.getResponse()
+          : { message: exception.message }) as object),
+        statusCode: status,
+        code: errorCodeForStatus(status),
+      });
       return;
     }
 
     if (!isBodyParserError(exception)) {
       response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        code: 'INTERNAL_SERVER_ERROR',
         message: 'Internal server error',
       });
       return;
@@ -58,6 +67,7 @@ export class BodyParserExceptionFilter implements ExceptionFilter {
     const statusCode = getBodyParserStatus(exception.type as string);
     response.status(statusCode).json({
       statusCode,
+      code: errorCodeForStatus(statusCode),
       message: exception.message ?? 'Invalid request body',
     });
   }

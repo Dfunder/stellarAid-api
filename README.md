@@ -101,6 +101,10 @@ Copy the relevant example (for example, `cp .env.development.example .env.develo
 
 `NODE_ENV` identifies the target environment. `PORT` controls the listening port and defaults to `3000` when unset. Never place real secrets in the example files.
 
+## Production concurrency
+
+See [production concurrency guidance](./docs/concurrency.md) for container replicas, Node/PM2 process models, capacity planning, and graceful shutdown expectations. The development command remains `npm run start:dev`.
+
 # 🚨 Error Responses
 
 Errors are returned by the global HTTP exception filter in a consistent envelope:
@@ -108,6 +112,7 @@ Errors are returned by the global HTTP exception filter in a consistent envelope
 ```json
 {
   "statusCode": 404,
+  "code": "NOT_FOUND",
   "message": "Cannot GET /missing",
   "path": "/missing",
   "timestamp": "2026-01-01T00:00:00.000Z"
@@ -128,7 +133,10 @@ CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
 
 All API routes are served under the versioned `/api/v1` prefix.
 
-- `GET /api/v1/` — returns the current greeting (`"Hello World!"`).
+- `GET /api/v1/` — returns the current greeting (`"Hello World!"`). It includes an `ETag` and `Cache-Control: public, max-age=60`; send its ETag as `If-None-Match` to receive `304 Not Modified` when unchanged.
+
+See [error responses and validation](./docs/errors-and-validation.md) for machine-readable codes and clear validation message conventions.
+
 - `GET /api/v1/admin/analytics` — reserved admin endpoint; returns `401` until
   authentication and authorization are implemented.
 - `GET /api/v1/docs` — interactive Swagger UI; `/api/v1/docs-json` serves the
@@ -136,6 +144,14 @@ All API routes are served under the versioned `/api/v1` prefix.
 - `GET /api/v1/health/live` — liveness metadata: `status`, `service`, `version`, and `timestamp`.
 - `GET /api/v1/health/ready` — readiness metadata plus named dependency check states.
 - `GET /api/v1/version` — service name, version, and environment metadata.
+
+# 📖 API Documentation
+
+- [Client usage examples](./docs/api.md)
+- [Inclusive API design guidelines](./docs/accessibility.md)
+- [API deprecation and change policy](./docs/deprecation-policy.md)
+
+API responses are JSON. JSON request bodies must use `Content-Type: application/json` (or another `+json` media type), and clients should send `Accept: application/json`. Unsupported write media types return `415`, and unsupported representations return `406` with the documented JSON error envelope.
 
 ## Admin and Media Scaffolds
 

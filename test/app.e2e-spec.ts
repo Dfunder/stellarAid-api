@@ -13,7 +13,7 @@ describe('AppController (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
     configureApp(app);
     await app.init();
   });
@@ -115,5 +115,16 @@ describe('AppController (e2e)', () => {
       name: 'stellarAid-api',
       version: '0.0.1',
     });
+  });
+
+  it('rejects JSON payloads larger than the configured limit', async () => {
+    await request(app!.getHttpServer())
+      .post('/api/v1')
+      .set('Content-Type', 'application/json')
+      .send({ payload: 'x'.repeat(1_100_000) })
+      .expect(413)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ statusCode: 413 });
+      });
   });
 });

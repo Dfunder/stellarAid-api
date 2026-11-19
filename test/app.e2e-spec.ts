@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src';
+import { configureApp } from './../src/app.setup';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App> | undefined;
@@ -13,6 +14,7 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    configureApp(app);
     await app.init();
   });
 
@@ -28,5 +30,51 @@ describe('AppController (e2e)', () => {
       .get('/api/v1')
       .expect(200)
       .expect('Hello World!');
+  });
+
+  it('/api/v1/admin/analytics (GET) fails closed', () => {
+    return request(app!.getHttpServer())
+      .get('/api/v1/admin/analytics')
+      .expect(401);
+  });
+
+  it('serves Swagger UI and documents the active routes', async () => {
+    await request(app!.getHttpServer())
+      .get('/api/v1/docs')
+      .expect(200)
+      .expect('Content-Type', /html/);
+
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/docs-json')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      paths: {
+        '/api/v1': {
+          get: {
+            responses: {
+              '200': {
+                description: 'The current API greeting.',
+                content: {
+                  'application/json': {
+                    schema: { type: 'string', example: 'Hello World!' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        '/api/v1/admin/analytics': {
+          get: {
+            responses: {
+              '401': {
+                description:
+                  'Admin authentication and authorization are not configured.',
+              },
+            },
+          },
+        },
+      },
+    });
   });
 });

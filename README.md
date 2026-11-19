@@ -124,12 +124,44 @@ CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
 
 # 🔌 API Endpoints
 
-All routes are served under the global `/api` prefix.
+All API routes are served under the versioned `/api/v1` prefix.
 
-- `GET /api` — returns the current greeting (`"Hello World!"`).
-All routes are served under the versioned `/api/v1` prefix.
+- `GET /api/v1/` — returns the current greeting (`"Hello World!"`).
+- `GET /api/v1/admin/analytics` — reserved admin endpoint; returns `401` until
+  authentication and authorization are implemented.
+- `GET /api/v1/docs` — interactive Swagger UI; `/api/v1/docs-json` serves the
+  generated OpenAPI document.
 
-- `GET /api/v1` — returns the current greeting (`"Hello World!"`).
+## Admin and Media Scaffolds
+
+The admin module is intentionally fail-closed: its guard denies every request
+until real authentication and role-based authorization are connected. Before
+enabling admin operations, require an authenticated principal with an explicit
+admin role, enforce least privilege, and audit sensitive actions. The current
+analytics operation is a placeholder and does not expose data.
+
+The media module defines storage-provider and validation-hook interfaces for
+future local, S3, or IPFS adapters. No upload route or storage provider is
+configured. A provider and at least one validation hook (including size,
+content-type, and content inspection) are required before the service accepts
+uploads; never trust a client filename or write unvalidated content to storage.
+
+## Database Commands
+
+The Prisma schema is scaffolded at `prisma/schema.prisma`. Install the Prisma
+CLI locally before using its commands:
+
+```bash
+npm install --save-dev prisma
+DATABASE_URL="postgresql://user:password@localhost:5432/stellaraid" npm run db:migrate
+DATABASE_URL="postgresql://user:password@localhost:5432/stellaraid" npm run db:seed
+```
+
+`db:migrate` runs `prisma migrate deploy`; `db:seed` runs the configured seed
+entry point. Both commands fail with a clear message if `DATABASE_URL` or the
+local Prisma CLI is missing. The seed entry point is a no-op until domain seed
+data is defined. Configure a real database URL through the environment and
+never commit credentials.
 # 📦 Import Aliases
 
 Source files can import from `src/` using the `@/*` alias instead of deep relative paths:

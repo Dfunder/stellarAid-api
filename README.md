@@ -91,15 +91,20 @@ The platform supports multi-asset contributions, verifiable donation trails, aut
 
 Configuration is read from process environment variables, with built-in defaults so the app can start without an environment file. Each environment has an example file documenting the supported variables:
 
-| Environment | Example file |
-| --- | --- |
+| Environment | Example file               |
+| ----------- | -------------------------- |
 | Development | `.env.development.example` |
-| Test | `.env.test.example` |
-| Production | `.env.production.example` |
+| Test        | `.env.test.example`        |
+| Production  | `.env.production.example`  |
 
 Copy the relevant example (for example, `cp .env.development.example .env.development`), adjust the values, and provide them to the process through your shell, process manager, or deployment platform. Real environment files are ignored by Git; only the `.example` files belong in the repository.
 
 `NODE_ENV` identifies the target environment. `PORT` controls the listening port and defaults to `3000` when unset. Never place real secrets in the example files.
+
+## Production concurrency
+
+See [production concurrency guidance](./docs/concurrency.md) for container replicas, Node/PM2 process models, capacity planning, and graceful shutdown expectations. The development command remains `npm run start:dev`.
+
 # 🚨 Error Responses
 
 Errors are returned by the global HTTP exception filter in a consistent envelope:
@@ -107,6 +112,7 @@ Errors are returned by the global HTTP exception filter in a consistent envelope
 ```json
 {
   "statusCode": 404,
+  "code": "NOT_FOUND",
   "message": "Cannot GET /missing",
   "path": "/missing",
   "timestamp": "2026-01-01T00:00:00.000Z"
@@ -114,6 +120,7 @@ Errors are returned by the global HTTP exception filter in a consistent envelope
 ```
 
 `statusCode` and `message` come from the thrown `HttpException`; unexpected errors are reported as a `500` with a generic message.
+
 # 🌐 CORS
 
 Cross-origin requests are enabled for local development by default. To restrict them, set `CORS_ORIGIN` to a comma-separated list of allowed origins, for example:
@@ -126,7 +133,10 @@ CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
 
 All API routes are served under the versioned `/api/v1` prefix.
 
-- `GET /api/v1/` — returns the current greeting (`"Hello World!"`).
+- `GET /api/v1/` — returns the current greeting (`"Hello World!"`). It includes an `ETag` and `Cache-Control: public, max-age=60`; send its ETag as `If-None-Match` to receive `304 Not Modified` when unchanged.
+
+See [error responses and validation](./docs/errors-and-validation.md) for machine-readable codes and clear validation message conventions.
+
 - `GET /api/v1/admin/analytics` — reserved admin endpoint; returns `401` until
   authentication and authorization are implemented.
 - `GET /api/v1/docs` — interactive Swagger UI; `/api/v1/docs-json` serves the
@@ -162,6 +172,7 @@ entry point. Both commands fail with a clear message if `DATABASE_URL` or the
 local Prisma CLI is missing. The seed entry point is a no-op until domain seed
 data is defined. Configure a real database URL through the environment and
 never commit credentials.
+
 # 📦 Import Aliases
 
 Source files can import from `src/` using the `@/*` alias instead of deep relative paths:
@@ -171,6 +182,7 @@ import { AppService } from '@/app.service';
 ```
 
 The alias is declared in `tsconfig.json` and mapped for Jest in `package.json` and `test/jest-e2e.json`. Keep new imports consistent with this convention.
+
 # ⚙️ Environment Variables
 
 Supported environment variables are documented in [`.env.example`](./.env.example). Copy it to `.env` and adjust the values for your environment:

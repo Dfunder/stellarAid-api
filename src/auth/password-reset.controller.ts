@@ -7,6 +7,7 @@ import {
   Injectable,
   Post,
 } from '@nestjs/common';
+import { IsString, MinLength } from 'class-validator';
 
 export const PASSWORD_RESET_HANDLER = 'PASSWORD_RESET_HANDLER';
 
@@ -16,7 +17,11 @@ export interface PasswordResetHandler {
 }
 
 export class ConfirmPasswordResetDto {
+  @IsString({ message: 'Enter a valid password reset token.' })
   token!: string;
+
+  @MinLength(8, { message: 'Password must contain at least 8 characters.' })
+  @IsString({ message: 'Enter a valid password.' })
   password!: string;
 }
 
@@ -31,12 +36,6 @@ export class PasswordResetController {
   @Post('confirm')
   @HttpCode(204)
   async confirm(@Body() body: ConfirmPasswordResetDto): Promise<void> {
-    if (typeof body?.token !== 'string' || body.token === '') {
-      throw new BadRequestException('token is required');
-    }
-    if (typeof body.password !== 'string' || body.password.length < 8) {
-      throw new BadRequestException('password must be at least 8 characters');
-    }
     try {
       await this.handler.resetPassword(body.token, body.password);
     } catch {

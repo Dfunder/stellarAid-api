@@ -29,7 +29,9 @@ describe('AppController (e2e)', () => {
     return request(app!.getHttpServer())
       .get('/api/v1')
       .expect(200)
-      .expect('Hello World!');
+      .expect(({ body }) => {
+        expect(body).toBe('Hello World!');
+      });
   });
 
   it('/api/v1/admin/analytics (GET) fails closed', () => {
@@ -75,6 +77,31 @@ describe('AppController (e2e)', () => {
           },
         },
       },
+    });
+  });
+
+  it('/api/v1 (GET) supports cache validation', async () => {
+    const first = await request(app!.getHttpServer())
+      .get('/api/v1')
+      .expect(200);
+
+    expect(first.headers['etag']).toBeDefined();
+    expect(first.headers['cache-control']).toContain('public');
+
+    await request(app!.getHttpServer())
+      .get('/api/v1')
+      .set('If-None-Match', first.headers['etag'])
+      .expect(304);
+  });
+
+  it('missing routes include a machine-readable error code', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/missing')
+      .expect(404);
+
+    expect(response.body).toMatchObject({
+      statusCode: 404,
+      code: 'NOT_FOUND',
     });
   });
 });

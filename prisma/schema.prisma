@@ -24,3 +24,20 @@ model Campaign {
   // Example for a future owner/status query: @@index([ownerId, status])
   @@index([createdAt])
 }
+
+enum AnalyticsEventType {
+  user_signed_up
+  campaign_created
+  campaign_viewed
+  donation_created
+  donation_completed
+}
+
+model AnalyticsEvent {
+  id         String             @id @default(uuid())
+  eventType  AnalyticsEventType
+  properties Json
+  createdAt  DateTime           @default(now())
+
+  @@index([eventType, createdAt])
+}

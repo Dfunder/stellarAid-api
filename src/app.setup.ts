@@ -5,6 +5,7 @@ import { BodyParserExceptionFilter } from './common/filters/body-parser-exceptio
 import { ERROR_CODES } from './common/filters/error-code';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { configureBodyParser } from './common/http/body-parser';
+import { configureSecurityHeaders } from './common/security/security-headers';
 
 function mediaType(value: string | undefined): string {
   return (value?.split(';', 1)[0] ?? '').trim().toLowerCase();
@@ -23,6 +24,7 @@ function acceptsJson(value: string | undefined): boolean {
 }
 
 export function configureApp(app: INestApplication): INestApplication {
+  configureSecurityHeaders(app);
   configureBodyParser(app);
   app.use((request: Request, response: Response, next: NextFunction) => {
     const path = request.path ?? request.url;

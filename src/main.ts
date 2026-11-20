@@ -1,36 +1,40 @@
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { configureApp } from './app.setup';
+
+function resolvePort(portEnv: string | undefined): number {
+  if (portEnv === undefined || portEnv === '') {
+    return 3000;
+  }
+
+  const port = Number(portEnv);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(
+      `Invalid PORT environment variable: "${portEnv}". Expected an integer between 1 and 65535.`,
+    );
+  }
+
+  return port;
+}
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  const config = new DocumentBuilder()
-    .setTitle('Lumora API')
-    .setDescription('Lumora Creative Marketplace API')
-    .setVersion('1.0')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  const startedAt = Date.now();
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
 
   app.enableCors({
-    origin: process.env.NEXT_PUBLIC_FRONTEND_URL,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: allowedOrigins?.length ? allowedOrigins : true,
   });
-
-  await app.listen(process.env.PORT ?? 3000);
+  configureApp(app);
+  await app.listen(resolvePort(process.env.PORT));
+  if (process.env.STARTUP_TIMING === 'true') {
+    console.log(`Startup ready in ${Date.now() - startedAt}ms`);
+  }
 }
-bootstrap();
+
+bootstrap().catch((err) => {
+  console.error('Failed to start application', err);
+  process.exit(1);
+});

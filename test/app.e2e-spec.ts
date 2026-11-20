@@ -118,6 +118,8 @@ describe('AppController (e2e)', () => {
       name: 'stellarAid-api',
       version: '0.0.1',
     });
+  });
+
   it('/api/v1 (GET) supports cache validation', async () => {
     const first = await request(app!.getHttpServer())
       .get('/api/v1')
@@ -141,6 +143,8 @@ describe('AppController (e2e)', () => {
       statusCode: 404,
       code: 'NOT_FOUND',
     });
+  });
+
   it('/api/v1 (GET) returns an explicit JSON content type', () => {
     return request(app!.getHttpServer())
       .get('/api/v1')

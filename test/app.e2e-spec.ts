@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src';
 import { configureApp } from './../src/app.setup';
+import { disableXPoweredBy } from './../src/common/http/disable-x-powered-by';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App> | undefined;
@@ -14,6 +15,7 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication({ bodyParser: false });
+    disableXPoweredBy(app);
     configureApp(app);
     await app.init();
   });
@@ -33,6 +35,11 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body).toBe('Hello World!');
       });
+  });
+
+  it('does not send the X-Powered-By header', async () => {
+    const response = await request(app!.getHttpServer()).get('/api/v1');
+    expect(response.headers['x-powered-by']).toBeUndefined();
   });
 
   it('/api/v1/admin/analytics (GET) fails closed', () => {

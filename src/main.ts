@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
+import { disableXPoweredBy } from './common/http/disable-x-powered-by';
 
 function resolvePort(portEnv: string | undefined): number {
   if (portEnv === undefined || portEnv === '') {
@@ -27,6 +28,7 @@ async function bootstrap() {
   app.enableCors({
     origin: allowedOrigins?.length ? allowedOrigins : true,
   });
+  disableXPoweredBy(app);
   configureApp(app);
   await app.listen(resolvePort(process.env.PORT));
   if (process.env.STARTUP_TIMING === 'true') {

@@ -1,0 +1,1 @@
+export const ANALYTICS_EVENT_STORE = Symbol('ANALYTICS_EVENT_STORE');

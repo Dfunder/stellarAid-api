@@ -1,0 +1,24 @@
+# Local development dependencies scaffold (PostgreSQL + Redis), per README roadmap.
+# Usage: docker compose up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stellaraid}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stellaraid}
+      POSTGRES_DB: ${POSTGRES_DB:-stellaraid}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,37 @@
+export const ERROR_CODES = {
+  BAD_REQUEST: 'BAD_REQUEST',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND',
+  METHOD_NOT_ALLOWED: 'METHOD_NOT_ALLOWED',
+  NOT_ACCEPTABLE: 'NOT_ACCEPTABLE',
+  CONFLICT: 'CONFLICT',
+  PAYLOAD_TOO_LARGE: 'PAYLOAD_TOO_LARGE',
+  UNSUPPORTED_MEDIA_TYPE: 'UNSUPPORTED_MEDIA_TYPE',
+  INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+} as const;
+
+export function errorCodeForStatus(status: number): string {
+  switch (status) {
+    case 400:
+      return ERROR_CODES.BAD_REQUEST;
+    case 401:
+      return ERROR_CODES.UNAUTHORIZED;
+    case 403:
+      return ERROR_CODES.FORBIDDEN;
+    case 404:
+      return ERROR_CODES.NOT_FOUND;
+    case 405:
+      return ERROR_CODES.METHOD_NOT_ALLOWED;
+    case 406:
+      return ERROR_CODES.NOT_ACCEPTABLE;
+    case 409:
+      return ERROR_CODES.CONFLICT;
+    case 413:
+      return ERROR_CODES.PAYLOAD_TOO_LARGE;
+    case 415:
+      return ERROR_CODES.UNSUPPORTED_MEDIA_TYPE;
+    default:
+      return ERROR_CODES.INTERNAL_SERVER_ERROR;
+  }
+}

@@ -1,21 +1,15 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { RedisModule } from './redis/redis.module';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { MediaModule } from './modules/media/media.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { InfraModule } from './common/infra/infra.module';
+import { VersionController } from './common/http/app-http.extras';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    PrismaModule,
-    RedisModule,
-    AuthModule,
-    UsersModule,
-  ],
-  controllers: [AppController],
+  imports: [AdminModule, MediaModule, AnalyticsModule, InfraModule],
+  controllers: [AppController, VersionController],
   providers: [AppService],
 })
 export class AppModule {}

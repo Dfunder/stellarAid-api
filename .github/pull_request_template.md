@@ -21,6 +21,15 @@ Closes #
 - [ ] `npm test`
 - [ ] `npm run test:e2e`
 
+## Accessibility and Client Impact
+
+<!-- See docs/accessibility.md. Write "N/A" next to an item that does not apply to this change. -->
+
+- [ ] Error messages are clear and actionable, with no stack traces or internal details
+- [ ] Response fields are explicit and self-describing, not dependent on color, emoji, or position
+- [ ] API docs, Swagger descriptions, and examples were updated for any contract change
+- [ ] Client impact was considered; breaking changes are avoided or called out with migration notes
+
 ## Screenshots / Logs
 
 <!-- Add screenshots or relevant logs if the change affects behavior or output. -->

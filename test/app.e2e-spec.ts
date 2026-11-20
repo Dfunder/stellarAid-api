@@ -23,6 +23,12 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
+  it('/ (POST) should return 404 for unsupported method', () => {
+    return request(app.getHttpServer())
+      .post('/')
+      .expect(404);
+  });
+
   afterEach(async () => {
     await app.close();
   });

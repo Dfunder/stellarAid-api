@@ -33,6 +33,44 @@ The following is a set of guidelines for contributing to this project. These are
     npm run start:dev
     ```
 
+## Lint, Format and Test
+
+Run the linter (auto-fixes issues in place):
+
+```bash
+npm run lint
+```
+
+Check formatting with Prettier:
+
+```bash
+npm run format
+```
+
+Run unit tests:
+
+```bash
+npm test
+```
+
+Run unit tests with coverage (enforces thresholds defined in `package.json`):
+
+```bash
+npm run test:cov
+```
+
+Run end-to-end tests:
+
+```bash
+npm run test:e2e
+```
+
+Build the project:
+
+```bash
+npm run build
+```
+
 ## Required Environment Variables
 
 Make sure to set the following environment variables in your `.env` file:

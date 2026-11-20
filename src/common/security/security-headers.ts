@@ -59,9 +59,23 @@ export function securityHeaders(
 }
 
 /**
- * Enable Helmet security headers. Call this before any other middleware so
- * every response, including early error responses, carries the headers.
+ * Stop Express from advertising itself. Express adds `X-Powered-By: Express`
+ * before any middleware runs, so turning the setting off means the header is
+ * never created, rather than depending on Helmet to remove it afterwards.
+ */
+export function disablePoweredBy(app: INestApplication): void {
+  const instance = app.getHttpAdapter().getInstance() as {
+    disable?: (setting: string) => unknown;
+  };
+  instance.disable?.('x-powered-by');
+}
+
+/**
+ * Enable Helmet security headers and hide framework details. Call this before
+ * any other middleware so every response, including early error responses,
+ * carries the headers.
  */
 export function configureSecurityHeaders(app: INestApplication): void {
+  disablePoweredBy(app);
   app.use(securityHeaders);
 }

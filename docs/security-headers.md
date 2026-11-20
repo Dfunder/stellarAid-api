@@ -16,7 +16,7 @@ Helmet's other defaults apply to both, for example `X-Content-Type-Options: nosn
 - `Cross-Origin-Resource-Policy` is `cross-origin`, because the API is meant to be read by browser clients on other origins (see `CORS_ORIGIN` in the README).
 - `upgrade-insecure-requests` is not sent, so Swagger UI keeps working over plain HTTP during local development.
 
-Helmet also removes the `X-Powered-By` header.
+`X-Powered-By` is never sent. `disablePoweredBy` turns off Express's `x-powered-by` setting, so the header is not created at all, and Helmet would remove it as well if it were. This keeps the framework from being fingerprinted from response headers.
 
 ## Changing the policy
 

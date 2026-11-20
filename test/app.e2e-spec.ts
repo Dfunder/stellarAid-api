@@ -187,6 +187,31 @@ describe('AppController (e2e)', () => {
       });
   });
 
+  describe('X-Powered-By', () => {
+    it('is disabled on the Express instance, not only stripped by Helmet', () => {
+      const instance = app!.getHttpAdapter().getInstance() as {
+        get(setting: string): unknown;
+      };
+      expect(instance.get('x-powered-by')).toBe(false);
+    });
+
+    it('is not sent on success, error, or docs responses', async () => {
+      const responses = [
+        await request(app!.getHttpServer()).get('/api/v1').expect(200),
+        await request(app!.getHttpServer()).get('/api/v1/missing').expect(404),
+        await request(app!.getHttpServer())
+          .get('/api/v1')
+          .set('Accept', 'text/html')
+          .expect(406),
+        await request(app!.getHttpServer()).get('/api/v1/docs').expect(200),
+      ];
+
+      for (const response of responses) {
+        expect(response.headers['x-powered-by']).toBeUndefined();
+      }
+    });
+  });
+
   describe('security headers', () => {
     it('sets Helmet headers and a locked-down CSP on API responses', async () => {
       const response = await request(app!.getHttpServer())

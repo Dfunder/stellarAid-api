@@ -9,6 +9,7 @@ This project serves browser, mobile, command-line, and server-side clients. API 
 - Represent missing optional data as `null` only when it is intentional; omit fields that do not apply, and document both cases.
 - Use ISO 8601 UTC strings with a `Z` suffix for timestamps. Use stable identifiers that clients do not need to parse.
 - Use pagination, sorting, and filtering names consistently. Document limits and the shape of list responses before a list endpoint becomes public.
+- List responses must use the standard pagination shape in [`api.md`](./api.md#pagination): explicit `limit`, `offset`, `count`, `hasNext`, `hasPrevious`, `nextOffset`, `previousOffset` and `total` fields, with `null` (never an omitted field) for anything that does not apply. Clients, including screen readers and other assistive tools, can then announce "showing 3 to 4, more available" without guessing.
 
 ## Errors and response status
 

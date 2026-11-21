@@ -27,11 +27,10 @@ async function bootstrap() {
   app.enableCors({
     origin: allowedOrigins?.length ? allowedOrigins : true,
   });
-  configureApp(app);
-  await app.listen(resolvePort(process.env.PORT));
-  if (process.env.STARTUP_TIMING === 'true') {
-    console.log(`Startup ready in ${Date.now() - startedAt}ms`);
-  }
+
+  app.enableShutdownHooks();
+
+  await app.listen(process.env.PORT ?? 3000);
 }
 
 bootstrap().catch((err) => {

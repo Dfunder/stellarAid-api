@@ -19,11 +19,6 @@ export interface PasswordResetHandler {
 }
 
 export class ConfirmPasswordResetDto {
-  @IsString()
-  token!: string;
-
-  @IsString()
-  @MinLength(8)
   @IsString({ message: 'Enter a valid password reset token.' })
   token!: string;
 
@@ -57,7 +52,6 @@ export class PasswordResetController {
         translate(locale, 'validation.password.minLength'),
       );
     }
-  async confirm(@Body() body: ConfirmPasswordResetDto): Promise<void> {
     try {
       await this.handler.resetPassword(body.token, body.password);
     } catch {

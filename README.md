@@ -129,6 +129,10 @@ Cross-origin requests are enabled for local development by default. To restrict 
 CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
 ```
 
+# 🛡 Security Headers
+
+Every response carries security headers set by [Helmet](https://helmetjs.github.io/), with a strict Content Security Policy for JSON routes and a relaxed one, limited to what Swagger UI needs, for the docs pages. See [docs/security-headers.md](docs/security-headers.md) for the policies and how to change them.
+
 # 🔌 API Endpoints
 
 All API routes are served under the versioned `/api/v1` prefix.

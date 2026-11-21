@@ -6,7 +6,7 @@ export type HelloResponse = string;
 
 @Injectable()
 export class AppService {
-  getHello(): HelloResponse {
-    return DEFAULT_GREETING;
+  getHello(): string {
+    return 'Hello World!';
   }
 }

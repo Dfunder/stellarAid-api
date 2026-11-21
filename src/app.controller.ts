@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppService, type HelloResponse } from './app.service';
 import { createHash } from 'node:crypto';
+import { AppService, type HelloResponse } from './app.service';
 
 @Controller()
 @ApiTags('app')

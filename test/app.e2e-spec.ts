@@ -13,7 +13,7 @@ describe('AppController (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
     configureApp(app);
     await app.init();
   });
@@ -29,7 +29,10 @@ describe('AppController (e2e)', () => {
     return request(app!.getHttpServer())
       .get('/api/v1')
       .expect(200)
-      .expect('Hello World!');
+      .expect('Content-Type', /application\/json/)
+      .expect(({ body }) => {
+        expect(body).toBe('Hello World!');
+      });
   });
 
   it('/api/v1/admin/analytics (GET) fails closed', () => {
@@ -75,6 +78,194 @@ describe('AppController (e2e)', () => {
           },
         },
       },
+    });
+  });
+
+  it('returns descriptive liveness metadata', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/health/live')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      service: 'stellaraid-api',
+      version: '0.0.1',
+    });
+    expect(response.body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('returns descriptive readiness metadata', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/health/ready')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      service: 'stellaraid-api',
+      checks: {
+        database: 'not-configured',
+        redis: 'not-configured',
+      },
+    });
+  });
+
+  it('returns service version metadata', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/version')
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      name: 'stellarAid-api',
+      version: '0.0.1',
+    });
+  });
+
+  it('/api/v1 (GET) supports cache validation', async () => {
+    const first = await request(app!.getHttpServer())
+      .get('/api/v1')
+      .expect(200);
+
+    expect(first.headers['etag']).toBeDefined();
+    expect(first.headers['cache-control']).toContain('public');
+
+    await request(app!.getHttpServer())
+      .get('/api/v1')
+      .set('If-None-Match', first.headers['etag'])
+      .expect(304);
+  });
+
+  it('missing routes include a machine-readable error code', async () => {
+    const response = await request(app!.getHttpServer())
+      .get('/api/v1/missing')
+      .expect(404);
+
+    expect(response.body).toMatchObject({
+      statusCode: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('/api/v1 (GET) returns an explicit JSON content type', () => {
+    return request(app!.getHttpServer())
+      .get('/api/v1')
+      .set('Accept', 'application/json')
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+      .expect(({ body }) => {
+        expect(body).toBe('Hello World!');
+      });
+  });
+
+  it('rejects write requests that do not use JSON', () => {
+    return request(app!.getHttpServer())
+      .post('/api/v1/missing')
+      .set('Content-Type', 'text/plain')
+      .send('not-json')
+      .expect(415)
+      .expect('Content-Type', /application\/json/)
+      .expect(({ body }) => {
+        expect(body.message).toContain('application/json');
+      });
+  });
+
+  it('rejects representations other than JSON', () => {
+    return request(app!.getHttpServer())
+      .get('/api/v1')
+      .set('Accept', 'text/html')
+      .expect(406)
+      .expect('Content-Type', /application\/json/);
+  });
+
+  it('rejects JSON payloads larger than the configured limit', async () => {
+    await request(app!.getHttpServer())
+      .post('/api/v1')
+      .set('Content-Type', 'application/json')
+      .send({ payload: 'x'.repeat(1_100_000) })
+      .expect(413)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ statusCode: 413 });
+      });
+  });
+
+  describe('X-Powered-By', () => {
+    it('is disabled on the Express instance, not only stripped by Helmet', () => {
+      const instance = app!.getHttpAdapter().getInstance() as {
+        get(setting: string): unknown;
+      };
+      expect(instance.get('x-powered-by')).toBe(false);
+    });
+
+    it('is not sent on success, error, or docs responses', async () => {
+      const responses = [
+        await request(app!.getHttpServer()).get('/api/v1').expect(200),
+        await request(app!.getHttpServer()).get('/api/v1/missing').expect(404),
+        await request(app!.getHttpServer())
+          .get('/api/v1')
+          .set('Accept', 'text/html')
+          .expect(406),
+        await request(app!.getHttpServer()).get('/api/v1/docs').expect(200),
+      ];
+
+      for (const response of responses) {
+        expect(response.headers['x-powered-by']).toBeUndefined();
+      }
+    });
+  });
+
+  describe('security headers', () => {
+    it('sets Helmet headers and a locked-down CSP on API responses', async () => {
+      const response = await request(app!.getHttpServer())
+        .get('/api/v1')
+        .expect(200);
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['strict-transport-security']).toBeDefined();
+      expect(response.headers['referrer-policy']).toBeDefined();
+      expect(response.headers['cross-origin-resource-policy']).toBe(
+        'cross-origin',
+      );
+      expect(response.headers['content-security-policy']).toContain(
+        "default-src 'none'",
+      );
+      expect(response.headers['content-security-policy']).toContain(
+        "frame-ancestors 'none'",
+      );
+    });
+
+    it('sets the same headers on error responses', async () => {
+      const notFound = await request(app!.getHttpServer())
+        .get('/api/v1/missing')
+        .expect(404);
+      const notAcceptable = await request(app!.getHttpServer())
+        .get('/api/v1')
+        .set('Accept', 'text/html')
+        .expect(406);
+
+      for (const response of [notFound, notAcceptable]) {
+        expect(response.headers['x-content-type-options']).toBe('nosniff');
+        expect(response.headers['content-security-policy']).toContain(
+          "default-src 'none'",
+        );
+      }
+    });
+
+    it('uses a policy Swagger UI can run under on the docs pages', async () => {
+      const response = await request(app!.getHttpServer())
+        .get('/api/v1/docs')
+        .expect(200);
+      const csp = response.headers['content-security-policy'];
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(csp).toContain("script-src 'self'");
+      expect(csp).not.toContain("default-src 'none'");
+      expect(csp).not.toContain('upgrade-insecure-requests');
+
+      // script-src 'self' blocks inline scripts, so the page must not use any.
+      const scriptTags = response.text.match(/<script\b[^>]*>/gi) ?? [];
+      expect(scriptTags.length).toBeGreaterThan(0);
+      for (const tag of scriptTags) {
+        expect(tag).toMatch(/\bsrc=/i);
+      }
     });
   });
 });

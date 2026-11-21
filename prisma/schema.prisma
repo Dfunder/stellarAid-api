@@ -19,4 +19,25 @@ model Campaign {
   goalAmount  Decimal  @db.Decimal(20, 7)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Keep indexes aligned with actual filter, sort, and join predicates.
+  // Example for a future owner/status query: @@index([ownerId, status])
+  @@index([createdAt])
+}
+
+enum AnalyticsEventType {
+  user_signed_up
+  campaign_created
+  campaign_viewed
+  donation_created
+  donation_completed
+}
+
+model AnalyticsEvent {
+  id         String             @id @default(uuid())
+  eventType  AnalyticsEventType
+  properties Json
+  createdAt  DateTime           @default(now())
+
+  @@index([eventType, createdAt])
 }

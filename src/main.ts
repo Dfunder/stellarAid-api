@@ -18,7 +18,8 @@ function resolvePort(portEnv: string | undefined): number {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const startedAt = Date.now();
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
@@ -28,6 +29,9 @@ async function bootstrap() {
   });
   configureApp(app);
   await app.listen(resolvePort(process.env.PORT));
+  if (process.env.STARTUP_TIMING === 'true') {
+    console.log(`Startup ready in ${Date.now() - startedAt}ms`);
+  }
 }
 
 bootstrap().catch((err) => {

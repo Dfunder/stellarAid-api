@@ -6,6 +6,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import {
+  getBodyParserStatus,
+  isBodyParserError,
+} from './body-parser-exception.filter';
+import { errorCodeForStatus } from './error-code';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -14,18 +19,31 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
+    const isParserError = isBodyParserError(exception);
+    const status = isParserError
+      ? getBodyParserStatus(exception.type as string)
+      : exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
-      exception instanceof HttpException
-        ? exception.message
-        : 'Internal server error';
+    const exceptionResponse =
+      exception instanceof HttpException ? exception.getResponse() : undefined;
+    const responseMessage = isParserError
+      ? exception.message
+      : typeof exceptionResponse === 'object' &&
+          exceptionResponse !== null &&
+          'message' in exceptionResponse
+        ? exceptionResponse.message
+        : exception instanceof HttpException
+          ? exception.message
+          : 'Internal server error';
+    const message = Array.isArray(responseMessage)
+      ? responseMessage.join('; ')
+      : responseMessage;
 
     response.status(status).json({
       statusCode: status,
+      code: errorCodeForStatus(status),
       message,
       path: request.url,
       timestamp: new Date().toISOString(),

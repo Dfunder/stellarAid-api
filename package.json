@@ -81,6 +81,16 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "clearMocks": true,
+    "restoreMocks": true,
+    "coverageThreshold": {
+      "global": {
+        "statements": 5,
+        "branches": 3,
+        "functions": 10,
+        "lines": 5
+      }
+    }
   }
 }

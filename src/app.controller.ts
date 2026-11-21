@@ -1,6 +1,7 @@
 import { Controller, Get, Req, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AppService, type HelloResponse } from './app.service';
 import { createHash } from 'node:crypto';
 import { AppService, type HelloResponse } from './app.service';
 

@@ -106,3 +106,51 @@ Invalid input examples:
 ```
 
 A request with a non-JSON body is rejected with `415 Unsupported Media Type`.
+
+## Pagination
+
+List endpoints use offset pagination through `limit` and `offset` query parameters and return one consistent response shape. Helpers live in `src/common/pagination/paginate.ts`.
+
+| Query parameter | Default | Rules                                                            |
+| --------------- | ------- | ---------------------------------------------------------------- |
+| `limit`         | `20`    | Whole number from `1` to `100`; out-of-range values are clamped. |
+| `offset`        | `0`     | Whole number of `0` or more; negative values become `0`.         |
+
+Example request:
+
+```bash
+curl --header 'Accept: application/json' \
+  'http://localhost:3000/api/v1/campaigns?limit=2&offset=2'
+```
+
+Example response (5 matching campaigns, total computed):
+
+```json
+{
+  "items": [{ "id": "c3" }, { "id": "c4" }],
+  "limit": 2,
+  "offset": 2,
+  "count": 2,
+  "hasNext": true,
+  "hasPrevious": true,
+  "nextOffset": 4,
+  "previousOffset": 0,
+  "total": 5
+}
+```
+
+Every field is always present. A field that does not apply is `null`, never omitted.
+
+| Field            | Type             | Meaning                                                                        |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------ |
+| `items`          | array            | The rows on this page, at most `limit` of them.                                |
+| `limit`          | number           | Maximum items requested for this page.                                         |
+| `offset`         | number           | Items skipped before the first item on this page.                              |
+| `count`          | number           | Items on this page (`items.length`).                                           |
+| `hasNext`        | boolean          | `true` when at least one more item exists after this page.                     |
+| `hasPrevious`    | boolean          | `true` when `offset` is greater than `0`.                                      |
+| `nextOffset`     | number or `null` | `offset` to request for the next page; `null` when `hasNext` is false.         |
+| `previousOffset` | number or `null` | `offset` to request for the previous page; `null` when `hasPrevious` is false. |
+| `total`          | number or `null` | Items across all pages; `null` when the endpoint does not count them.          |
+
+Clients should follow `nextOffset` and `previousOffset` rather than computing offsets themselves, and should read `hasNext` instead of inferring the end of the list from `count`. When `total` is `null`, show wording such as "more results available" rather than a page count.

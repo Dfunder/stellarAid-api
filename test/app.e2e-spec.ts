@@ -118,6 +118,8 @@ describe('AppController (e2e)', () => {
       name: 'stellarAid-api',
       version: '0.0.1',
     });
+  });
+
   it('/api/v1 (GET) supports cache validation', async () => {
     const first = await request(app!.getHttpServer())
       .get('/api/v1')
@@ -141,6 +143,8 @@ describe('AppController (e2e)', () => {
       statusCode: 404,
       code: 'NOT_FOUND',
     });
+  });
+
   it('/api/v1 (GET) returns an explicit JSON content type', () => {
     return request(app!.getHttpServer())
       .get('/api/v1')
@@ -181,5 +185,87 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body).toMatchObject({ statusCode: 413 });
       });
+  });
+
+  describe('X-Powered-By', () => {
+    it('is disabled on the Express instance, not only stripped by Helmet', () => {
+      const instance = app!.getHttpAdapter().getInstance() as {
+        get(setting: string): unknown;
+      };
+      expect(instance.get('x-powered-by')).toBe(false);
+    });
+
+    it('is not sent on success, error, or docs responses', async () => {
+      const responses = [
+        await request(app!.getHttpServer()).get('/api/v1').expect(200),
+        await request(app!.getHttpServer()).get('/api/v1/missing').expect(404),
+        await request(app!.getHttpServer())
+          .get('/api/v1')
+          .set('Accept', 'text/html')
+          .expect(406),
+        await request(app!.getHttpServer()).get('/api/v1/docs').expect(200),
+      ];
+
+      for (const response of responses) {
+        expect(response.headers['x-powered-by']).toBeUndefined();
+      }
+    });
+  });
+
+  describe('security headers', () => {
+    it('sets Helmet headers and a locked-down CSP on API responses', async () => {
+      const response = await request(app!.getHttpServer())
+        .get('/api/v1')
+        .expect(200);
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['strict-transport-security']).toBeDefined();
+      expect(response.headers['referrer-policy']).toBeDefined();
+      expect(response.headers['cross-origin-resource-policy']).toBe(
+        'cross-origin',
+      );
+      expect(response.headers['content-security-policy']).toContain(
+        "default-src 'none'",
+      );
+      expect(response.headers['content-security-policy']).toContain(
+        "frame-ancestors 'none'",
+      );
+    });
+
+    it('sets the same headers on error responses', async () => {
+      const notFound = await request(app!.getHttpServer())
+        .get('/api/v1/missing')
+        .expect(404);
+      const notAcceptable = await request(app!.getHttpServer())
+        .get('/api/v1')
+        .set('Accept', 'text/html')
+        .expect(406);
+
+      for (const response of [notFound, notAcceptable]) {
+        expect(response.headers['x-content-type-options']).toBe('nosniff');
+        expect(response.headers['content-security-policy']).toContain(
+          "default-src 'none'",
+        );
+      }
+    });
+
+    it('uses a policy Swagger UI can run under on the docs pages', async () => {
+      const response = await request(app!.getHttpServer())
+        .get('/api/v1/docs')
+        .expect(200);
+      const csp = response.headers['content-security-policy'];
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(csp).toContain("script-src 'self'");
+      expect(csp).not.toContain("default-src 'none'");
+      expect(csp).not.toContain('upgrade-insecure-requests');
+
+      // script-src 'self' blocks inline scripts, so the page must not use any.
+      const scriptTags = response.text.match(/<script\b[^>]*>/gi) ?? [];
+      expect(scriptTags.length).toBeGreaterThan(0);
+      for (const tag of scriptTags) {
+        expect(tag).toMatch(/\bsrc=/i);
+      }
+    });
   });
 });

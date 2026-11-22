@@ -71,6 +71,12 @@ Build the project:
 npm run build
 ```
 
+Run security scans:
+
+```bash
+npm run security:check
+```
+
 ## Required Environment Variables
 
 Make sure to set the following environment variables in your `.env` file:
@@ -87,6 +93,8 @@ AWS_S3_BUCKET=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 ```
+
+Values are validated at startup by `src/config/environment.ts`. `DATABASE_URL` is required when `NODE_ENV=production`. Never commit real credentials; follow [security guidelines](./docs/security.md) for handling, rotation, redaction, and CORS/CSRF requirements.
 
 ## How to Run Migrations
 
@@ -118,6 +126,7 @@ Before submitting a pull request, please ensure the following:
 
 - [ ] Tests pass
 - [ ] No lint errors
+- [ ] Security checks pass
 - [ ] Swagger docs updated
 
 ## Good First Issues

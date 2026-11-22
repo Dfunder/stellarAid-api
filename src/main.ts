@@ -1,36 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { configureApp } from './app.setup';
-
-function resolvePort(portEnv: string | undefined): number {
-  if (portEnv === undefined || portEnv === '') {
-    return 3000;
-  }
-
-  const port = Number(portEnv);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error(
-      `Invalid PORT environment variable: "${portEnv}". Expected an integer between 1 and 65535.`,
-    );
-  }
-
-  return port;
-}
+import { validateEnvironment } from './config/environment';
 
 async function bootstrap() {
-  const startedAt = Date.now();
+  const env = validateEnvironment();
   const app = await NestFactory.create(AppModule, { bodyParser: false });
-  const allowedOrigins = process.env.CORS_ORIGIN?.split(',')
-    .map((origin) => origin.trim())
-    .filter((origin) => origin.length > 0);
 
   app.enableCors({
-    origin: allowedOrigins?.length ? allowedOrigins : true,
+    origin: env.CORS_ORIGIN.length > 0 ? env.CORS_ORIGIN : false,
+    credentials: false,
   });
 
   app.enableShutdownHooks();
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(env.PORT);
 }
 
 bootstrap().catch((err) => {

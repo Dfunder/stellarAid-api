@@ -99,7 +99,7 @@ Configuration is read from process environment variables, with built-in defaults
 
 Copy the relevant example (for example, `cp .env.development.example .env.development`), adjust the values, and provide them to the process through your shell, process manager, or deployment platform. Real environment files are ignored by Git; only the `.example` files belong in the repository.
 
-`NODE_ENV` identifies the target environment. `PORT` controls the listening port and defaults to `3000` when unset. Never place real secrets in the example files.
+`NODE_ENV` identifies the target environment. `PORT` controls the listening port and defaults to `3000` when unset. Configuration is validated at startup by `src/config/environment.ts`; invalid values stop startup with a clear message that never prints secret values. `DATABASE_URL` is required when `NODE_ENV=production`. See [security guidelines](./docs/security.md) for the full schema, CORS defaults, and credential-handling rules. Never place real secrets in the example files.
 
 ## Production concurrency
 
@@ -123,15 +123,21 @@ Errors are returned by the global HTTP exception filter in a consistent envelope
 
 # 🌐 CORS
 
-Cross-origin requests are enabled for local development by default. To restrict them, set `CORS_ORIGIN` to a comma-separated list of allowed origins, for example:
+Cross-origin requests are denied by default. Set `CORS_ORIGIN` to an explicit comma-separated allowlist of bare origins, for example:
 
 ```bash
 CORS_ORIGIN=https://app.stellaraid.example,https://admin.stellaraid.example
 ```
 
+Wildcards, paths, query strings, and embedded credentials are rejected by the startup schema. CORS credentials remain disabled; see [security guidelines](./docs/security.md) before enabling cookie-based authentication or CSRF-protected flows.
+
 # 🛡 Security Headers
 
-Every response carries security headers set by [Helmet](https://helmetjs.github.io/), with a strict Content Security Policy for JSON routes and a relaxed one, limited to what Swagger UI needs, for the docs pages. See [docs/security-headers.md](docs/security-headers.md) for the policies and how to change them.
+Every response carries security headers set by [Helmet](https://helmetjs.github.io/), with a strict Content Security Policy for JSON routes and a relaxed one, limited to what Swagger UI needs, for the docs pages. See [docs/security-headers.md](docs/security-headers.md) for the policies and how to change them, and [docs/security.md](docs/security.md) for credential, token, CORS, and CSRF requirements.
+
+# Security checks
+
+Run `npm run security:check` to scan tracked files for committed secrets and audit production dependencies. CI runs the same command on every push and pull request. See [security guidelines](./docs/security.md) for local and Gitleaks instructions.
 
 # 🔌 API Endpoints
 

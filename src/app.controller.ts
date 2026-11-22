@@ -1,9 +1,11 @@
 import { Controller, Get, Req, Res } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type {
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from 'express';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppService, type HelloResponse } from './app.service';
 import { createHash } from 'node:crypto';
-import { AppService, type HelloResponse } from './app.service';
 
 @Controller()
 @ApiTags('app')
@@ -17,8 +19,8 @@ export class AppController {
     schema: { type: 'string', example: 'Hello World!' },
   })
   getHello(
-    @Req() request?: Request,
-    @Res({ passthrough: true }) response?: Response,
+    @Req() request?: ExpressRequest,
+    @Res({ passthrough: true }) response?: ExpressResponse,
   ): HelloResponse | void {
     const greeting = this.appService.getHello();
     if (!request || !response) return greeting;

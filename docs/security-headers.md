@@ -13,7 +13,7 @@ Two Content Security Policy (CSP) profiles are used, chosen by request path.
 
 Helmet's other defaults apply to both, for example `X-Content-Type-Options: nosniff`, `Strict-Transport-Security`, `Referrer-Policy`, and `X-Frame-Options`. Two choices differ from the defaults:
 
-- `Cross-Origin-Resource-Policy` is `cross-origin`, because the API is meant to be read by browser clients on other origins (see `CORS_ORIGIN` in the README).
+- `Cross-Origin-Resource-Policy` is `cross-origin`, because the API is meant to be read by browser clients on other origins when `CORS_ORIGIN` is configured (see the README and [security guidelines](./security.md)).
 - `upgrade-insecure-requests` is not sent, so Swagger UI keeps working over plain HTTP during local development.
 
 `X-Powered-By` is never sent. `disablePoweredBy` turns off Express's `x-powered-by` setting, so the header is not created at all, and Helmet would remove it as well if it were. This keeps the framework from being fingerprinted from response headers.

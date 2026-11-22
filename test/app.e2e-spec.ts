@@ -91,7 +91,9 @@ describe('AppController (e2e)', () => {
       service: 'stellaraid-api',
       version: '0.0.1',
     });
-    expect(response.body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect((response.body as { timestamp: string }).timestamp).toMatch(
+      /^\d{4}-\d{2}-\d{2}T/,
+    );
   });
 
   it('returns descriptive readiness metadata', async () => {
@@ -154,10 +156,6 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body).toBe('Hello World!');
       });
-  });
-
-  afterEach(async () => {
-    await app.close();
   });
 
   describe('X-Powered-By', () => {

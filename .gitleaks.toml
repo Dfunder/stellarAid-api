@@ -1,0 +1,10 @@
+title = "StellarAid API secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''package-lock\.json''',
+  '''coverage/''',
+]
